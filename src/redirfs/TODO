@@ -1,0 +1,7 @@
+		================================
+		RedirFS - Redirecting FileSystem
+			      TODO 
+		================================
+
+* support for address space operations
+* allow redirect all operations in VFS objects

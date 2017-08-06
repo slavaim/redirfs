@@ -1,0 +1,6 @@
+This directory contains various usefull scripts and other utils used for
+redirfs development.
+
+- svn-set-ignore.sh - uses .svnignore or .cvsignore file in current
+                      directory to set svn::ignore property
+- cross-build64.sh - simple wrapper for correct setting of ARCH and CROSS_COMPILE

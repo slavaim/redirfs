@@ -1,0 +1,28 @@
+		========================
+		ROFlt - Read-Only Filter
+			  README
+		========================
+
+This software is distributed under the GNU General Public License Version 3.
+
+1. Introduction
+
+	ROFlt or Read-Only Filter is a filter for the RedirFS Framework. It
+	makes selected directories read-only. All modifying operations, like
+	mkdir, unlink or create, over these directories return the EROFS error.
+
+	For an overview of the RedirFS project, visit 
+
+		http://www.redirfs.org
+
+2. Installation
+
+	See the INSTALL file.
+
+3. Documentation
+
+	http://www.redirfs.org/tiki-index.php?page=redirfs_doc
+
+4. Problems & Bugs
+	
+	http://www.redirfs.org/cgi-bin/bugzilla/index.cgi

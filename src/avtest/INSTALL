@@ -1,0 +1,43 @@
+			======================================
+				 Installing avtest
+			======================================
+
+1. Requirements
+	
+	* Installed Anti-Virus Library - libav, please see the libav
+	  INSTALL file
+
+2. Download
+	
+	* Get the latest stable version at
+	  http://www.redirfs.org/packages/avtest-x.y.tar.gz
+
+3. Compilation
+	
+	* Unpack package
+		$ tar -xvzf avtest-x.y.tar.gz
+
+	* Change to the avtest-x.y directory
+		$ cd avtest-x.y
+
+	* Run make command
+		$ make
+
+4. Installation/Uninstallation
+
+	* Change user to root
+		$ su
+
+	* Install avtest 
+		# make install
+
+	* Uninstall avtest
+		# make uninstall
+
+5. Problems & Bugs
+
+	* RedirFS's bugzilla
+	  http://www.redirfs.org/cgi-bin/bugzilla/index.cgi
+	
+	* RedirFS's mailing lists
+	  http://www.redirfs.org/tiki-index.php?page=redirfs_maillists

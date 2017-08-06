@@ -1,0 +1,504 @@
+How to write a Filter
+---------------------
+
+Content
+	1. Registration & Unregistration
+	2. Activation & Deactivation
+	3. Operations Settings
+	4. Filter's Callback Functions
+	5. Paths Settings
+	6. Control Callback Function
+	7. Sysfs Interface
+	8. Private Data
+	8.1. VFS Private Data
+	8.2. Operation Context Private Data
+	9. Subcalls
+
+Notes:
+- You should know something about Linux Kernel Module programing and Virtual
+  Filesystem Switch implementation in Linux.
+- It is advised to see the dummyflt implementation at the same time.
+- If not specified, RedirFS framework functions return 0 on success, negative
+  errno value otherwise.
+
+1. Registration & Unregistration
+
+First of all you have to register your new filter to the RedirFS framework. This
+is done by the rfs_register_filter function. Before you can call this function
+you need to fill the rfs_filter_info structure properly.
+
+struct rfs_filter_info {
+	char *name;
+	int priority;
+	int active;
+	int (*ctl_cb)(struct rfs_ctl *ctl);
+};
+
+name
+----
+String defining filter's name. It is used in the sysfs interface. See the Sysfs
+Interface section.
+
+priority
+--------
+A unique number defining filter order in the filters call chain. RedirFS can
+manage one or more filters and it needs to know in which order it should call
+them. Filter with smaller number (higher priority) is called before all
+filters with greater numbers (lesser priorities). This applies to pre callback
+functions. For post callback functions the order is reversed. For now there are
+no rules for filter which priority number it should use. In the future it will
+be necessary to have a list of filters and their priorities. 
+
+active 
+------
+Flag defining if the filter is active right after the registration. Zero value
+means that filter is not active and it needs to be activated later. Other then
+zero value means that filter is active. Note that RedirFS is calling only active
+filters.
+
+ctl_cb
+------
+If filter sets this callback function it will get requests for new settings
+entered through the sysfs interface. See the Control Callback Function section.
+
+Each filter registered to the RedirFS framework is identified by a handle. This
+handle is returned by the rfs_register_filter function and it is required by
+all other functions in the RedirFS framework. RedirFS is using it for filter
+identification.
+
+Registration and unregistration is done with the following functions. 
+
+int rfs_register_filter(rfs_filter *filter, struct rfs_filter_info *filter_info);
+int rfs_unregister_filter(rfs_filter filter);
+
+2. Activation & Deactivation
+
+Filter can be in the two states, activated or deactivated. RedirFS calls only
+activated filters. Filter's state can be set in the rfs_filter_info structure
+during registration or anytime after registration with the following functions.
+
+int rfs_activate_filter(rfs_filter filter);
+int rfs_deactivate_filter(rfs_filter filter);
+
+This can be used to activate the filter after all settings (e.g. paths) are
+done. 
+
+3. Operations Settings
+
+Filter can register pre and post callback functions for selected filesystem
+calls. Each operation, in which filter is interested, is described by the
+rfs_op_info structure. 
+
+struct rfs_op_info {
+	enum rfs_op_id op_id;
+	enum rfs_retv (*pre_cb)(rfs_context, struct rfs_args *);
+	enum rfs_retv (*post_cb)(rfs_context, struct rfs_args *);
+};
+
+op_id
+-----
+Operation identifier from the rfs_op_id enum. Each operation has a unique
+identifier which has the following format. 
+
+RFS_<file type>_<operations set>_<operation>
+
+<file_type>
+NONE - negative dentry objects without inode
+REG - regular file
+DIR - directory
+CHR - char device
+BLK - block device
+FIFO - fifo
+LNK - symlink
+SOCK - unix socket
+
+<operations_set>
+DOP - dentry operations
+IOP - inode operations
+FOP - file operations
+AOP - address space operations
+
+<operation>
+Concrete operation in the operations set.
+
+Note that filter can not register callback functions for all operations of all
+file types. The VFS layer is calling just several functions for each file type.
+For example the lookup function is never called for regular files. Please check
+out the supported_operations.txt to see which operations can be redirected.
+
+pre_cb
+------
+Pre-callback filter's function for operation identified by the op_id. If filter
+is not interested in pre-callback it should set this pointer to NULL.
+
+post_cb
+------
+Post-callback filter's function for operation identified by the op_id. If filter
+is not interested in post-callback it should set this pointer to NULL.
+
+RedirFS expects all filter callback functions in one array properly finished
+with {RFS_OP_END, NULL, NULL} element. Callback functions should be defined as
+following example.
+
+static struct rfs_op_info op_info[] = {
+	{RFS_REG_IOP_PERMISSION, dummyflt_permission, dummyflt_permission},
+	{RFS_DIR_IOP_PERMISSION, dummyflt_permission, dummyflt_permission},
+	{RFS_REG_FOP_OPEN, dummyflt_open, dummyflt_open},
+	{RFS_DIR_FOP_OPEN, dummyflt_open, dummyflt_open},
+	{RFS_OP_END, NULL, NULL}
+};
+
+To set callback functions, filter has to call the rfs_set_operations function.
+
+int rfs_set_operations(rfs_filter filter, struct rfs_op_info *op_info);
+
+Note that filter can set or change callback functions whenever it wants to. It
+just needs to call the rfs_set_operations with different values. If filter calls
+rfs_set_operations for the second time all callback functions set during the
+first rfs_set_operations call will stay the same unless the second call changes
+them. 
+
+Example:
+first rfs_set_operations call with
+{RFS_REG_IOP_PERMISSION, dummyflt_permission, dummyflt_permission}
+
+Now filter's pre and post callback functions will be called only for the
+RFS_REG_IOP_PERMISSION.
+
+second rfs_set_operations call with
+{RFS_DIR_IOP_PERMISSION, dummyflt_permission, dummyflt_permission}
+
+Now filter's pre and post callback functions will be called for both
+RFS_REG_IOP_PERMISSION and RFS_DIR_IOP_PERMISSION operations.
+
+third rfs_set_operations call with
+{RFS_REG_IOP_PERMISSION, dummyflt_permission, NULL}
+{RFS_DIR_IOP_PERMISSION, dummyflt_permission, NULL}
+
+Now only filter's pre callback functions will be called for both
+RFS_REG_IOP_PERMISSION and RFS_DIR_IOP_PERMISSION operations.
+
+fourth rfs_set_operations call with
+{RFS_REG_IOP_PERMISSION, NULL, NULL}
+{RFS_DIR_IOP_PERMISSION, NULL, NULL}
+
+No callbacks will be called at all.
+
+4. Filter's Callback Functions
+
+All callback functions have the same interface.
+
+enum rfs_retv cb(rfs_context cont, struct rfs_args *rargs);
+
+rfs_retv
+--------
+Filter can return to the RedirFS framework two values.
+
+RFS_STOP - do not call next filters in the filters call chain
+RFS_CONTINUE - continue normally and call next filter
+
+cont
+----
+Holds private context data for filters. This allows filters to pass per
+operation their private data from pre to post callback function. For more info
+see the Private Data section.
+
+The rfs_args structure is probably the most important structure for filter. It
+contains arguments and return value for original file system function.
+
+struct rfs_args {
+	union rfs_op_args args;
+	union rfs_op_retv retv;
+	struct rfs_op_type type;
+};
+
+args
+----
+Contains arguments for the original file system operation. Filter can modify or
+replace them. This is a union and each operation has its own structure in it
+(e.g. f_lookup). Filter has to always use the proper structure.
+
+retv
+----
+This is a union of all types which can be be returned by the original file
+system operations. Again filter has to fill it with the proper value
+corresponding to the original file system function return type. This value is
+used only if filter returns RFS_STOP and it is passed back to the VFS layer.
+
+type
+----
+Contains call type RFS_PRECALL or RFS_POSTCALL and operation id from the
+rfs_op_id enum. Thanks to this information filter can identify for which
+operation its callback was called and if it is pre or post callback.
+This allows filter to register one callback for several operations.
+
+5. Paths Settings
+
+Filter can set for which paths its callback functions will be called. This is
+done with the rfs_set_path function.
+
+int rfs_set_path(rfs_filter filter, struct rfs_path_info *path_info);
+
+struct rfs_path_info {
+	char *path;
+	int flags;
+}
+
+path
+----
+Full filename path.
+
+flags
+-----
+RFS_PATH_SINGLE - handle path as single path
+RFS_PATH_SUBTREE - handle path as subtree
+RFS_PATH_INCLUDE - include selected path
+RFS_PATH_EXCLUDE - exclude selected path
+
+Note that actual path in the rfs_set_path function can cover paths selected
+previously by the same filter. You can not set fixed paths.
+
+Example:
+first rfs_set_path call with
+{"/home/john/work", RFS_PATH_SUBTREE | RFS_PATH_INCLUDE}
+
+Filter's callback functions will be called for the whole /home/john/work subtree.
+
+second rfs_set_path call with
+{"/home/john/work/exclude", RFS_PATH_SUBTREE | RFS_PATH_EXCLUDE}
+
+Filter's callback functions will be called for the whole /home/john/work subtree
+except the /home/john/work/exclude subtree.
+
+third rfs_set_path call with
+{"/home/john/work/exclude/include", RFS_PATH_SUBTREE | RFS_PATH_INCLUDE}
+
+Filter's callback functions will be called for the whole /home/john/work
+and /home/john/work/exclude/include subtrees except /home/john/work/exclude
+subtree.
+
+fourth rfs_set_path call with
+{"/home/john/work", RFS_PATH_SUBTREE | RFS_PATH_INCLUDE}
+
+Filter's callback functions will be called as at the first call for the whole
+/home/john/work subtree.
+
+fifth rfs_set_path call with
+{"/home/john/work", RFS_PATH_SINGLE | RFS_PATH_EXCLUDE}
+
+Filter's callback functions will be called for the whole /home/john/work subtree
+except the /home/john/work directory. You can exclude single directories and
+single files.
+
+sixth rfs_set_path call with
+{"/home/john", RFS_PATH_PATH | RFS_PATH_EXCLUDE}
+
+No callback functions will be called because there are no paths selected by the
+filter.
+
+
+6. Control Callback Function
+
+Request for new settings, entered through the sysfs interface, is represented by
+the rfs_ctl structure. Filter can decide if it will follow new settings or
+just ignore it. Note that this function will handle only default settings which
+can be done for all filters. For more information see the Sysfs Interface
+section.
+
+struct rfs_ctl {
+	enum rfs_ctl_id id;
+	union rfs_ctl_data data;
+};
+
+id
+--
+Command identifier represented by the rfs_clt_id. It can have following values.
+RFS_CTL_ACTIVATE - request to activate filter
+RFS_CTL_DEACTIVATE - request to deactivate filter
+RFS_CTL_SETPATH - request to set filter's path
+
+data
+----
+It is represented by the rfs_ctl_data union and it contains data for the
+selected command. This is used only by the RFS_CTL_SETPATH command and it
+contains information about the new path which is represented by the rfs_path_info
+structure. For more information see the Paths Settings section.
+
+7. Sysfs Interface
+
+Filter can be controlled through the sysfs files if it set a control callback
+function during registration.
+
+The RedirFS creates the same basic attributes for each filter in the sysfs file
+system. For each filter is created a directory /sys/fs/redirfs/<filter name>.
+This directory contains the following files (attributes):
+
+active (rw)
+------
+0 - filter is deactivated
+1 - filter is activated
+
+control (rw)
+-------
+0 - filter can not be controlled through the sysfs interface
+1 - filter can be controlled through the sysfs interface
+
+priority (ro)
+--------
+filter's priority
+
+paths
+-----
+list of paths separated by \0 in the following format.
+
+<subtree>:<included>:<path>
+
+<subtree>
+0 - path represents single path
+1 - path represents subtree
+
+<included>
+0 - path is excluded
+1 - path is included
+
+<path>
+full filename path
+
+So if you want to include the /home/john/work directory for the dummyflt you can
+use following command:
+
+$ echo "1:1:/home/john/work" > /sys/fs/redirfs/dummyflt/paths
+
+Filter can also add its own attributes. RedirFS provides following functions to
+make it easier.
+
+int rfs_register_attribute(rfs_filter filter, struct rfs_flt_attribute *attr);
+int rfs_unregister_attribute(rfs_filter filter, struct rfs_flt_attribute *attr);
+
+struct rfs_flt_attribute {
+	struct attribute attr;
+	ssize_t (*show)(rfs_filter filter, struct rfs_flt_attribute *attr, char *buf);
+	ssize_t (*store)(rfs_filter filter, struct rfs_flt_attribute *attr, const char *buf, size_t size);
+	void *data;
+};
+
+You can use the rfs_flt_attr(__name, __mode, __show, __store, __data) macro to
+initialize the new attribute easily.
+
+__name - file name for your new attribute
+__mode - file mode
+__show - function called for reading from the file
+__store - function called for writing to the file
+__data - filter's private data for this attribute
+
+After registration this file will be created in the filter's sysfs
+directory. If you want to create more complicated hierarchy you can use the
+rfs_get_kobject function and sysfs interface directly.
+
+Note that you can extend rfs_flt_attribute by including it in your own attribute
+structure and then use the content_of macro in the show or store functions to get
+your attribute from the rfs_flt_attribute. For inspiration you can check out how
+the avflt does it.
+
+8. Private Data
+
+8.1. VFS Private Data
+
+Filter can attach, detach and get its private data to file, dentry and inode VFS
+objects using the following functions.
+
+int rfs_attach_data_inode(rfs_filter filter, struct inode *inode, struct rfs_priv_data *data, struct rfs_priv_data **exist);
+int rfs_attach_data_dentry(rfs_filter filter, struct dentry *dentry, struct rfs_priv_data *data, struct rfs_priv_data **exist);
+int rfs_attach_data_file(rfs_filter filter, struct file *file, struct rfs_priv_data *data, struct rfs_priv_data **exist);
+int rfs_detach_data_inode(rfs_filter filter, struct inode *inode, struct rfs_priv_data **data);
+int rfs_detach_data_dentry(rfs_filter filter, struct dentry *dentry, struct rfs_priv_data **data);
+int rfs_detach_data_file(rfs_filter filter, struct file *file, struct rfs_priv_data **data);
+int rfs_get_data_inode(rfs_filter filter, struct inode *inode, struct rfs_priv_data **data);
+int rfs_get_data_dentry(rfs_filter filter, struct dentry *dentry, struct rfs_priv_data **data);
+int rfs_get_data_file(rfs_filter filter, struct file *file, struct rfs_priv_data **data);
+
+Private data are represented by the rfs_priv_data structure. You should include
+it to your own structure for private data and than use the content_of macro to
+get your private data from the rfs_priv_data.
+
+While private data can be used by several functions at the same time RedirFS
+uses proper reference counting for it. Each rfs_priv_data structure has to be
+initialized by the rfs_init_data function.
+
+int rfs_init_data(struct rfs_priv_data *data, rfs_filter filter, void (*cb)(struct rfs_priv_data *));
+
+data
+----
+Pointer to the rfs_priv_data which should be attached
+
+filter
+------
+Filter handle to which this private data belongs
+
+cb
+--
+Callback function which will be called when the filter's private data has to be
+freed. It means that no one is using it. This can happen when the VFS object is
+going to be destroyed, filter unregistration or when filter asks RedirFS to
+detach its private data. Note that this callback can be called within the irq
+handler while RedirFS is using the RCU. Filter can not block in this callback
+and it should use irq safe functions only.
+
+Filter also needs to use the rfs_get_data and rfs_put_data functions for proper
+reference count handling of private data.
+
+void rfs_put_data(struct rfs_priv_data *data);
+struct rfs_priv_data *rfs_get_data(struct rfs_priv_data *data);
+
+Follows functions increasing reference counter.
+rfs_init_data - counter set to 0
+rfs_get_data - explicitly +1
+rfs_get_data_inode - data +1
+rfs_get_data_dentry - data +1
+rfs_get_data_file - data +1
+rfs_attach_data_inode - data +1 or exist +1
+rfs_attach_data_dentry - data +1 or exist +1
+rfs_attach_data_file - data +1 or exist +1
+
+Note that the 'data' and the 'exist' are the rfs_priv_data arguments in the RedirFS
+functions for the private data manipulation (rfs_attach_data_*, rfs_detach_data_*,
+rfs_get_data_*). The 'exist' pointer can be NULL, it is filled by the RedirFS in
+the case that the private data for the filter are already attached. In this case
+the 'data' counter is left unchanged and the pointer to the existing private
+data with increased counter is returned in the 'exist' pointer. Filter has to
+call the rfs_put_data every time it gets private data from this functions. For
+more info you can check out how the avflt uses this functions.
+
+8.2. Operation Context Private Data
+
+Filter can also attach its private data per operation and pass it from pre to
+post callback function. Filter has to detach its private data in the post
+callback function. Private data has to be initialized before first usage. Note
+that post callback functions are called for all filters whose pre callback
+functions were called.
+
+int rfs_init_data_cont(struct rfs_cont_data *data, rfs_filter filter);
+int rfs_attach_data_cont(rfs_filter filter, rfs_context *context, struct rfs_cont_data *data);
+int rfs_detach_data_cont(rfs_filter filter, rfs_context context, struct rfs_cont_data **data);
+
+9. Subcalls
+
+Subcalls are RedirFS functions for selected VFS operations. Subcall calls only
+filters which are in the filter call chain past the filter which called the
+subcall. This allows filter to call the same or different VFS operation with its
+own or different arguments. Subcall has the same return type as the original
+operation. Subcalls have the following interface:
+
+<orig. type> rfs_<orig. name>_subcall(rfs_filter flt, union rfs_op_args *args);
+
+<orig. type> - original operation return type
+<orig. name> - original operation name
+
+flt
+---
+handler of filter which is calling subcall
+
+args
+----
+arguments for the subcall
+

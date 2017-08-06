@@ -1,0 +1,37 @@
+		================================
+		RedirFS - Redirecting FileSystem
+			    README
+		================================
+
+This software is distributed under the GNU General Public License Version 3.
+
+1. Introduction
+
+	Redirecting FileSystem or RedirFS project aims to be general, fast,
+	flexible and open source framework allowing to redirect native 
+	filesystem calls in the VFS layer. It is implemented as a 
+	LKM(Linux Kernel Module) and provides well defined interface for other
+	LKMs which are called Filters. Filters can set pre and post call-back 
+	functions for selected filesystem operations(e.g. permission, open). 
+	Filters can also select for which file system paths will be their
+	call-back functions called and even which file system paths will be
+	excluded. Each Filter is specified by a name and unique number which
+	represents Filter's priority. RedirFS manages all registered Filters and
+	calls their call-back functions in specific order defined by their
+	priorities.
+
+	For an overview of the RedirFS project, visit 
+
+		http://www.redirfs.org
+
+2. Installation
+
+	See the INSTALL file.
+
+3. Documentation
+
+	http://www.redirfs.org/tiki-index.php?page=redirfs_doc
+
+4. Problems & Bugs
+	
+	http://www.redirfs.org/cgi-bin/bugzilla/index.cgi

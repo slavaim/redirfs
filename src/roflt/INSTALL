@@ -1,0 +1,54 @@
+			======================================
+				 Installing ROFlt
+			======================================
+
+1. Requirements
+	
+	* Running Linux kernel version 2.6.25 and higher
+	* Source code and configuration for running Linux kernel
+	  - at least make scripts and make prepare
+	* Linux kernel compiled with modules support
+	* Compiled RedirFS Framework, please see the RedirFS's INSTALL file
+
+2. Download
+	
+	* Get the latest stable version at
+	  http://www.redirfs.org/packages/roflt-x.y.tar.gz
+
+3. Compilation
+	
+	* Unpack package
+		$ tar -xvzf roflt-x.y.tar.gz
+
+	* Change to the roflt-x.y directory
+		$ cd roflt-x.y
+
+	* Copy the RedirFS's Module.symvers file to the ROFlt source tree.
+	  For more info please see Documentation/kbuild/modules.txt
+	  section "7.3 Symbols from another external module".
+		$ cp <path to the RedirFS's source tree>/Module.symvers .
+
+	* Run make command
+		$ make -C /lib/modules/`uname -r`/build M=`pwd` \
+			EXTRA_CFLAGS=-I<full path to the redirfs dir> modules
+
+4. Inserting module
+
+	* Change user to root
+		$ su
+
+	* Install modules 
+		$ make -C /lib/modules/`uname -r`/build M=`pwd` \
+			EXTRA_CFLAGS=-I<full path to the redirfs dir> \
+			modules_install
+
+	* Load roflt.ko module
+		# modprobe roflt
+
+5. Problems & Bugs
+
+	* RedirFS's bugzilla
+	  http://www.redirfs.org/cgi-bin/bugzilla/index.cgi
+	
+	* RedirFS's mailing lists
+	  http://www.redirfs.org/tiki-index.php?page=redirfs_maillists

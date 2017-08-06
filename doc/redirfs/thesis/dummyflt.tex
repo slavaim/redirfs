@@ -1,0 +1,104 @@
+\chapter{Dummy Filter}
+\label{lab:dummy}
+Here is an example of a Dummy Filter. It registers only one pre callback function for
+regular file permission function. This function is called by the VFS every time when user
+space process wants to open or execute a regular file. Directory subtrees over which
+will be this Filter's callback function called are \texttt{/bin} and
+\texttt{/usr/bin}. The Dummy Filter only prints the dentry name of an accessed file every
+time the file is opened or executed.
+
+\section{Sample Code}
+
+\begin{verbatim}
+
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/dcache.h>
+#include <linux/namei.h>
+#include "redirfs.h"
+
+
+/*
+   Filter's handler
+ */
+static redirfs_filter dummyflt_filter;
+
+/*
+   Filter's callback functions
+ */
+static enum redirfs_retv dummyflt_pre_permission(redirfs_context context,
+                struct redirfs_args_t *args)
+{
+        const char *name;
+	
+
+        name= args->args.i_permission.nd->dentry->d_name.name;
+
+        printk(KERN_ALERT "dummyflt: permission '%s'\n", name);
+        return REDIRFS_RETV_CONTINUE;
+}
+
+/*
+   Filter's callback functions for registration
+ */
+static struct redirfs_op_t dummyflt_ops[] = {
+        {REDIRFS_I_REG, REDIRFS_IOP_PERMISSION, dummyflt_pre_permission, NULL},
+        REDIRFS_OP_END
+};
+
+static int __init dummyflt_init(void)
+{
+        int retval = 0;
+        int priority = 999;
+        unsigned long flags = 0;
+
+        /*
+           Dummy Filter registration to the Redirfs Framework
+         */
+        dummyflt_filter = redirfs_register_filter("dummyflt", priority, flags);
+        retval = PTR_ERR(dummyflt_filter);
+        if (IS_ERR(dummyflt_filter)) 
+                goto exit;
+
+        /*
+           Set Filter's callback functions.
+         */
+        retval = redirfs_set_operations(dummyflt_filter, dummyflt_ops);
+        if (retval)
+                goto unregister;
+
+        /*
+           Set Filter's directory subtrees
+         */
+        retval = redirfs_include_path(dummyflt_filter, "/bin");
+        if (retval)
+                goto unregister;
+
+        retval = redirfs_include_path(dummyflt_filter, "/usr/bin");
+        if (retval)
+                goto unregister;
+
+        redirfs_activate_filter(dummyflt_filter);
+
+        return 0;
+
+unregister:
+        redirfs_unregister_filter(dummyflt_filter);
+exit:
+        return retval;
+}
+
+static void __exit dummyflt_exit(void)
+{
+        redirfs_unregister_filter(dummyflt_filter);
+}
+
+module_init(dummyflt_init);
+module_exit(dummyflt_exit);
+
+MODULE_LICENSE("Dual BSD/GPL");
+MODULE_VERSION("v0.001");
+MODULE_DESCRIPTION("Dummy Filter");
+
+\end{verbatim}

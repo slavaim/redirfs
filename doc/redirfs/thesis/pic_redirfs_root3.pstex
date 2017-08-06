@@ -1,0 +1,388 @@
+%!PS-Adobe-2.0 EPSF-2.0
+%%Title: /home/qwertyn/school/thesis/eng/pic_redirfs_root3.fig
+%%Creator: fig2dev Version 3.2 Patchlevel 5-alpha5
+%%CreationDate: Sat May 28 19:00:06 2005
+%%For: qwertyn@qmob (Frantisek Hrbata,,,)
+%%BoundingBox: 0 0 308 408
+%Magnification: 1.0000
+%%EndComments
+/$F2psDict 200 dict def
+$F2psDict begin
+$F2psDict /mtrx matrix put
+/col-1 {0 setgray} bind def
+/col0 {0.000 0.000 0.000 srgb} bind def
+/col1 {0.000 0.000 1.000 srgb} bind def
+/col2 {0.000 1.000 0.000 srgb} bind def
+/col3 {0.000 1.000 1.000 srgb} bind def
+/col4 {1.000 0.000 0.000 srgb} bind def
+/col5 {1.000 0.000 1.000 srgb} bind def
+/col6 {1.000 1.000 0.000 srgb} bind def
+/col7 {1.000 1.000 1.000 srgb} bind def
+/col8 {0.000 0.000 0.560 srgb} bind def
+/col9 {0.000 0.000 0.690 srgb} bind def
+/col10 {0.000 0.000 0.820 srgb} bind def
+/col11 {0.530 0.810 1.000 srgb} bind def
+/col12 {0.000 0.560 0.000 srgb} bind def
+/col13 {0.000 0.690 0.000 srgb} bind def
+/col14 {0.000 0.820 0.000 srgb} bind def
+/col15 {0.000 0.560 0.560 srgb} bind def
+/col16 {0.000 0.690 0.690 srgb} bind def
+/col17 {0.000 0.820 0.820 srgb} bind def
+/col18 {0.560 0.000 0.000 srgb} bind def
+/col19 {0.690 0.000 0.000 srgb} bind def
+/col20 {0.820 0.000 0.000 srgb} bind def
+/col21 {0.560 0.000 0.560 srgb} bind def
+/col22 {0.690 0.000 0.690 srgb} bind def
+/col23 {0.820 0.000 0.820 srgb} bind def
+/col24 {0.500 0.190 0.000 srgb} bind def
+/col25 {0.630 0.250 0.000 srgb} bind def
+/col26 {0.750 0.380 0.000 srgb} bind def
+/col27 {1.000 0.500 0.500 srgb} bind def
+/col28 {1.000 0.630 0.630 srgb} bind def
+/col29 {1.000 0.750 0.750 srgb} bind def
+/col30 {1.000 0.880 0.880 srgb} bind def
+/col31 {1.000 0.840 0.000 srgb} bind def
+
+end
+save
+newpath 0 408 moveto 0 0 lineto 308 0 lineto 308 408 lineto closepath clip newpath
+-4.9 406.8 translate
+1 -1 scale
+
+/cp {closepath} bind def
+/ef {eofill} bind def
+/gr {grestore} bind def
+/gs {gsave} bind def
+/sa {save} bind def
+/rs {restore} bind def
+/l {lineto} bind def
+/m {moveto} bind def
+/rm {rmoveto} bind def
+/n {newpath} bind def
+/s {stroke} bind def
+/sh {show} bind def
+/slc {setlinecap} bind def
+/slj {setlinejoin} bind def
+/slw {setlinewidth} bind def
+/srgb {setrgbcolor} bind def
+/rot {rotate} bind def
+/sc {scale} bind def
+/sd {setdash} bind def
+/ff {findfont} bind def
+/sf {setfont} bind def
+/scf {scalefont} bind def
+/sw {stringwidth} bind def
+/tr {translate} bind def
+/tnt {dup dup currentrgbcolor
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add srgb}
+  bind def
+/shd {dup dup currentrgbcolor 4 -2 roll mul 4 -2 roll mul
+  4 -2 roll mul srgb} bind def
+/$F2psBegin {$F2psDict begin /$F2psEnteredState save def} def
+/$F2psEnd {$F2psEnteredState restore end} def
+
+$F2psBegin
+10 setmiterlimit
+0 slj 0 slc
+ 0.06299 0.06299 sc
+%
+% Fig objects follow
+%
+% 
+% here starts figure with depth 50
+% Polyline
+0 slj
+0 slc
+7.500 slw
+n 2858 371 m
+ 3769 371 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+2925 304 m
+gs 1 -1 sc (filter object) col0 sh gr
+% Polyline
+n 2858 67 m 3769 67 l 3769 742 l 2858 742 l
+ cp gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+2925 686 m
+gs 1 -1 sc (avgflt) col0 sh gr
+% Polyline
+n 124 1215 m 1811 1215 l 1811 1957 l 124 1957 l
+ cp gs col0 s gr 
+% Polyline
+n 124 1485 m
+ 1811 1485 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+158 1417 m
+gs 1 -1 sc (root object) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+158 1800 m
+gs 1 -1 sc (/home/john/data) col0 sh gr
+% Polyline
+n 3263 2464 m 4174 2464 l 4174 3139 l 3263 3139 l
+ cp gs col0 s gr 
+% Polyline
+n 3263 2767 m
+ 4174 2767 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+3330 2700 m
+gs 1 -1 sc (filter object) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+3330 3082 m
+gs 1 -1 sc (cryptflt) col0 sh gr
+% Polyline
+n 3263 3847 m
+ 4174 3847 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+3330 3780 m
+gs 1 -1 sc (filter object) col0 sh gr
+% Polyline
+n 3263 3544 m 4174 3544 l 4174 4219 l 3263 4219 l
+ cp gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+3330 4162 m
+gs 1 -1 sc (avgflt) col0 sh gr
+% Polyline
+n 3263 1215 m 4950 1215 l 4950 1957 l 3263 1957 l
+ cp gs col0 s gr 
+% Polyline
+n 3263 1485 m
+ 4950 1485 l gs col0 s gr 
+% Polyline
+ [60] 0 sd
+gs  clippath
+3408 2341 m 3408 2479 l 3453 2479 l 3453 2341 l 3453 2341 l 3431 2431 l 3408 2341 l cp
+eoclip
+n 3431 1957 m
+ 3431 2464 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 3408 2341 m 3431 2431 l 3453 2341 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+3442 3421 m 3442 3559 l 3487 3559 l 3487 3421 l 3487 3421 l 3465 3511 l 3442 3421 l cp
+eoclip
+n 3465 3139 m
+ 3465 3544 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 3442 3421 m 3465 3511 l 3487 3421 l  col0 s
+/Times-Roman ff 142.88 scf sf
+3296 1417 m
+gs 1 -1 sc (root object) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+3296 1800 m
+gs 1 -1 sc (/home/ned/bin) col0 sh gr
+% Polyline
+n 2081 2464 m 2993 2464 l 2993 3139 l 2081 3139 l
+ cp gs col0 s gr 
+% Polyline
+n 2081 2767 m
+ 2993 2767 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+2149 2700 m
+gs 1 -1 sc (filter object) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+2149 3082 m
+gs 1 -1 sc (cryptflt) col0 sh gr
+% Polyline
+n 495 4657 m 1406 4657 l 1406 5332 l 495 5332 l
+ cp gs col0 s gr 
+% Polyline
+n 495 4961 m
+ 1406 4961 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+563 4894 m
+gs 1 -1 sc (filter object) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+563 5276 m
+gs 1 -1 sc (cryptflt) col0 sh gr
+% Polyline
+n 2081 3847 m
+ 2993 3847 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+2149 3780 m
+gs 1 -1 sc (filter object) col0 sh gr
+% Polyline
+n 2081 3544 m 2993 3544 l 2993 4219 l 2081 4219 l
+ cp gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+2149 4162 m
+gs 1 -1 sc (avgflt) col0 sh gr
+% Polyline
+n 495 6075 m
+ 1406 6075 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+563 6007 m
+gs 1 -1 sc (filter object) col0 sh gr
+% Polyline
+n 495 5771 m 1406 5771 l 1406 6446 l 495 6446 l
+ cp gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+563 6390 m
+gs 1 -1 sc (avgflt) col0 sh gr
+% Polyline
+gs  clippath
+2296 5456 m 2434 5456 l 2434 5411 l 2296 5411 l 2296 5411 l 2386 5434 l 2296 5456 l cp
+eoclip
+n 2081 5434 m
+ 2419 5434 l gs col0 s gr gr
+
+% arrowhead
+n 2296 5456 m 2386 5434 l 2296 5411 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+2296 5118 m 2434 5118 l 2434 5073 l 2296 5073 l 2296 5073 l 2386 5096 l 2296 5118 l cp
+eoclip
+n 2081 5096 m
+ 2419 5096 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 2296 5118 m 2386 5096 l 2296 5073 l  col0 s
+/Times-Roman ff 142.88 scf sf
+2486 5501 m
+gs 1 -1 sc (connection between roots) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+2486 5130 m
+gs 1 -1 sc (filters attached to root) col0 sh gr
+% Polyline
+gs  clippath
+576 427 m 713 427 l 713 382 l 576 382 l 576 382 l 666 405 l 576 427 l cp
+eoclip
+n 90 405 m
+ 698 405 l gs col0 s gr gr
+
+% arrowhead
+n 576 427 m 666 405 l 576 382 l 576 427 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+783 1124 m 672 1205 l 699 1242 l 809 1160 l 809 1160 l 724 1196 l 783 1124 l cp
+eoclip
+n 1339 742 m
+ 698 1215 l gs col0 s gr gr
+
+% arrowhead
+n 783 1124 m 724 1196 l 809 1160 l 783 1124 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+n 698 0 m 2385 0 l 2385 742 l 698 742 l
+ cp gs col0 s gr 
+% Polyline
+n 698 270 m
+ 2385 270 l gs col0 s gr 
+% Polyline
+ [60] 0 sd
+gs  clippath
+2735 359 m 2873 359 l 2873 314 l 2735 314 l 2735 314 l 2825 337 l 2735 359 l cp
+eoclip
+n 2385 337 m
+ 2858 337 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 2735 359 m 2825 337 l 2735 314 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+2295 3421 m 2295 3559 l 2340 3559 l 2340 3421 l 2340 3421 l 2318 3511 l 2295 3421 l cp
+eoclip
+n 2318 3139 m
+ 2318 3544 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 2295 3421 m 2318 3511 l 2340 3421 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+2396 2341 m 2396 2479 l 2441 2479 l 2441 2341 l 2441 2341 l 2419 2431 l 2396 2341 l cp
+eoclip
+n 1811 1620 m 2419 1620 l
+ 2419 2464 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 2396 2341 m 2419 2431 l 2441 2341 l  col0 s
+% Polyline
+n 495 3544 m 1406 3544 l 1406 4219 l 495 4219 l
+ cp gs col0 s gr 
+% Polyline
+n 495 3847 m
+ 1406 3847 l gs col0 s gr 
+% Polyline
+ [60] 0 sd
+gs  clippath
+843 3421 m 843 3559 l 888 3559 l 888 3421 l 888 3421 l 866 3511 l 843 3421 l cp
+eoclip
+n 866 3206 m
+ 866 3544 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 843 3421 m 866 3511 l 888 3421 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+877 4534 m 877 4672 l 922 4672 l 922 4534 l 922 4534 l 900 4624 l 877 4534 l cp
+eoclip
+n 900 4219 m
+ 900 4657 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 877 4534 m 900 4624 l 922 4534 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+877 5648 m 877 5786 l 922 5786 l 922 5648 l 922 5648 l 900 5738 l 877 5648 l cp
+eoclip
+n 900 5332 m
+ 900 5771 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 877 5648 m 900 5738 l 922 5648 l  col0 s
+% Polyline
+gs  clippath
+843 2342 m 843 2479 l 888 2479 l 888 2342 l 888 2342 l 866 2432 l 843 2342 l cp
+eoclip
+n 866 1957 m
+ 866 2464 l gs col0 s gr gr
+
+% arrowhead
+n 843 2342 m 866 2432 l 888 2342 l 843 2342 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3779 1210 m 3913 1240 l 3923 1196 l 3789 1166 l 3789 1166 l 3872 1208 l 3779 1210 l cp
+eoclip
+n 1778 742 m
+ 3904 1215 l gs col0 s gr gr
+
+% arrowhead
+n 3779 1210 m 3872 1208 l 3789 1166 l 3779 1210 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+n 124 2464 m 1811 2464 l 1811 3206 l 124 3206 l
+ cp gs col0 s gr 
+% Polyline
+n 124 2734 m
+ 1811 2734 l gs col0 s gr 
+/Times-Roman ff 142.88 scf sf
+731 202 m
+gs 1 -1 sc (root object) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+731 585 m
+gs 1 -1 sc (/home) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+563 3780 m
+gs 1 -1 sc (filter object) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+563 4162 m
+gs 1 -1 sc (compressflt) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+158 2666 m
+gs 1 -1 sc (root object) col0 sh gr
+/Times-Roman ff 142.88 scf sf
+158 3049 m
+gs 1 -1 sc (/home/john/data/compress) col0 sh gr
+% here ends figure;
+$F2psEnd
+rs
+showpage
+%%Trailer
+%EOF

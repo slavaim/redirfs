@@ -1,0 +1,105 @@
+RedirFS sysfs interface
+-----------------------
+
+/sys/fs/redirfs/filters
+
+	<filter name>/
+	|-- active	rw
+	|-- exclude/
+	|   |-- add	wo
+	|   |-- paths	ro
+	|   `-- remove	wo
+	|-- include/
+	|   |-- add	wo
+	|   |-- paths	ro
+	|   `-- remove	wo
+	|-- priority	ro
+	|-- remall	wo
+	`-- unregister	wo
+
+
+active
+	input
+		0 - deactivate filter
+		1 - activate filter
+	output
+		0 - filter is inactive
+		1 - filter is active
+
+priority
+	output
+		filter's priority number
+
+
+unregister
+	input
+		1 - unregister filter
+
+remall
+	input
+		1 - remove all paths
+
+add
+	input
+		<path> - add include or exclude path
+	
+remove
+	input
+		<id> - remove include or exclude path
+
+paths
+	output
+		<id>:<path> - list of include or exclude paths
+
+
+example for dummyflt
+
+1) load redirfs
+# insmod redirfs.ko
+
+2) load dummyflt
+# insmod dummyflt
+
+3) exclude "/tmp/include/exclude" directory
+# echo -n "/tmp/include/exclude" > /sys/fs/redirfs/filters/dummyflt/exclude/add
+
+4) include "/tmp/include" directory
+# echo -n "/tmp/include" > /sys/fs/redirfs/filters/dummyflt/include/add
+
+5) include "/tmp/include/exclude/fin" file
+# echo -n "/tmp/include/exclude/fin" > /sys/fs/redirfs/filters/dummyflt/include/add
+
+6) exclude "/tmp/include/fex" file
+# echo -n "/tmp/include/fex" > /sys/fs/redirfs/filters/dummyflt/exclude/add
+
+7) show included paths
+# cat /sys/fs/redirfs/filters/dummyflt/include/paths
+# 1:/tmp/include2:/tmp/include/exclude/fin
+
+8) show excluded paths
+# cat /sys/fs/redirfs/filters/dummyflt/exclude/paths
+# 0:/tmp/include/exclude3:/tmp/include/fex
+
+9) remove included "/tmp/include/exclude/fin" file
+# echo -n "2" > /sys/fs/redirfs/filters/dummyflt/include/remove
+
+10) remove excluded "/tmp/include/exclude" direcotry
+# echo -n "0" > /sys/fs/redirfs/filters/dummyflt/exclude/remove
+
+11) show included paths
+# cat /sys/fs/redirfs/filters/dummyflt/include/paths
+# 1:/tmp/include
+
+12) show excluded paths
+# cat /sys/fs/redirfs/filters/dummyflt/exclude/paths
+# 3:/tmp/include/fex
+
+13) remove all paths
+# echo -n "1" > /sys/fs/redirfs/filters/dummyflt/remall
+
+14) unregister filter
+# echo -n "1" > /sys/fs/redirfs/filters/dummyflt/unregister
+
+15) remove dummyflt
+# rmmod dummyflt
+

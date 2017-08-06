@@ -1,0 +1,415 @@
+%!PS-Adobe-2.0 EPSF-2.0
+%%Title: pic_vfs_struct.fig
+%%Creator: fig2dev Version 3.2 Patchlevel 5-alpha5
+%%CreationDate: Fri May 20 13:44:28 2005
+%%For: qwertyn@qmob (Frantisek Hrbata,,,)
+%%BoundingBox: 0 0 377 427
+%Magnification: 1.0000
+%%EndComments
+/$F2psDict 200 dict def
+$F2psDict begin
+$F2psDict /mtrx matrix put
+/col-1 {0 setgray} bind def
+/col0 {0.000 0.000 0.000 srgb} bind def
+/col1 {0.000 0.000 1.000 srgb} bind def
+/col2 {0.000 1.000 0.000 srgb} bind def
+/col3 {0.000 1.000 1.000 srgb} bind def
+/col4 {1.000 0.000 0.000 srgb} bind def
+/col5 {1.000 0.000 1.000 srgb} bind def
+/col6 {1.000 1.000 0.000 srgb} bind def
+/col7 {1.000 1.000 1.000 srgb} bind def
+/col8 {0.000 0.000 0.560 srgb} bind def
+/col9 {0.000 0.000 0.690 srgb} bind def
+/col10 {0.000 0.000 0.820 srgb} bind def
+/col11 {0.530 0.810 1.000 srgb} bind def
+/col12 {0.000 0.560 0.000 srgb} bind def
+/col13 {0.000 0.690 0.000 srgb} bind def
+/col14 {0.000 0.820 0.000 srgb} bind def
+/col15 {0.000 0.560 0.560 srgb} bind def
+/col16 {0.000 0.690 0.690 srgb} bind def
+/col17 {0.000 0.820 0.820 srgb} bind def
+/col18 {0.560 0.000 0.000 srgb} bind def
+/col19 {0.690 0.000 0.000 srgb} bind def
+/col20 {0.820 0.000 0.000 srgb} bind def
+/col21 {0.560 0.000 0.560 srgb} bind def
+/col22 {0.690 0.000 0.690 srgb} bind def
+/col23 {0.820 0.000 0.820 srgb} bind def
+/col24 {0.500 0.190 0.000 srgb} bind def
+/col25 {0.630 0.250 0.000 srgb} bind def
+/col26 {0.750 0.380 0.000 srgb} bind def
+/col27 {1.000 0.500 0.500 srgb} bind def
+/col28 {1.000 0.630 0.630 srgb} bind def
+/col29 {1.000 0.750 0.750 srgb} bind def
+/col30 {1.000 0.880 0.880 srgb} bind def
+/col31 {1.000 0.840 0.000 srgb} bind def
+
+end
+save
+newpath 0 427 moveto 0 0 lineto 377 0 lineto 377 427 lineto closepath clip newpath
+0.8 426.0 translate
+1 -1 scale
+
+/cp {closepath} bind def
+/ef {eofill} bind def
+/gr {grestore} bind def
+/gs {gsave} bind def
+/sa {save} bind def
+/rs {restore} bind def
+/l {lineto} bind def
+/m {moveto} bind def
+/rm {rmoveto} bind def
+/n {newpath} bind def
+/s {stroke} bind def
+/sh {show} bind def
+/slc {setlinecap} bind def
+/slj {setlinejoin} bind def
+/slw {setlinewidth} bind def
+/srgb {setrgbcolor} bind def
+/rot {rotate} bind def
+/sc {scale} bind def
+/sd {setdash} bind def
+/ff {findfont} bind def
+/sf {setfont} bind def
+/scf {scalefont} bind def
+/sw {stringwidth} bind def
+/tr {translate} bind def
+/tnt {dup dup currentrgbcolor
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add srgb}
+  bind def
+/shd {dup dup currentrgbcolor 4 -2 roll mul 4 -2 roll mul
+  4 -2 roll mul srgb} bind def
+/$F2psBegin {$F2psDict begin /$F2psEnteredState save def} def
+/$F2psEnd {$F2psEnteredState restore end} def
+
+$F2psBegin
+10 setmiterlimit
+0 slj 0 slc
+ 0.06299 0.06299 sc
+%
+% Fig objects follow
+%
+% 
+% here starts figure with depth 50
+/Times-Roman ff 158.75 scf sf
+180 325 m
+gs 1 -1 sc (struct fs_struct) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 734 m
+gs 1 -1 sc (struct dentry *root) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 939 m
+gs 1 -1 sc (struct dentry *pwd) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 1143 m
+gs 1 -1 sc (struct dentry *altroot) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 1348 m
+gs 1 -1 sc (struct vfsmount *rootmnt) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 1552 m
+gs 1 -1 sc (struct vfsmount *pwdmnt) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 1757 m
+gs 1 -1 sc (struct vfsmount *altrootmnt) col0 sh gr
+% Polyline
+0 slj
+0 slc
+7.500 slw
+n 0 0 m 2238 0 l 2238 1877 l 0 1877 l
+ cp gs col0 s gr 
+% Polyline
+n 0 541 m
+ 2238 541 l gs col0 s gr 
+% Polyline
+n 0 2382 m 2526 2382 l 2526 3862 l 0 3862 l
+ cp gs col0 s gr 
+% Polyline
+n 0 2924 m
+ 2526 2924 l gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+180 2707 m
+gs 1 -1 sc (struct vfsmount) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 3116 m
+gs 1 -1 sc (struct vfsmount *mnt_parent) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 3321 m
+gs 1 -1 sc (struct dentry *mnt_mountpoint) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 3525 m
+gs 1 -1 sc (struct dentry *mnt_root) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 3730 m
+gs 1 -1 sc (struct super_block *mnt_sb) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 2021 m
+gs 1 -1 sc (struct inode) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 2430 m
+gs 1 -1 sc (struct super_block *i_sb) col0 sh gr
+% Polyline
+n 3248 1697 m 5414 1697 l 5414 2527 l 3248 2527 l
+ cp gs col0 s gr 
+% Polyline
+n 3248 2238 m
+ 5414 2238 l gs col0 s gr 
+% Polyline
+n 3248 5053 m
+ 5594 5053 l gs col0 s gr 
+% Polyline
+n 3248 4512 m 5594 4512 l 5594 5378 l 3248 5378 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+3429 4837 m
+gs 1 -1 sc (struct file_system_type) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 5246 m
+gs 1 -1 sc (struct file_system_type *next) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 6172 m
+gs 1 -1 sc (struct files_struct ) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 6582 m
+gs 1 -1 sc (struct file *fd_array[]) col0 sh gr
+% Polyline
+n 0 5848 m 1805 5848 l 1805 6750 l 0 6750 l
+ cp gs col0 s gr 
+% Polyline
+n 0 6389 m
+ 1805 6389 l gs col0 s gr 
+% Polyline
+gs  clippath
+3119 204 m 3263 204 l 3263 155 l 3119 155 l 3119 155 l 3216 180 l 3119 204 l cp
+eoclip
+n 1480 686 m 2418 686 l 2418 180 l
+ 3248 180 l gs col0 s gr gr
+
+% arrowhead
+n 3119 204 m 3216 180 l 3119 155 l 3119 204 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3119 349 m 3263 349 l 3263 300 l 3119 300 l 3119 300 l 3216 325 l 3119 349 l cp
+eoclip
+n 1480 866 m 2526 866 l 2526 325 l
+ 3248 325 l gs col0 s gr gr
+
+% arrowhead
+n 3119 349 m 3216 325 l 3119 300 l 3119 349 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3119 493 m 3263 493 l 3263 444 l 3119 444 l 3119 444 l 3216 469 l 3119 493 l cp
+eoclip
+n 1660 1083 m 2635 1083 l 2635 469 l
+ 3248 469 l gs col0 s gr gr
+
+% arrowhead
+n 3119 493 m 3216 469 l 3119 444 l 3119 493 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+192 2253 m 192 2397 l 241 2397 l 241 2253 l 241 2253 l 217 2350 l 192 2253 l cp
+eoclip
+n 2093 1697 m 2382 1697 l 2382 1985 l 217 1985 l
+ 217 2382 l gs col0 s gr gr
+
+% arrowhead
+n 192 2253 m 217 2350 l 241 2253 l 192 2253 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+336 2253 m 336 2397 l 385 2397 l 385 2253 l 385 2253 l 361 2350 l 336 2253 l cp
+eoclip
+n 1985 1480 m 2454 1480 l 2454 2094 l 361 2094 l
+ 361 2382 l gs col0 s gr gr
+
+% arrowhead
+n 336 2253 m 361 2350 l 385 2253 l 336 2253 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+480 2253 m 480 2397 l 529 2397 l 529 2253 l 529 2253 l 505 2350 l 480 2253 l cp
+eoclip
+n 1913 1299 m 2562 1299 l 2562 2166 l 505 2166 l
+ 505 2382 l gs col0 s gr gr
+
+% arrowhead
+n 480 2253 m 505 2350 l 529 2253 l 480 2253 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+625 2253 m 625 2397 l 674 2397 l 674 2253 l 674 2253 l 650 2350 l 625 2253 l cp
+eoclip
+n 2165 3068 m 2599 3068 l 2599 2238 l 650 2238 l
+ 650 2382 l gs col0 s gr gr
+
+% arrowhead
+n 625 2253 m 650 2350 l 674 2253 l 625 2253 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3119 602 m 3263 602 l 3263 553 l 3119 553 l 3119 553 l 3216 578 l 3119 602 l cp
+eoclip
+n 2310 3285 m 2707 3285 l 2707 578 l
+ 3248 578 l gs col0 s gr gr
+
+% arrowhead
+n 3119 602 m 3216 578 l 3119 553 l 3119 602 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3119 710 m 3263 710 l 3263 661 l 3119 661 l 3119 661 l 3216 686 l 3119 710 l cp
+eoclip
+n 1841 3465 m 2815 3465 l 2815 686 l
+ 3248 686 l gs col0 s gr gr
+
+% arrowhead
+n 3119 710 m 3216 686 l 3119 661 l 3119 710 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3119 3200 m 3263 3200 l 3263 3151 l 3119 3151 l 3119 3151 l 3216 3176 l 3119 3200 l cp
+eoclip
+n 2129 3682 m 2923 3682 l 2923 3176 l
+ 3248 3176 l gs col0 s gr gr
+
+% arrowhead
+n 3119 3200 m 3216 3176 l 3119 3151 l 3119 3200 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3584 2903 m 3584 3047 l 3633 3047 l 3633 2903 l 3633 2903 l 3609 3000 l 3584 2903 l cp
+eoclip
+n 5089 2346 m 5522 2346 l 5522 2671 l 3609 2671 l
+ 3609 3032 l gs col0 s gr gr
+
+% arrowhead
+n 3584 2903 m 3609 3000 l 3633 2903 l 3584 2903 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+n 3248 3032 m 5775 3032 l 5775 4079 l 3248 4079 l
+ cp gs col0 s gr 
+% Polyline
+n 3248 3574 m
+ 5775 3574 l gs col0 s gr 
+% Polyline
+gs  clippath
+3981 4383 m 3981 4527 l 4030 4527 l 4030 4383 l 4030 4383 l 4006 4480 l 3981 4383 l cp
+eoclip
+n 5630 3934 m 5919 3934 l 5919 4187 l 4006 4187 l
+ 4006 4512 l gs col0 s gr gr
+
+% arrowhead
+n 3981 4383 m 4006 4480 l 4030 4383 l 3981 4383 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+5542 192 m 5399 192 l 5399 241 l 5542 241 l 5542 241 l 5446 217 l 5542 192 l cp
+eoclip
+n 4944 3718 m 5955 3718 l 5955 217 l
+ 5414 217 l gs col0 s gr gr
+
+% arrowhead
+n 5542 192 m 5446 217 l 5542 241 l 5542 192 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+n 3248 541 m
+ 5414 541 l gs col0 s gr 
+% Polyline
+n 3248 0 m 5414 0 l 5414 1227 l 3248 1227 l
+ cp gs col0 s gr 
+% Polyline
+gs  clippath
+4162 1568 m 4162 1712 l 4211 1712 l 4211 1568 l 4211 1568 l 4187 1665 l 4162 1568 l cp
+eoclip
+n 4944 1119 m 5486 1119 l 5486 1480 l 4187 1480 l
+ 4187 1697 l gs col0 s gr gr
+
+% arrowhead
+n 4162 1568 m 4187 1665 l 4211 1568 l 4162 1568 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3837 2903 m 3837 3047 l 3886 3047 l 3886 2903 l 3886 2903 l 3862 3000 l 3837 2903 l cp
+eoclip
+n 5161 866 m 5666 866 l 5666 2779 l 3862 2779 l
+ 3862 3032 l gs col0 s gr gr
+
+% arrowhead
+n 3837 2903 m 3862 3000 l 3886 2903 l 3837 2903 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+5542 408 m 5399 408 l 5399 457 l 5542 457 l 5542 457 l 5446 433 l 5542 408 l cp
+eoclip
+n 5053 686 m 5666 686 l 5666 433 l
+ 5414 433 l gs col0 s gr gr
+
+% arrowhead
+n 5542 408 m 5446 433 l 5542 457 l 5542 408 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+5722 4740 m 5579 4740 l 5579 4789 l 5722 4789 l 5722 4789 l 5626 4765 l 5722 4740 l cp
+eoclip
+n 5450 5198 m 5919 5198 l 5919 4765 l
+ 5594 4765 l gs col0 s gr gr
+
+% arrowhead
+n 5722 4740 m 5626 4765 l 5722 4789 l 5722 4740 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+n 0 4332 m 1985 4332 l 1985 5378 l 0 5378 l
+ cp gs col0 s gr 
+% Polyline
+n 0 4873 m
+ 1985 4873 l gs col0 s gr 
+% Polyline
+gs  clippath
+2153 3990 m 2153 3847 l 2104 3847 l 2104 3990 l 2104 3990 l 2129 3894 l 2153 3990 l cp
+eoclip
+n 1877 5017 m 2129 5017 l
+ 2129 3862 l gs col0 s gr gr
+
+% arrowhead
+n 2153 3990 m 2129 3894 l 2104 3990 l 2153 3990 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+3119 854 m 3263 854 l 3263 805 l 3119 805 l 3119 805 l 3216 830 l 3119 854 l cp
+eoclip
+n 1732 5234 m 2996 5234 l 2996 830 l
+ 3248 830 l gs col0 s gr gr
+
+% arrowhead
+n 3119 854 m 3216 830 l 3119 805 l 3119 854 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+710 5506 m 710 5363 l 661 5363 l 661 5506 l 661 5506 l 686 5410 l 710 5506 l cp
+eoclip
+n 1660 6533 m 2021 6533 l 2021 5667 l 686 5667 l
+ 686 5378 l gs col0 s gr gr
+
+% arrowhead
+n 710 5506 m 686 5410 l 661 5506 l 710 5506 l  cp gs 0.00 setgray ef gr  col0 s
+/Times-Roman ff 158.75 scf sf
+3429 3357 m
+gs 1 -1 sc (struct super_block) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 3790 m
+gs 1 -1 sc (struct dentry *s_root;) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 4007 m
+gs 1 -1 sc (struct file_system_type *s_type) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 325 m
+gs 1 -1 sc (struct dentry) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 722 m
+gs 1 -1 sc (struct dentry *d_parent) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 1155 m
+gs 1 -1 sc (struct inode *d_inode) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+3429 939 m
+gs 1 -1 sc (struct super_block *d_sb) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+180 4656 m
+gs 1 -1 sc (struct file) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+144 5090 m
+gs 1 -1 sc (struct vfsmount f_vfsmnt) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+144 5306 m
+gs 1 -1 sc (struct dentry *f_dentry) col0 sh gr
+% here ends figure;
+$F2psEnd
+rs
+showpage
+%%Trailer
+%EOF

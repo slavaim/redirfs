@@ -1,0 +1,317 @@
+%!PS-Adobe-2.0 EPSF-2.0
+%%Title: /home/qwertyn/school/thesis/eng/pic_vfs_file.fig
+%%Creator: fig2dev Version 3.2 Patchlevel 5-alpha5
+%%CreationDate: Mon May 23 18:30:01 2005
+%%For: qwertyn@qmob (Frantisek Hrbata,,,)
+%%BoundingBox: 0 0 331 418
+%Magnification: 1.0000
+%%EndComments
+/$F2psDict 200 dict def
+$F2psDict begin
+$F2psDict /mtrx matrix put
+/col-1 {0 setgray} bind def
+/col0 {0.000 0.000 0.000 srgb} bind def
+/col1 {0.000 0.000 1.000 srgb} bind def
+/col2 {0.000 1.000 0.000 srgb} bind def
+/col3 {0.000 1.000 1.000 srgb} bind def
+/col4 {1.000 0.000 0.000 srgb} bind def
+/col5 {1.000 0.000 1.000 srgb} bind def
+/col6 {1.000 1.000 0.000 srgb} bind def
+/col7 {1.000 1.000 1.000 srgb} bind def
+/col8 {0.000 0.000 0.560 srgb} bind def
+/col9 {0.000 0.000 0.690 srgb} bind def
+/col10 {0.000 0.000 0.820 srgb} bind def
+/col11 {0.530 0.810 1.000 srgb} bind def
+/col12 {0.000 0.560 0.000 srgb} bind def
+/col13 {0.000 0.690 0.000 srgb} bind def
+/col14 {0.000 0.820 0.000 srgb} bind def
+/col15 {0.000 0.560 0.560 srgb} bind def
+/col16 {0.000 0.690 0.690 srgb} bind def
+/col17 {0.000 0.820 0.820 srgb} bind def
+/col18 {0.560 0.000 0.000 srgb} bind def
+/col19 {0.690 0.000 0.000 srgb} bind def
+/col20 {0.820 0.000 0.000 srgb} bind def
+/col21 {0.560 0.000 0.560 srgb} bind def
+/col22 {0.690 0.000 0.690 srgb} bind def
+/col23 {0.820 0.000 0.820 srgb} bind def
+/col24 {0.500 0.190 0.000 srgb} bind def
+/col25 {0.630 0.250 0.000 srgb} bind def
+/col26 {0.750 0.380 0.000 srgb} bind def
+/col27 {1.000 0.500 0.500 srgb} bind def
+/col28 {1.000 0.630 0.630 srgb} bind def
+/col29 {1.000 0.750 0.750 srgb} bind def
+/col30 {1.000 0.880 0.880 srgb} bind def
+/col31 {1.000 0.840 0.000 srgb} bind def
+
+end
+save
+newpath 0 418 moveto 0 0 lineto 331 0 lineto 331 418 lineto closepath clip newpath
+0.8 416.8 translate
+1 -1 scale
+
+/cp {closepath} bind def
+/ef {eofill} bind def
+/gr {grestore} bind def
+/gs {gsave} bind def
+/sa {save} bind def
+/rs {restore} bind def
+/l {lineto} bind def
+/m {moveto} bind def
+/rm {rmoveto} bind def
+/n {newpath} bind def
+/s {stroke} bind def
+/sh {show} bind def
+/slc {setlinecap} bind def
+/slj {setlinejoin} bind def
+/slw {setlinewidth} bind def
+/srgb {setrgbcolor} bind def
+/rot {rotate} bind def
+/sc {scale} bind def
+/sd {setdash} bind def
+/ff {findfont} bind def
+/sf {setfont} bind def
+/scf {scalefont} bind def
+/sw {stringwidth} bind def
+/tr {translate} bind def
+/tnt {dup dup currentrgbcolor
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add
+  4 -2 roll dup 1 exch sub 3 -1 roll mul add srgb}
+  bind def
+/shd {dup dup currentrgbcolor 4 -2 roll mul 4 -2 roll mul
+  4 -2 roll mul srgb} bind def
+/$F2psBegin {$F2psDict begin /$F2psEnteredState save def} def
+/$F2psEnd {$F2psEnteredState restore end} def
+
+$F2psBegin
+10 setmiterlimit
+0 slj 0 slc
+ 0.06299 0.06299 sc
+%
+% Fig objects follow
+%
+% 
+% here starts figure with depth 50
+% Polyline
+0 slj
+0 slc
+7.500 slw
+n 0 0 m 1689 0 l 1689 345 l 0 345 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+77 230 m
+gs 1 -1 sc (user space process 1) col0 sh gr
+% Polyline
+n 1766 0 m 3454 0 l 3454 345 l 1766 345 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+1842 230 m
+gs 1 -1 sc (user space process 2) col0 sh gr
+% Polyline
+n 3531 0 m 5220 0 l 5220 345 l 3531 345 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+3608 230 m
+gs 1 -1 sc (user space process 3) col0 sh gr
+% Polyline
+n 2226 1151 m 3071 1151 l 3071 1497 l 2226 1497 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+2303 1382 m
+gs 1 -1 sc (file object) col0 sh gr
+% Polyline
+n 384 1190 m 1228 1190 l 1228 1535 l 384 1535 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+461 1433 m
+gs 1 -1 sc (file object) col0 sh gr
+% Polyline
+n 4030 1151 m 4875 1151 l 4875 1497 l 4030 1497 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+4107 1407 m
+gs 1 -1 sc (file object) col0 sh gr
+% Polyline
+n 2917 2533 m 4069 2533 l 4069 2879 l 2917 2879 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+2994 2763 m
+gs 1 -1 sc (dentry object) col0 sh gr
+% Polyline
+n 1036 2572 m 2188 2572 l 2188 2917 l 1036 2917 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+1113 2802 m
+gs 1 -1 sc (dentry object) col0 sh gr
+% Polyline
+n 345 2303 m 4836 2303 l 4836 3147 l 345 3147 l
+ cp gs col0 s gr 
+% Polyline
+n 3224 3838 m 3838 3838 l 3838 4260 l 3224 4260 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+3339 4107 m
+gs 1 -1 sc (inode) col0 sh gr
+% Polyline
+n 1267 3800 m 1881 3800 l 1881 4222 l 1267 4222 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+1382 4068 m
+gs 1 -1 sc (inode) col0 sh gr
+% Polyline
+n 1919 4836 m 3224 4836 l 3224 5450 l 1919 5450 l
+ cp gs col0 s gr 
+/Times-Roman ff 158.75 scf sf
+2265 5182 m
+gs 1 -1 sc (harddisk) col0 sh gr
+% Polyline
+gs  clippath
+780 1054 m 780 1205 l 831 1205 l 831 1054 l 831 1054 l 806 1157 l 780 1054 l cp
+eoclip
+n 806 345 m
+ 806 1190 l gs col0 s gr gr
+
+% arrowhead
+n 780 1054 m 806 1157 l 831 1054 l  col0 s
+% Polyline
+gs  clippath
+2584 1054 m 2584 1205 l 2635 1205 l 2635 1054 l 2635 1054 l 2610 1157 l 2584 1054 l cp
+eoclip
+n 2610 345 m
+ 2610 1190 l gs col0 s gr gr
+
+% arrowhead
+n 2584 1054 m 2610 1157 l 2635 1054 l  col0 s
+% Polyline
+gs  clippath
+4388 1015 m 4388 1166 l 4439 1166 l 4439 1015 l 4439 1015 l 4414 1118 l 4388 1015 l cp
+eoclip
+n 4414 345 m
+ 4414 1151 l gs col0 s gr gr
+
+% arrowhead
+n 4388 1015 m 4414 1118 l 4439 1015 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+1400 2473 m 1484 2598 l 1526 2570 l 1443 2444 l 1443 2444 l 1479 2544 l 1400 2473 l cp
+eoclip
+n 806 1535 m
+ 1497 2572 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 1400 2473 m 1479 2544 l 1443 2444 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+1723 2455 m 1621 2565 l 1658 2600 l 1761 2490 l 1761 2490 l 1673 2548 l 1723 2455 l cp
+eoclip
+n 2648 1497 m
+ 1650 2572 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 1723 2455 m 1673 2548 l 1761 2490 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+3455 2419 m 3349 2525 l 3385 2561 l 3491 2455 l 3491 2455 l 3401 2510 l 3455 2419 l cp
+eoclip
+n 4414 1497 m
+ 3378 2533 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 3455 2419 m 3401 2510 l 3491 2455 l  col0 s
+% Polyline
+ [15 45] 45 sd
+gs  clippath
+1548 3664 m 1548 3815 l 1599 3815 l 1599 3664 l 1599 3664 l 1574 3767 l 1548 3664 l cp
+eoclip
+n 1574 2917 m
+ 1574 3800 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 1548 3664 m 1574 3767 l 1599 3664 l  col0 s
+% Polyline
+ [15 45] 45 sd
+gs  clippath
+3467 3702 m 3467 3853 l 3518 3853 l 3518 3702 l 3518 3702 l 3493 3805 l 3467 3702 l cp
+eoclip
+n 3493 2879 m
+ 3493 3838 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 3467 3702 m 3493 3805 l 3518 3702 l  col0 s
+% Polyline
+gs  clippath
+2257 4774 m 2376 4865 l 2407 4824 l 2288 4733 l 2288 4733 l 2354 4816 l 2257 4774 l cp
+1696 4283 m 1577 4192 l 1546 4233 l 1665 4324 l 1665 4324 l 1600 4242 l 1696 4283 l cp
+eoclip
+n 1574 4222 m
+ 2380 4836 l gs col0 s gr gr
+
+% arrowhead
+n 1696 4283 m 1600 4242 l 1665 4324 l 1696 4283 l  cp gs 0.00 setgray ef gr  col0 s
+% arrowhead
+n 2257 4774 m 2354 4816 l 2288 4733 l 2257 4774 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+2819 4736 m 2697 4823 l 2727 4865 l 2849 4778 l 2849 4778 l 2751 4817 l 2819 4736 l cp
+3436 4359 m 3558 4272 l 3528 4230 l 3406 4317 l 3406 4317 l 3505 4279 l 3436 4359 l cp
+eoclip
+n 3531 4260 m
+ 2725 4836 l gs col0 s gr gr
+
+% arrowhead
+n 3436 4359 m 3505 4279 l 3406 4317 l 3436 4359 l  cp gs 0.00 setgray ef gr  col0 s
+% arrowhead
+n 2819 4736 m 2751 4817 l 2849 4778 l 2819 4736 l  cp gs 0.00 setgray ef gr  col0 s
+% Polyline
+gs  clippath
+1054 5782 m 1205 5782 l 1205 5731 l 1054 5731 l 1054 5731 l 1157 5757 l 1054 5782 l cp
+eoclip
+n 384 5757 m
+ 1190 5757 l gs col0 s gr gr
+
+% arrowhead
+n 1054 5782 m 1157 5757 l 1054 5731 l  col0 s
+% Polyline
+ [60] 0 sd
+gs  clippath
+1054 6166 m 1205 6166 l 1205 6115 l 1054 6115 l 1054 6115 l 1157 6141 l 1054 6166 l cp
+eoclip
+n 384 6141 m
+ 1190 6141 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 1054 6166 m 1157 6141 l 1054 6115 l  col0 s
+% Polyline
+ [15 45] 45 sd
+gs  clippath
+1015 6550 m 1166 6550 l 1166 6499 l 1015 6499 l 1015 6499 l 1118 6525 l 1015 6550 l cp
+eoclip
+n 384 6525 m
+ 1151 6525 l gs col0 s gr gr
+ [] 0 sd
+% arrowhead
+n 1015 6550 m 1118 6525 l 1015 6499 l  col0 s
+/Times-Roman ff 158.75 scf sf
+422 2533 m
+gs 1 -1 sc (dentry) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+422 2751 m
+gs 1 -1 sc (cache) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+1267 5834 m
+gs 1 -1 sc (fd) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+1228 6218 m
+gs 1 -1 sc (f_dentry) col0 sh gr
+/Times-Roman ff 158.75 scf sf
+1190 6602 m
+gs 1 -1 sc (d_inode) col0 sh gr
+% here ends figure;
+$F2psEnd
+rs
+showpage
+%%Trailer
+%EOF

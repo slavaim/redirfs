@@ -1,0 +1,2 @@
+# RedirFS - Redirecting File System
+THIS PROJECT IS NO LONGER DEVELOPED OR MAINTAINED

@@ -1,0 +1,39 @@
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.TH COMPFLT_CTL 1 "APRIL 2007"
+.SH NAME
+compflt_ctl
+.SH SYNOPSIS
+.B compflt_ctl
+.B [
+.I <param>
+.B [
+.I value
+.B ] ]
+.SH DESCRIPTION
+.B compflt_ctl
+is a command-line utility for querying and setting tuneable compflt settings. If no
+.I param
+is selected, it prints all known parameters, otherwise only the selected one. if
+.I value
+is set, the parameter is first set to
+.I value
+before printing its value.
+.SH OPTIONS
+.TP
+.I param
+is one of the following:
+.RS
+.TP
+.B method
+compression method,
+.I value
+can be: deflate, lzf, bzip2, rle, null.
+.TP
+.B bsize
+block size,
+.I value
+has to be between 512 and 32768 and divisible by 512 without remainder.
+.SH AUTHOR
+Jan Podrouzek <xpodro01@stud.fit.vutbr.cz>

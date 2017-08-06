@@ -1,0 +1,108 @@
+Anti-Virus Filter (avflt)
+=========================
+
+Avflt is RedirFS based filter allowing to catch events needed for the on-access
+scanning. It goes hand in hand with the user-space libav.a library which
+provides simple interface for the anti-virus program. So the whole on-access
+scanning process is composed of three parts: kernel module called avflt,
+user-space library called libav.a and finally user-space anti-virus program.
+
+The libav.a library is thread safe and can be used in multi-thread or
+multi-process environment or in combination of both. It does not manage
+registered processes. This means that several different application can use this
+library(e.g. several anti-virus programs), but one request will be delivered
+only to one of the registered processes. So if you want to use more anti-virus
+programs to scan one file you will need to write some manager(dispatcher) based
+on libav.a to take care about this.
+
+The library interface is pretty simple as you can see below. There are two
+structures involved. The av_con structure is used for communication with the
+avflt char device and the av_req structure contains all information about one
+request. As you can see the av_get_fn function which is used to get full
+filename of accessed file is using the av_con structure. This means that the
+filename is not by default included in the av_req structure. This function is
+slow and you should use it only if you really need to know the filename(e.g.
+report about infected file). The av_get_fd function should be used instead to
+get file descriptor and do scanning directly on this file descriptor. You can
+still get filename and open the file by yourself in your application but it will
+be much slower. The meaning of the rest of functions is pretty clear. For
+inspiration how to use this interface check out the av_test.c file. Note: You do
+not access any structure members directly but use interface functions only.
+
+int av_register(struct av_con *avc);
+int av_unregister(struct av_con *avc);
+int av_request(struct av_con *avc, struct av_req *avr);
+int av_reply(struct av_con *avc, struct av_req *avr);
+int av_include(const char *path);
+int av_exclude(const char *path);
+int av_event_on(int event);
+int av_event_off(int event);
+int av_set_access(struct av_req *avr, int ava);
+int av_get_fd(struct av_req *avr, int *fd);
+int av_get_fn(struct av_con *avc, struct av_req *avr, const char **fn);
+int av_get_event(struct av_req *avr, int *event);
+
+The avflt and libav.a uses the avflt_ucheck structure for communication between
+kernel-space and user-space. The avflt does some basic tests(version and magic
+number check) to be sure that it is dealing with the libav.a library.
+
+Avflt uses only two redirected functions from the RedirFS. The open and close
+file operation. With the open function avflt is able to catch open and exec
+events but it is not able to distinguish them. The idea is to keep it fast and
+simple. If avflt should be able to distinguish the exec event it will need to
+redirect also the permission operation. However in this function it is not
+possible to get file object and it means that avflt is not able to open the file
+directly in kernel-space and provide the file descriptor to the user-space
+application. Anyway the event type is good only for some logging. Avflt is
+trying to minimize communication with the user-space. I uses cache based on the
+RedirFS ability to attach private data to the VFS object(in this case just to
+inode object). For each file that was scanned the result is attached to the
+inode and checked next time the inode is accessed. Unfortunately there are cases
+where the cache can not be used. Specially when the file is modified. Avflt is
+using the inode i_writecount member to figure out if somebody is writing to the
+file or not. So as you can see there is no need to redirect any write functions.
+This can also handle the file memory mappings.
+
+Here follows the cache usage diagram:
+
+
+        open/close operation
+                  |
+                  V
+          opened for writing
+           |              \
+           no             yes
+           |                \
+           |                 V
+           |              only one process is writing
+           |                  |               |
+           |                 yes              no
+           |                  |               |
+           |                  V               |
+           |       current process & open     |
+           |           |         |            |
+           |          yes        no           |
+           |          /          |            |
+           |         /           |            |
+           V        V            |            |
+           file empty            |            |
+           |        |            |           /
+          yes       no           |          /
+           |        |            |         /
+           |        V            |        /
+           |     result cached   |       /
+           |     |           |   |      / 
+           |    yes          no  |     /
+           |     |           |   |    /
+           |     |           V   V   V
+           |     |           scan file                    
+           |     |              /
+           |     |             V
+           |     |    cache result
+           |     |      /
+           |     |     /       
+            \    |    /
+             V   V   V
+              return
+
+

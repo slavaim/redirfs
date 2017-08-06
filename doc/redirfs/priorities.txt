@@ -1,0 +1,54 @@
+Filter groups and priorities
+----------------------------
+
+-2147483648 - 499999999  : reserved
+
+  500000000 - 999999999  : transparent
+
+	500000000 - 599999999  : reserved 
+
+		500000000 : dummyflt
+
+	600000000 - 699999999  : control 
+
+		unionflt
+
+		roflt
+
+	700000000 - 799999999  : reserved
+
+	800000000 - 899999999  : security
+					 						
+		850000000 : avflt
+		860000000 : dazukoflt
+
+	900000000 - 999999999  : data protection
+
+		undelflt
+
+		repliflt
+
+		cdpflt
+						 
+ 	1000000000 - 1099999999 : reserved
+
+ 1100000000 - 1599999999 : reserved
+
+ 1600000000 - 2099999999 : non-transparent
+
+ 	1600000000 - 1699999999 : reserved 
+
+	1700000000 - 1799999999 : compression
+
+		compressflt
+
+	1800000000 - 1899999999 : reserved
+
+	1900000000 - 1999999999 : encryption
+
+		encryptflt
+
+	2000000000 - 2099999999 : reserved
+
+ 2100000000 - 2147483647 : reserved
+

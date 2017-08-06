@@ -1,0 +1,31 @@
+		=========================
+		AVFlt - Anti-Virus Filter
+			  README
+		=========================
+
+This software is distributed under the GNU General Public License Version 3.
+
+1. Introduction
+
+	AVFlt or Anti-Virus Filter is a filter for the RedirFS Framework. It is
+	intended for so-called on-access scanning, which means that files are 
+	checked for malicious content on-the-fly before open and after close.
+	AVFlt uses in kernel cache and it makes sure than only changed files are
+	checked. It comes hand in hand with the libav library which should be
+	used by Anti-Virus scanners.
+
+	For an overview of the RedirFS project, visit 
+
+		http://www.redirfs.org
+
+2. Installation
+
+	See the INSTALL file.
+
+3. Documentation
+
+	http://www.redirfs.org/tiki-index.php?page=redirfs_doc
+
+4. Problems & Bugs
+	
+	http://www.redirfs.org/cgi-bin/bugzilla/index.cgi

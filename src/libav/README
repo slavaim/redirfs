@@ -1,0 +1,30 @@
+		==========================
+		libav - Anti-Virus Library
+		         README
+		==========================
+
+This software is distributed under the Boost Software License, Version 1.0.
+
+1. Introduction
+
+	Anti-Virus Library provides userspace interface for AVFlt. It
+	communicates with AVFlt through the avflt char device. This library
+	allows only to receive requests for file scan from AVFlt and send
+	scan results back to AVFlt. For AVFlt settings, like which paths should
+	be scanned, the libavfltctl library has to be used. 
+	
+	For an overview of the RedirFS project, visit 
+
+		http://www.redirfs.org
+
+2. Installation
+
+	See the INSTALL file.
+
+3. Documentation
+
+	http://www.redirfs.org/tiki-index.php?page=redirfs_doc
+
+4. Problems & Bugs
+	
+	http://www.redirfs.org/cgi-bin/bugzilla/index.cgi

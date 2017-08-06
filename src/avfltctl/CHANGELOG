@@ -1,0 +1,6 @@
+version 0.2
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- show registered and trusted tgids
+
+version 0.1
+	* initial release

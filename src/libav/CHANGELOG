@@ -1,0 +1,11 @@
+version 0.2.0 2010-04-09
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- added av_set_cache function allowing to enable(default) or disable
+	  result caching per file
+
+version 0.1.0
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- added av_register_trusted and av_unregister_trusted
+	
+version 0.0.0
+	* initial release

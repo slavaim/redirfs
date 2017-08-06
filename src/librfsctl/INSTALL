@@ -1,0 +1,42 @@
+			======================================
+				 Installing librfsctl
+			======================================
+
+1. Requirements
+	
+	* Compiled RedirFS Framework, please see the RedirFS's INSTALL file
+
+2. Download
+	
+	* Get the latest stable version at
+	  http://www.redirfs.org/packages/librfsctl-x.y.z.tar.gz
+
+3. Compilation
+	
+	* Unpack package
+		$ tar -xvzf librfsctl-x.y.z.tar.gz
+
+	* Change to the librfsctl-x.y.z directory
+		$ cd librfsctl-x.y.z
+
+	* Run make command
+		$ make
+
+4. Installation/Uninstallation
+
+	* Change user to root
+		$ su
+
+	* Install librfsctl 
+		# make install
+
+	* Uninstall librfsctl
+		# make uninstall
+
+5. Problems & Bugs
+
+	* RedirFS's bugzilla
+	  http://www.redirfs.org/cgi-bin/bugzilla/index.cgi
+	
+	* RedirFS's mailing lists
+	  http://www.redirfs.org/tiki-index.php?page=redirfs_maillists

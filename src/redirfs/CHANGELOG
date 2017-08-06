@@ -1,0 +1,154 @@
+version 0.11 experimental 2011-09-05
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- added pre_rename and post_rename callback to redirfs_filter_operations
+		- this can be used by filter to be notified about files moved
+		  inside a filter's path within one file system
+	- support for 2.6.38+ kernels
+	- redirfs_get_filename is now just a simple wrapper around d_path and it
+	  returns a filename just for the first mount point.
+
+version 0.10 2010-05-20
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- reflected changes in 2.6.34 kernel
+		- include of <linux/slab.h>
+		- removeved unnecessary checks in rfs_setattr_default
+
+version 0.9 2010-04-06
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- fixed RHEL 5.4 address_space_operations_ext hang by removing
+	  address_space_operations support 
+	  thanks to Vasiliy Novikov <vasiliy.novikov@gmail.com>
+	- removed rfs_dcache_rdentry_add_check since it causes too many problems
+	  when dentry operations were assigned from the root dentry
+	  thanks to Vasiliy Novikov <vasiliy.novikov@gmail.com>
+
+version 0.8
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- fixed rfs dentry addition for isofs
+	  thanks to Vasiliy Novikov <vasiliy.novikov@gmail.com>
+	- support for kernels >= 2.6.12
+	  thanks to Vasiliy Novikov <vasiliy.novikov@gmail.com>
+	- reflected changes in the follow_up function interface in 2.6.31
+	- fixed filter reference counter, kref_get() warning on zero counter 
+	
+version 0.7
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- used dget_locked instead of direct increase of d_count
+          it allows redirfs to run at kernel with openvz patches
+	- added callbacks
+		REDIRFS_DIR_IOP_UNLINK
+		REDIRFS_DIR_IOP_RMDIR
+		REDIRFS_REG_IOP_SETATTR
+		REDIRFS_DIR_IOP_SETATTR
+		REDIRFS_LNK_IOP_SETATTR
+		REDIRFS_CHR_IOP_SETATTR
+		REDIRFS_BLK_IOP_SETATTR
+		REDIRFS_FIFO_IOP_SETATTR
+		REDIRFS_SOCK_IOP_SETATTR
+		REDIRFS_NONE_DOP_D_REVALIDATE
+		REDIRFS_REG_DOP_D_REVALIDATE
+		REDIRFS_DIR_DOP_D_REVALIDATE
+		REDIRFS_CHR_DOP_D_REVALIDATE
+		REDIRFS_BLK_DOP_D_REVALIDATE
+		REDIRFS_FIFO_DOP_D_REVALIDATE
+		REDIRFS_LNK_DOP_D_REVALIDATE
+		REDIRFS_SOCK_DOP_D_REVALIDATE
+	- added might_sleep() macro into functions which can sleep
+	- fixed locking in redirfs_get_path_id()
+	- removed GFP_ATOMIC allocations where possible and added GFP_KERNEL
+	  allocation fallbacks otherwise, BUG 14
+	- better filter handle check in redirfs API, added IS_ERR check
+	- fixed bind mount paths - two paths one root
+	- added support for older kernels >= 2.6.16, thanks to Sergey Ivanov
+	- fixed open with the O_DIRECTORY flag for non directory file types,
+	  thanks to Sergey Ivanov
+	- cifs is not supported
+	  the -EPERM error is returned when path is to be added within cifs
+
+version 0.6
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- fixed bug 13 - oops BUG at rfs_inode.c:306!
+
+version 0.5
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- fixed NULL pointer dereference in rfs_fsrename_set
+
+version 0.4
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- added support for private data - file, dentry, inode, redirfs root
+	- introduced redirfs_root handle representing redirfs root object
+	- simplified sysfs interface
+	- small changes in the redirfs interface (not compatible with previous
+	  versions)
+	- redirfs_ctl control callbacks replaced with generic
+	  redirfs_filter_operations table
+	- fixed rinfo memory leak
+
+version 0.3
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- reflected changes in the permission function interface
+	- fixed rdentry NULL dereference in rfs_fsrename
+	- rfs_lookup adds only dirs while there are no registered filters
+
+version 0.3-pre4
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- reworked global rename handling
+	- makefile cleanup
+
+	* John Ogness <redirfs@ogness.net> 
+	- fixed wrong reference usage in rfs_path_get
+
+version 0.3-pre3
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- removed usage of RCU due to CONFIG_PREEMPT_RCU
+	- redirfs is now a permanent module which cannot be unloaded
+	- fixed dead lock in rfs_dcache_walk and rfs_fsrename
+	- redirect readdir instead of d_compare to check newly added vfs objects(NFS)
+	- fixed removing of path attached to the file system root
+	- cleanup of the redirfs_get_filename function
+	- fixed full path name for the file system root
+	- added check if filter is active in post calls
+	- correct destruction of inode objects in the rfs_d_iput function
+	- rinode objects are removed in the rfs_d_iput function
+	- rdentry objects are removed in the rfs_d_release function
+	- fixed NULL pointer dereferences in the rfs_fsrename functions
+
+version 0.3-pre2
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- fixed removing of rfs_file objects
+	- added support for file systems which are adding dentry/inode objects
+	  during readdir (e.g. NFS)
+
+version 0.3-pre1
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- rewritten from scratch
+	- new path management
+	- new sysfs interface
+	- new redirfs framework interface
+	- supports kernel version 2.6.25 and higher
+	- not all features introduced in the 0.2 version implemented yet
+		- missing support for filter's private data
+		- missing support for address space operations
+		- limited set of redirected operations
+
+version 0.2.1
+	* never released, experimental support for sub-mounts
+
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- fixed bug 09: crash on rdentry_set_ops when changing path
+	- fixed bug 10: include subtree after include single path causes crash
+	- fixed bug 11: added rename support
+	- added support for sub-mounts and sub-unmounts
+	- added support for rename
+	- changed rfs_get_filename interface, now it requires vfsmount object
+
+	* Paolo Ambrosio <paolo.ambrosio@gmail.com>
+	- fixed typo RFS_REG_AOP_COMMINT_WRITE => RFS_REG_AOP_COMMIT_WRITE
+	- fixed bug 12: added mmap callback
+
+version 0.2
+	* rewritten from scratch
+
+version 0.1
+	* first stable version with limited functionality
+

@@ -1,0 +1,34 @@
+\chapter{AVG Anti-Virus Filter}
+The AVG Anti-Virus Filter or avgflt uses the RedirFS Framework for on-access scanning. It is
+based on dummyflt which has been introduced in chapter \ref{lab:dummy}. The whole
+on-access scanning consists of three parts -- avgflt kernel module registered to the
+Redirfs Framework, user space script Avghelper which ask the AVG Anti--Virus daemon to
+check the accessed file and the AVG Anti--Virus daemon.
+
+\section{Avgflt}
+Avgflt registers in the Redirfs Framework pre permission callback function. This function is
+called before a process opens or executes a file in specified directory subtree. Avgflt
+interact with Avghelper through \texttt{call\_usermodehelper()} function, defined in
+\texttt{kernel/kmod.c}. This function allows to call userspace program within Linux
+kernel. It takes four arguments. Path for the application, null-terminated argument
+list, null-terminated environment list and wait flag. Wait flag specifies if the
+kernel should wait for the application to finish and return status or to continue.
+Avgflt waits until the Avghelper returns and then allows or disallows access to the
+file.
+
+Avgflt module takes two arguments which have to be specified when the module is
+inserted to the Linux kernel through \texttt{insmod} or \texttt{modprobe} command.
+First \texttt{omit\_pid} argument specifies pid of process which will be omitted from
+controlling. In this case it is pid of AVG daemon process. Second \texttt{cmd\_path}
+specifies path to the application in user space which will be called by Avgflt. In this
+case it is the Avghelper script.
+
+\section{Userspace script -- Avghelper}
+Avghelper receives from Avgflt full path to the file which should be scanned. It
+contacts the AVG daemon and waits for the scanning result. If the scanned file is not infected
+it returns back to the Avgflt positive value, otherwise zero or negative value is
+returned.
+
+\section{AVG Anti--Virus Daemon}
+The AVG Anti--Virus Daemon by default listens at localhost on port 55555. It provides
+TCP/IP socket interface to the AVG scanning kernel.

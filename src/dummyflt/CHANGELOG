@@ -1,0 +1,35 @@
+version 0.5 2011-09-05
+        * Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- added missing <linux/slab.h> include
+
+version 0.4
+        * Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- support for kernels >= 2.6.12
+
+version 0.3
+        * Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- adapted for RedirFS 0.4 interface
+
+version 0.2
+        * Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- added INSTALL and README file
+	- permission registered only for kernels < 2.6.27
+	- simple Makefile
+
+version 0.2-pre3
+        * Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- added lookup function
+	- added GPLv3 license terms
+	- added redirfs_set_path example
+	- priority set to 500000000
+
+version 0.2-pre2
+        * Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- proper unregistration after error in the init module function
+
+version 0.2-pre1
+        * Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- adapted for RedirFS 0.3 interface
+
+version 0.1
+	* initial release

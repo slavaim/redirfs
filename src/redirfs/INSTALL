@@ -1,0 +1,48 @@
+			======================================
+				 Installing RedirFS
+			======================================
+
+1. Requirements
+	
+	* Running Linux kernel version 2.6.16 and higher
+	* Source code and configuration for running Linux kernel
+	  - at least make scripts and make prepare
+	* Linux kernel compiled with modules support
+
+2. Download
+	
+	* Get the latest stable version at
+	  http://www.redirfs.org/packages/redirfs-x.y.tar.gz
+
+3. Compilation
+	
+	* Unpack package
+		$ tar -xvzf redirfs-x.y.tar.gz
+
+	* Change to the redirfs-x.y directory
+		$ cd redirfs-x.y
+
+	* Run make command
+		$ make -C /lib/modules/`uname -r`/build M=`pwd` modules
+
+4. Inserting module
+
+	* Change user to root
+		$ su
+
+	* Install module
+		# make -C /lib/modules/`uname -r`/build M=`pwd` modules_install
+
+	* Update module dependencies
+		# depmod -a
+
+	* Load redirfs.ko module
+		# modprobe redirfs
+
+5. Problems & Bugs
+
+	* RedirFS's bugzilla
+	  http://www.redirfs.org/cgi-bin/bugzilla/index.cgi
+	
+	* RedirFS's mailing lists
+	  http://www.redirfs.org/tiki-index.php?page=redirfs_maillists

@@ -1,0 +1,43 @@
+			======================================
+				 Installing libavfltctl
+			======================================
+
+1. Requirements
+	
+	* Installed RedirFS Control Library - librfsctl, please see the
+	  librfsctl INSTALL file
+
+2. Download
+	
+	* Get the latest stable version at
+	  http://www.redirfs.org/packages/libavfltctl-x.y.z.tar.gz
+
+3. Compilation
+	
+	* Unpack package
+		$ tar -xvzf libavfltctl-x.y.z.tar.gz
+
+	* Change to the libavfltctl-x.y.z directory
+		$ cd libavfltctl-x.y.z
+
+	* Run make command
+		$ make
+
+4. Installation/Uninstallation
+
+	* Change user to root
+		$ su
+
+	* Install libavfltctl 
+		# make install
+
+	* Uninstall libavfltctl
+		# make uninstall
+
+5. Problems & Bugs
+
+	* RedirFS's bugzilla
+	  http://www.redirfs.org/cgi-bin/bugzilla/index.cgi
+	
+	* RedirFS's mailing lists
+	  http://www.redirfs.org/tiki-index.php?page=redirfs_maillists

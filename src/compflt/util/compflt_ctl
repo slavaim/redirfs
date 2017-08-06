@@ -1,0 +1,41 @@
+#!/bin/sh
+
+root_dir=/sys/fs/redirfs/filters/compflt/settings
+method_f=method
+bsize_f=blksize
+
+function usage
+{
+        echo "usage: compflt_ctl [<cmd> [value]]"
+        echo -e "\n<cmd> is one of the following:"
+        echo -e "\tmethod\tcompression method"
+        echo -e "\tbsize\tblock size"
+        echo -e "\nsee man page for details."
+}
+
+if [ $# -eq 0 ]; then
+        echo -n "method="
+        cat ${root_dir}/${method_f}
+        echo -n "bzize="
+        cat ${root_dir}/${bsize_f}
+        exit
+fi
+
+case $1 in
+        method)
+        ctl_file="${root_dir}/${method_f}"
+        ;;
+        bsize)
+        ctl_file="${root_dir}/${bsize_f}"
+        ;;
+        *)
+        usage
+        exit
+        ;;
+esac
+
+if [ $# -gt 1 ]; then
+        echo -n "${2}" > ${ctl_file}
+fi
+echo -n "${1}="
+cat ${ctl_file}

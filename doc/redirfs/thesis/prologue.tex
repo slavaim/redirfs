@@ -1,0 +1,60 @@
+\chapter{Prologue}
+Filesystem access control is an important part of operating system security. The Linux
+kernel provides default filesystem access control based on rights (read, write,
+execute) which are divided for owner, group and others. In some cases this is not
+enough and access control needs to be extended. As an example, we can consider
+on--access scanning by an antivirus application. The antivirus application needs to
+be notified when other processes are trying to open, execute or close some files. This
+is not possible with the standard filesystem access control mechanism. Another example
+can be problems with root's rights. By default there are no limitations for root. In
+some cases it is desirable to limit the root's rights. For example when a process
+need to be executed with root privileges. This is also not possible with the standard
+Linux access control mechanism. Several projects like RSBAC, Medusa or LSM provide
+enhanced access control frameworks for Linux kernels.
+This thesis focuses on filesystem access control, describes the existing methods
+of filesystem access control, and points out their problems and limitations. Further
+it describes in detail the Linux implementation of the Virtual Filesystem Switch (VFS)
+and introduces a new Redirfs framework based on it. Redirfs aims to be  a general
+framework which allows third party modules to be notified about VFS events. Redirfs
+tries to overcome the problems and limitations of existing solutions. This thesis uses
+filesystem access control analysis from semestral project.
+
+\begin{description}
+	\item [Chapter 2]
+		describes in detail the Virtual Filesystem Switch and its
+		implementation in the Linux kernel. It also provides information about
+		all objects which form the VFS, and describes their data fields and
+		operations. Further it focus on VFS objects interaction and
+		interconnection.
+		
+	\item [Chapter 3]
+		presents the Linux Security Module framework which was included in the
+		Linux kernel 2.6. It describes its interface, modules stacking, and
+		points out its flawed design.
+
+	\item [Chapter 4]
+		describes overlay filesystems and the way they are implemented for the
+		Linux kernels. It presents the FiST project which provides an overlay
+		filesystem generator.
+
+	\item [Chapter 5]
+		presents Dazuko which is aimed to be a cross-platform device driver
+		that allows applications to control file access on a system. It
+		describes several ways in which Dazuko interacts with the Linux
+		kernel.
+
+	\item [Chapter 6]
+		introduces the Redirfs framework which creates a new layer between the
+		VFS layer and the native filesystems. It replaces the VFS object's
+		operations and allows third-party modules to be notified about VFS
+		events. It describes its design, architecture, implementation, and
+		interface.
+
+	\item [Chapter 7] 
+		contains sample code of the dummyflt which uses the Redirfs framework.
+
+	\item [Chapter 8] 
+		describes implementation of the avgflt. This is a filter using the
+		Redirfs framework, which communicates with the AVG7 Anti-Virus daemon
+		and provides on-access scanning.
+\end{description}

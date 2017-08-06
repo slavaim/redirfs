@@ -1,0 +1,99 @@
+\chapter{Dazuko}
+\label{lab:dazuko}
+Dazuko aims to be a cross-platform device driver that allows applications to control
+file access on a system. The current release of Dazuko supports Linux 2.2-2.6,
+Linux/RSBAC, and FreeBSD 4/5 kernels. It is mainly used by anti-virus companies for
+on-access scanning. The first version was developed by H+BEDV Datentechnik GmbH (anti-virus
+company from Germany) which was later released as an open source code under BSD and
+GPL licence. Dazuko is now maintained by John Ogness. In the following text
+will be described Dazuko for Linux kernels.
+
+Dazuko consists of the Linux kernel module called dazuko and a user space library called
+dazukoio. Communication between the module and the library is done through
+the \texttt{/dev/dazuko} char device with major number 33. 
+
+\section{Dazuko Interface}
+Dazuko provides a well defined interface which allows user space processes to be
+notified about some filesystem events. Currently Dazuko generates the following
+events: on\_open, on\_close, on\_close\_modified, on\_exec, on\_unlink and on\_rmdir.
+Dazuko provides interface for several programing languages like C, Python, Perl or
+Java. Here will be briefly described the interface for the C language.
+
+All functions return zero on success.
+
+\subsection*{Registration}
+\subsubsection{\texttt{int dazukoRegister(const char* groupName, const char *mode)}}
+Registers an application to the Dazuko module. The argument \texttt{grouName}
+specifies the group
+name to which the application will be added. This is useful when an application runs in
+several instances. Dazuko then delivers event which occurred to the first available
+application in the group. The second parameter \texttt{mode} specifies the mode in
+which the application will interact with Dazuko. There are currently two modes
+available, read-only "r" and read-write "r+". The read-only mode allows an application
+to receive all accesses but does not give the application an opportunity to decide if
+the access should be allowed or not.
+
+\subsection*{Configuration}
+\subsubsection{\texttt{int dazukoSetAccessMask(unsigned long accessMask)}}
+Sets bit mask of events which will be delivered to the application.
+Possibilities are
+\texttt{ON\_OPEN, ON\_CLOSE, ON\_CLOSE\_MODIFIED, ON\_EXEC, ON\_UNLINK} and
+\texttt{ON\_RMDIR}.
+
+\subsubsection{\texttt{int dazukoAddIncludePath(const char *path)}}
+Adds a new directory path (including all subdirectories) for which events will
+be delivered to the applications.
+
+\subsubsection{\texttt{int dazukoAddExcludePath(const char *path)}}
+Removes the directory path.
+
+\subsubsection{\texttt{int dazukoRemoveAllPaths(void)}}
+Removes all guarded paths.
+
+\subsection*{Access Control}
+\subsubsection{\texttt{int dazukoGetAccess(struct dazuko\_access **acc)}}
+This is a blocking function which waits until the event is delivered. The argument \texttt{acc}
+then contains all information about this event.
+
+\subsubsection{\texttt{int dazukoReturnAccess(struct dazuko\_access **acc)}}
+The application which is registered with "r+" mode has to call this function because
+the dazuko module waits for an answer.
+
+\subsection*{Unregistration}
+\subsubsection{\texttt{int dazukoUnregister(void)}}
+Unregisters the application from the dazuko module.
+
+
+\section{Interaction with Linux Kernel}
+
+\subsection{Replacement of Syscall Table}
+For Linux kernels 2.2.x and 2.4.x Dazuko replaces addresses of selected functions in
+the syscall table. The advantage of this approach is that Dazuko doesn't need to modify
+the Linux kernel source code and it is relatively easy to replace functions in the syscall
+table. Generally it is not a good idea to modify the syscall table. It is work
+for a 
+rootkit, not for the security module. Imagine that the Linux kernel will contain some rootkit
+detector. In this case Dazuko will not be able to work. Another problem is that
+the syscall
+functions are to high. This means that Dazuko is not able to catch accesses to the
+filesystems, for example, from NFS kernel daemon. Dazuko has to replace
+\texttt{sys\_open} syscall to be able to generate on\_open event. This means that
+it is called every time the file is opened and it has to check if the file is in some
+directory paths which were selected by applications.
+
+\subsection{LSM Interface}
+For Linux kernels 2.6.x Dazuko uses LSM framework. Is is better than replacing
+the syscall
+table, but maintaining the security module for the LSM is a lot of work. The
+problem is in the LSM's
+approach to modules stacking. The LSM framework also doesn't provide a way to catch
+on\_close events.
+
+\subsection{RSBAC Interface}
+Dazuko uses for the Linux kernels 2.6.x in addition to the LSM framework also
+the RSBAC framework which solves the problem with on\_close events.
+
+\subsection{Overlay Filesystem}
+Currently Dazuko uses three ways to interact with the Linux kernel. Overlay
+filesystem should replace all of them. It is being implemented in these days and
+uses the FiST generator.

@@ -1,0 +1,27 @@
+		================================
+		avtest - Anti-Virus Test Utility
+			     README
+		================================
+
+This software is distributed under the Boost Software License, Version 1.0.
+
+1. Introduction
+
+	Anti-Virus Test Utility is a very simple program using the libav
+	library. It just prints information about accessed files.
+
+	For an overview of the RedirFS project, visit 
+
+		http://www.redirfs.org
+
+2. Installation
+
+	See the INSTALL file.
+
+3. Documentation
+
+	http://www.redirfs.org/tiki-index.php?page=redirfs_doc
+
+4. Problems & Bugs
+	
+	http://www.redirfs.org/cgi-bin/bugzilla/index.cgi

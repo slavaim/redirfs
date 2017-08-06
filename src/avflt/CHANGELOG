@@ -1,0 +1,39 @@
+version 0.6 2010-05-20
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- reflected changes in 2.6.34 kernel
+		- include of <linux/slab.h>
+
+version 0.5 2010-04-09
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- fixed memory leak in avflt_proc_add()
+	  thanks to Robert Minsk <robertminsk@yahoo.com>
+	- proper canceling of pending requests when application is unregistered
+	  form avflt
+	  thanks to Timo Metsala <timo.metsala@f-secure.com>
+	- user-space <==> kernel protocol extended for cache option
+	  0 - do not cache cache event result
+	  1 - cache event result
+	  This is intended to be used by the user-space anti-virus applications
+	  when a file cannot be scanned or when an error occurred during scan.
+	  In this case application can allow or deny access to the file and it
+	  should set the result to not be cached. Next time the file is accessed
+	  it is send again for scan instead of returning result from cache.
+
+version 0.4
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- dentry_open adapted to new 2.6.29 security context - struct cred
+	- added support for "trusted" processes
+	- added sysfs interface for registered and trusted processes
+
+version 0.3
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- better fix of open for files bigger then 2GB
+	  O_LARGEFILE flag is set base on original f_flags
+
+version 0.2
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- fixed open for files bigger then 2GB(MAX_NON_LFS)
+
+version 0.1
+	* initial release
+

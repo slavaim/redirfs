@@ -1,0 +1,80 @@
+\chapter{Epilogue}
+This thesis describes the problems and limitations of the existing solutions for
+filesystem control access. The only solution supported directly by the Linux kernel is
+the LSM framework. It was integrated into the Linux kernel 2.6 and it provides a set
+of callback functions which can be registered by the security modules. The LSM is intended
+as a general framework which provides a way to control access to all Linux kernel
+structures. It does not enhance Linux kernel security by itself. It just provides an
+interface for security modules. The LSM has a big problem with the stacking of security
+modules. Only one security module can be registered directly to the LSM framework.
+Other modules are always registered to the security module which was registered before
+it. If the security module is not able to register other modules then no other module
+can be used. Modules are called in the order in which they were registered. There is
+no way of changing the calling order. With this stacking approach it is also not
+possible to safely remove security modules which have registered other security
+modules.
+
+Another method of filesystem access control is to use the overlay filesystem. The linux
+kernel doesn't provide any special support for overlay filesystems. The whole idea
+behind it is that the linux kernel allows the mounting of a filesystem over another
+already mounted filesystem. The original filesystem is covered by the new one. Overlay
+filesystem uses this feature. When the overlay filesystem is mounted it covers the
+original one and links its VFS objects with the VFS objects of the original
+filesystem. This means that the overlay filesystem duplicates all VFS objects (file,
+inode, dentry) created for the original filesystem. Overlay filesystems can be stacked
+and again, as in the LSM, there is no way of specifying the order of overlay
+filesystems and how to safely unmount them (overlay filesystem could be used by other
+overlay filesystem).
+
+It is also possible to use a general access control framework (RSBAC, Medusa), but
+these projects are not integrated into the Linux kernel. This means that the kernel has
+to be patched and maintaining patches for different kernel versions is also difficult.
+Another special project for filesystem access control is the Dazuko. It is used mainly
+by anti--virus companies for on--access scanning. It uses several methods of interaction
+with the Linux kernel. For Linux kernels 2.2 and 2.4 it replaces the syscall table.
+This is generally not a good idea (rootkit detectors) and syscall function are too
+high (NFS kernel daemon). For Linux kernel 2.6 Dazuko uses the LSM framework whose
+problems were mentioned above. Moreover, the LSM framework does not provide any way to
+catch on close event which is very important for anti--virus applications. As a
+solution, Dazuko uses RSBAC framework. At this moment Dazuko maintainer John Ogness
+tries to solve all these problems with the overlay filesystem.
+
+I have proposed a completely new framework called Redirfs to overcome all the problems
+and limitations mentioned above. It creates a new layer between the Linux VFS and the
+native filesystems. It interacts directly with the VFS layer and replaces the VFS
+objects operations. It provides a well defined interface for third--party kernel
+modules called filters. Each filter can register pre and post callback function for
+each native filesystem operation. It can also specify directory sub--trees over which
+their callback functions will be called. Filters can even exclude directory sub--trees.
+Filters are called in a specific order defined by their priorities. Redirfs modifies
+only those VFS object operations for which there are registered Filter callback
+functions. This means that all other operations go directly to the native filesystem
+with absolutely no overhead. Redirfs also modifies only the VFS objects which have to
+be modified. It returns VFS objects operations back to the native filesystem
+operations as soon as possible (no filter needs them).
+
+Base parts of the Redirfs framework were implemented. The current implementation has
+several limitations. Note that these limitations are not design limitations! Only that
+some features have not been implemented yet. The Redirfs framework is well defined and
+ready for all intended features. Here are some limitations that will be removed in the
+future. At the moment filters can only register callback functions for dentry, inode
+and file operations over regular files and directories. All submounted directories are
+ignored.
+
+Some parts of the Redirfs framework need to be implemented in a more sophisticated
+way. For example, replacement of file objects operations is implemented in a very
+unsophisticated way.
+Redirfs goes through all of the created file objects and checks if the file object
+belongs to the specified directory sub-tree. This check is comparing the full filename
+path with the directory path, which is too slow. This and several other implementation
+parts should be improved and optimized. This could be work for future projects, as
+well as some other user-space tools for filters, the interface for Redirfs in the
+/proc filesystem, the Redirfs port to BSD systems, and implementation of several
+filters.
+
+The current implementation was tested on Linux kernels 2.6.10 and 2.6.11.3 and several
+filters were written for testing, including avgflt. Redirfs works without problems on
+uniprocessor systems without preemptive kernel. On SMP systems and preemptive kernels
+there is a problem with correct locking. This will be fixed.
+
+Redirfs, with the help of GRISOFT, s.r.o, will continue as an open source project.

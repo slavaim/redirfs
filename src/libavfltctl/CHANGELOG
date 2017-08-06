@@ -1,0 +1,6 @@
+version 1.0.0
+	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+	- added support for registered and trusted sysfs files
+
+version 0.0.0
+	* initial release

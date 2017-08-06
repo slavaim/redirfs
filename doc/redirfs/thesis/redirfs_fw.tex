@@ -1,0 +1,832 @@
+\chapter{RedirFS Framework}
+RedirFS stands for \textbf{REDIR}ecting \textbf{F}ile\textbf{S}ystem. In
+chapters \ref{lab:lsm}, \ref{lab:overlay} and \ref{lab:dazuko} were described
+the existing
+possibilities of file access control in the Linux kernel and their limitations. Among
+these limitation belong replacing the syscall table, duplication of VFS objects, bad
+support for security modules, absent safety unloading of security modules, no
+possibility how to specify order in which the security modules will be called and so on.
+To overcome these limitations, I propose a new solution - the RedirFS Framework.
+
+\section{RedirFS Goals}
+
+\begin{itemize}
+	\item Provide general, fast, flexible and open source framework allowing to
+		redirect native file system calls in VFS objects.
+	\item Should not modify Linux kernel source code. 
+	\item Implemented as a Linux kernel module.
+	\item Independent of the Linux kernel version.
+	\item Be able to register, unregister and manage several third-party filters
+		(other Linux kernel modules).
+	\item Provide a well defined interface allowing filters to set callback
+		functions for selected file system operations.
+	\item Allow filters to set pre and post native file system callbacks.
+	\item Allow filters to select directory subtrees for which their callback
+		functions will be called.
+	\item Provide a way to allow filters to exclude selected directory
+		subtrees.
+	\item Be able on-the-fly to include and exclude directory subtrees and add, remove
+		or modify filter's callback function.
+	\item Modify only VFS object operations which have to be modified.
+	\item Be able to call filters in a specific order.
+	\item React on return values from filters and be able to interrupt the filter call
+		chain.
+	\item Allow the filter to forward data from pre to post callback function. 
+	\item Allow filters to attach their private data to selected VFS's
+		objects.
+	\item Return VFS objects operations to the native file system calls as soon as
+		possible.
+	\item Avoid as much as possible VFS objects duplication.
+
+\end{itemize}
+
+\section{RedirFS Design}
+As you can see in figure \ref{fig:redirfs_role} RedirFS Framework creates a new layer
+between the VFS and native filesystems and has two main functions.
+
+\begin{enumerate}
+	\item Interact with the VFS layer and redirect operations selected by filters over
+		specified directory subtrees to the Framework.
+	\item Interact with filters and call all of them which are interested in
+		the VFS event which occurs.
+\end{enumerate}
+
+The RedirFS Framework provides a well defined interface to filters which is 
+described in detail in section \ref{lab:redirfs_interface}. Filter can ask the RedirFS Framework for
+the following actions.
+
+\begin{itemize}
+	\item Register itself to the RedirFS Framework. It is the first thing that
+		the filter has to do. As a result the filter receives from the RedirFS Framework
+		its handler. The filter has to use this handler in every following
+		interaction with the RedirFS Framework to identify itself. During
+		registration the filter has to set its name and priority. From
+		the RedirFS
+		point of view the filter's name is not very important and is used only
+		for some statistic or debug information. Several filters can have the same
+		name. More important is the filter's priority. It is a unique number and
+		the RedirFS Framework calls filters in order defined by theirs priorities.
+		They are called upwardly from lower to higher numbers. Lower number
+		means higher priority.
+
+	\item Set or modify pre and post callback filter's functions for selected VFS
+		operations.
+
+	\item Remove previously set callback functions.
+
+	\item Set directory subtrees over which the filter's callback functions will
+		be called.
+
+	\item Remove previously set directory subtrees. When the filter removes
+		the directory
+		subtree which is part of other subtree previously set by the
+		same filter then
+		the directory subtree which it about to be removed is excluded from the
+		previously set subtree.
+
+	\item Activate itself. The filter is not active by default. It means
+		that the filter
+		can set callbacks and subtrees, but it doesn't receive any events
+		until it is activated.
+
+	\item Deactivate itself. The filter is not removed from the RedirFS Framework, but it
+		is just not notified about registered VFS events until it is 
+		activated again.
+
+	\item Remove itself. This completely removes the whole filter (Its callbacks and
+		all subtrees).
+\end{itemize}
+
+\begin{figure}[hp]
+	\begin{center}
+		\input{pic_redirfs_role.pstex_t}
+	\end{center}
+	\caption{The RedirFS role during system calls}
+	\label{fig:redirfs_role}
+\end{figure}
+
+The whole idea behind the RedirFS Framework is to replace selected VFS object operations
+by RedirFS operations so that VFS calls RedirFS framework instead of native
+filesystem. RedirFS is then able to notify all interested filters that the VFS tries to
+call native filesystem. Figure \ref{fig:redirfs_role} shows that only operations
+selected by filters are redirected to the RedirFS Framework. All other operations go
+directly to the native file system and the RedirFS Framework doesn't affect them in any
+way.
+
+\section{RedirFS Architecture}
+\label{lab:redirfs_arch}
+The RedirFS Framework is formed by several objects which are in detail described in
+section \ref{lab:redirfs_data_struct}. Here their purpose will be described.
+
+\subsection{Root Object}
+Filters can select for directory subtrees their callback functions will be
+called for. Directory subtrees are identified by full directory path. When a
+filter asks the
+RedirFS Framework for a new subtree, it creates a root object representing
+the requested subtree. Then the filter is attached to this new root object. It is
+possible that the root object for the requested subtree already exists. It can happen when
+another filter already selected the same subtree. In this case the RedirFS Framework only
+attach filter to the existing root object.
+
+Root objects are connected in n-ary trees like dentry objects in the VFS. The difference is
+that in the VFS there is only one main dentry object (dentry object for root directory)
+and in the RedirFS Framework can be several main root objects. These main root objects are
+linked in a list. The whole RedirFS Framework is based on root objects and it is important to
+understand how the root objects are connected and how the root objects tree is
+modified while new filters and directory subtrees are added. In figures
+\ref{fig:redirfs_root1}, \ref{fig:redirfs_root2} and \ref{fig:redirfs_root3} is shown
+what happen with root objects trees when three different filters are added.
+
+\begin{figure}[hp]
+	\begin{center}
+		\input{pic_redirfs_root1.pstex_t}
+	\end{center}
+	\caption{Example: RedirFS root objects for one filter}
+	\label{fig:redirfs_root1}
+\end{figure}
+
+In figure \ref{fig:redirfs_root1} only one filter called cryptfs is registered in
+the RedirFS Framework and it has selected two directory subtrees. So two new root
+objects are created and the cryptfs filter is attached to them.
+
+\begin{figure}[hp]
+	\begin{center}
+		\input{pic_redirfs_root2.pstex_t}
+	\end{center}
+	\caption{Example: RedirFS root objects for two filters}
+	\label{fig:redirfs_root2}
+\end{figure}
+
+In figure \ref{fig:redirfs_root2} is registered second filter called avgflt. This
+filter has selected only one directory subtree, but it contains both 
+subtrees which were set by cryptflt filter. Root objects are reorganized and the
+avgflt filter is attached to the new root object and to all root objects which are under it.
+In figure \ref{fig:redirfs_root3} is attached one more filter called the compressflt. It
+has selected the \texttt{/home/john/data/compress} subtree which belongs under
+the
+\texttt{/home/john/data} root object. And again the compressflt is attached to the new
+root object and to all root objects which are under it. In this case there are no root
+objects under it.
+
+\begin{figure}[hp]
+	\begin{center}
+		\input{pic_redirfs_root3.pstex_t}
+	\end{center}
+	\caption{Example: RedirFS root objects for three filters}
+	\label{fig:redirfs_root3}
+\end{figure}
+
+Root objects connection in figures \ref{fig:redirfs_root1}, \ref{fig:redirfs_root2}
+and \ref{fig:redirfs_root3} are simplified and also only filter pointers are attached
+to the root objects. Detailed information is in section
+\ref{lab:redirfs_data_struct}. Note that filters are attached to the root
+objects in a
+specific order. It is because some filters have to be called sooner or later then
+others. The order is specified by the filter's priority.
+
+When a filter wants to remove or exclude some previously set directory subtree, the
+RedirFS Framework detaches it from all corresponding root objects. If it is the last
+attached filter then the root object is destroyed.
+
+\subsection{Filter Object}
+Each registered filter is in the RedirFS Framework represented by the filter object
+which contains all its information. As filter asks RedirFS Framework for inserting and
+removing directory subtrees, the RedirFS Framework is attaching or detaching the
+filter object
+to or from the corresponding root objects.
+
+\subsection{Inode Object}
+The RedirFS inode object is created for each VFS inode which is in one of the directory
+subtrees selected by filters. It is dynamically created and destroyed along with
+the VFS
+inode. Note that the RedirFS inode is different than the VFS inode. It is used to find out
+which root object corresponds to the VFS inode. It is very important to find the right
+root object to the VFS inode object. When the VFS object operations are redirected to
+the RedirFS Framework, it is only the VFS inode which can be always obtained. When
+we have the VFS inode object we also can obtain the corresponding RedirFS inode which contains
+pointer to the proper root object. Then RedirFS Framework can call all filters
+attached to the root object. Of course only those filters which are interested in native
+filesystem operation which occurred.
+
+\section{RedirFS Data Structures}
+\label{lab:redirfs_data_struct}
+In this section are in detail described all data structures used in RedirFS Framework.
+
+\subsection{Root Object}
+The root object is represented by structure \texttt{struct redirfs\_root\_t}, defined in
+\texttt{root.h}. Each root object is attached in one of several n-ary trees. Number of
+these trees and their hierarchy depends on directory subtrees selected by filters. This was
+described in section \ref{lab:redirfs_arch}. All roots of these trees are linked in a list
+which header \texttt{redirfs\_root\_list} is defined in \texttt{root.c}. Concurrent
+access to the hierarchy of root objects is protected by the
+\texttt{redirfs\_root\_list\_lock} spinlock.
+
+\subsubsection{\texttt{struct list\_head attached\_flts}}
+Each root object can have attached several filter objects. Pointers to all attached
+filter objects are linked in a list whom header is stored in this field. Note that
+filters in this list are in specific order which depends on filters priorities.
+
+\subsubsection{\texttt{struct list\_head subroots}}
+All root objects which belong directly under other root object are linked in a list
+which header is stored in this field. In other words all root's children are linked
+in this list.
+
+\subsubsection{\texttt{struct list\_head sibroots}}
+Through this field are linked all root objects on the same level (siblings).
+
+\subsubsection{\texttt{struct list\_head remove}}
+Through this field are linked all root objects which are going to be removed. List
+header \texttt{redirfs\_remove\_root\_list} of this list is defined in
+\texttt{root.c}. List is protected by \texttt{redirfs\_remove\_root\_list\_lock} which
+is also defined in \texttt{root.c}.
+
+\subsubsection{\texttt{struct list\_head inodes}}
+List header of all RedirFS inode objects which belong to the root object. RedirFS inode
+object is different than the VFS inode object and is used to find out right root object.
+
+\subsubsection{\texttt{struct redirfs\_root\_t *parent}}
+Pointer to the parent root object. If root object has no parent then this field is set
+to NULL.
+
+\subsubsection{\texttt{struct dentry *dentry}}
+Every root object represents one directory subtree which is defined by full directory
+path. This field contains pointer to the dentry objects which represents this
+directory in VFS.
+
+\subsubsection{\texttt{spinlock\_t lock}}
+Is used to protect all data fields in root object against concurrent access.
+
+\subsubsection{\texttt{char *path}}
+Directory subtree path which is represented by root object.
+
+\subsubsection{\texttt{atomic\_t flt\_cnt}}
+Number of attached filters.
+
+\subsubsection{\texttt{struct redirfs\_operations\_t *fw\_ops}}
+Every root object contains a pointer to the RedirFS Framework operations. These
+operations are common for all root objects and their purpose is to call all Filters
+attached to the root.
+
+\subsubsection{\texttt{struct redirfs\_operations\_t new\_ops}}
+This field contains pointers to the structures of new operations for all VFS objects
+belonging to the directory subtree which is represented by the root object.
+
+\subsubsection{\texttt{struct redirfs\_operations\_t orig\_ops}}
+This field contains pointers to the structures of original native filesystem
+operations originally used by VFS objects. 
+
+\subsubsection{\texttt{struct redirfs\_vfs\_operations\_t vfs\_ops}}
+This field contains structures of new VFS operations pointers.
+
+\subsubsection{\texttt{struct redirfs\_operations\_counters\_t new\_ops\_cnts}}
+In this field are stored counters for each operation in the \texttt{vfs\_ops} field.
+Note that each operation can be used by several filters.
+
+\subsection{Filter Object}
+Filter object is represented by structure \texttt{struct redirfs\_flt\_t}, defined in
+\texttt{filter.h}. All filter objects are linked in a list which header
+\texttt{redirfs\_flt\_list} is defined in \texttt{filter.c}. The list is protected against
+concurrent access by \texttt{redirfs\_flt\_list\_lock} spinlock.
+
+\subsubsection{\texttt{struct list\_head flt\_list}}
+Filter objects are linked through this field in the filters list.
+
+\subsubsection{\texttt{spinlock\_t lock}}
+Is used to protect all data fields in the filter object against concurrent access.
+
+\subsubsection{\texttt{char *name}}
+Filter's name.
+
+\subsubsection{\texttt{int turn}}
+Filter's priority.
+
+\subsubsection{\texttt{unsigned int flags}}
+Filter's flags. For now this field is not used and is reserved for future usage.
+Here could be stored for example information if the filter wants follow submounts or
+shrink dentry cache.
+
+\subsubsection{\texttt{atomic\_t active}}
+Contains information whether the filter is active (1 -- active, 0 -- not active).
+
+\subsubsection{\texttt{struct redirfs\_vfs\_operations\_t vfs\_pre\_ops}}
+Filter's pre callback functions.
+
+\subsubsection{\texttt{struct redirfs\_vfs\_operations\_t vfs\_post\_ops}}
+Filter's post callback functions.
+
+\subsubsection{\texttt{struct redirfs\_operations\_t pre\_ops}}
+Pointers to the filter's pre callback functions.
+
+\subsubsection{\texttt{struct redirfs\_operations\_t post\_ops}}
+Pointers to the filter's post callback functions.
+
+\subsection{Inode Object}
+Inode object is represented by the structure \texttt{struct redirfs\_inode\_t}, defined in
+\texttt{inode.h}. For RedirFS inode allocation and deallocation is used the Linux
+kernel slab allocator. Each RedirFS inode is located in the \texttt{redirfs\_ihash} hash
+table.
+
+\subsubsection{\texttt{struct hlist\_node inode\_hash}}
+All RedirFS inode objects with same hash value are linked in list through this field.
+
+\subsubsection{\texttt{struct list\_head inode\_root}}
+Each RedirFS inode object belongs to the one root object. All RedirFS inode objects
+which belong to the root are linked through this field.
+
+\subsubsection{\texttt{struct list\_head priv}}
+For now this field is not used and is reserved for future usage. Filters will be able
+through this field to attach their private data to the VFS inode object.
+
+\subsubsection{\texttt{struct redirfs\_root\_t *root}}
+Pointer to the root object to which this inode object belongs.
+
+\subsubsection{\texttt{spinlock\_t lock}}
+Is used to protect all data fields in filter object against concurrent access.
+
+\subsubsection{\texttt{struct super\_block *sb}}
+Pointer to the VFS super block object.
+
+\subsubsection{\texttt{unsigned long ino}}
+Inode number of corresponding VFS inode object. This and the previous field is used to
+find corresponding RedirFS inode object to the VFS inode object.
+
+\subsection{Operations Object}
+The operations object is represented by the structure \texttt{struct redirfs\_operations\_t},
+defined in \texttt{operations.h}. It contains pointers to the inode and file
+operations for regular file and directory. It also contains a pointer to the dentry
+operations. Moreover it defines for each VFS operation the structure array
+which is used for more comfortable way how to individually access elements in
+structure. Each operations object has to be initialized by \texttt{redirfs\_init\_ops}
+or \texttt{redirfs\_init\_orig\_ops} function. These functions properly set all arrays
+and pointers in operations object. Which function to use for initialization depends if
+operations structures are known or not. The \texttt{redirfs\_init\_ops} function is
+used when we know them and \texttt{redirfs\_init\_orig\_ops} otherwise.
+
+\section{RedirFS Implementation}
+This section describes implementation of the RedirFS Framework. RedirFS Framework as
+it is implemented right now has several limitation because not all planned features
+were implemented. Note that RedirFS is well defined and all features which were not
+for now implemented can be easily added in the future because RedirFS is ready for
+them.
+
+For now redirfs allows to redirect inode, file and dentry operation for regular files
+and directories. Filters can register only inode permission function and all submounts
+directories are ignored.
+
+\subsection{Replacement of VFS Object Operations}
+Linux VFS layer provides API which allows to work with VFS objects. RedirFS Framework
+uses this API and connection between VFS objects to replace operations in VFS objects.
+Note that operations replacement is done only by assigning new pointer value to the
+VFS object.
+
+\subsubsection{Replacement of Existing Dentry and Inode Object Operations}
+Dentry objects are in the Linux VFS connected in n-ary tree. VFS provides the
+\texttt{path\_lookup()} function to convert filename path to the corresponding dentry
+object. RedirFS Framework uses this function when the filter wants to include or exclude
+some directory subtree to find directory dentry object. Now it can goes through dentry
+subtree and replace operations in all existing dentry and inode objects. Note that
+each dentry has pointer to the corresponding inode. RedirFS provides
+\texttt{redirfs\_walk\_dcache()} function which locks dentry and inode cache and goes
+through specific dentry subtree. It takes five arguments. Start dentry object,
+callback function which is called for every dentry object in the dentry subtree,
+callback data for this function, callback function which is called when the mount
+point dentry is found and its callback data. Note that to some dentry objects in the
+dentry subtree can be already attached other RedirFS root objects. If this is true
+then the \texttt{redirfs\_walk\_dcache()} function has to skip those dentries. We can
+not change operations for other root objects because they can have attached different
+filters and can replace different operations. This function is called only in two cases.
+When filter inserts new directory subtree which is not already added and when the last
+filter is detached from root object.
+
+Dentry and inode object operations are replaced in \texttt{redirfs\_set\_new\_ops()}
+function, which is called for every dentry object in dentry subtree, by
+\texttt{redirfs\_walk\_dcache()} function. This function beside replacing operations
+has to save old VFS objects operations. It is important because RedirFS has to set
+original operations back when the last filter is detached from the root object. Note that
+not all native filesystem operations are known at the beginning. For example if
+\texttt{redirfs\_set\_new\_ops()} function gets dentry object of regular file for the
+first time it saves original operations to the \texttt{orig\_ops} structure in
+corresponding root object.
+
+Function \texttt{redirfs\_set\_orig\_ops()} is called in the same way as
+\texttt{redirfs\_set\_new\_ops()} and assigns VFS objects back original operations.
+This is very easy because RedirFS knows about all operations which previously
+replaced.
+ 
+\subsubsection{Replacement of Existing File Object Operations}
+Replacing file object operations is a little bit complicated. The file object, when is
+created, copies the pointer to the file operations from corresponding inode object. So
+replacing file operations only in the inode objects is not enough. The problem is that
+there is no way how to get file objects related with inode or dentry object. File
+object contains pointer to the corresponding dentry object but dentry object does not
+contain pointer to the file object. It is logical because dentry object can be used by
+several files. But this is the same situation as with inode and dentry objects. Each
+inode object can be used by several dentries and in this relation inode object
+contains list of all dentry objects which are using it. However this is not true in
+relation between dentry and file object and RedirFS has to find other way how to
+replace operations in file objects. All file objects created over one filesystem are
+linked in a list which header is stored in the super block object. Each dentry object
+contains pointer to the super block object. So when RedirFS knows dentry object for
+the directory subtree it can go through the list of all file objects and replace their
+operation. Other problem is that in this list are linked all file object. It means
+that there are file objects which do not belong under specified directory subtree.
+Here RedirFS has to compare file names and replace operations only in file objects
+which belongs under the directory subtree. RedirFS provides
+\texttt{redirfs\_replace\_files\_ops} which locks the files list lock and goes through
+all file objects in the list. It takes four arguments. Directory path for which will
+be file objects operations replaced, dentry objects representing directory path, new
+file operations and file type for which will be the operations replaced. Here again
+RedirFS has to take care when the file object does not belong under other root object. 
+This is called in same cases as \texttt{redirfs\_walk\_dcache} function and when
+original file operations are obtained.
+
+\subsection{Replacement of Newly Created Objects Operations}
+This is easier because all operations of VFS objects in caches are already replaced.
+RedirFS only need to know which operations are creating new objects. Then let the
+native filesystem to create these objects and replace their operations before they
+will be returned back to the VFS. Follows functions which create new VFS objects.
+
+\subsubsection{Create operation in directory inode}
+This operation creates new regular file in specified directory.
+
+\subsubsection{Lookup operation in directory inode}
+This operation is called by VFS if it does not found corresponding dentry object in
+path lookup operation. This operation is called for every file type.
+
+\subsubsection{Mkdir operation in directory inode}
+This function creates new directory object.\\
+
+This functions can handle only regular files and directories. In future RedirFS will be
+able to handle all file types. For example to handle creating of special files like
+char devices, fifos or block devices, RedirFS need to implement mknod operation for
+directory inodes. There is one more problem because for example each char device has
+its own operations. So it is not possible to handle them all in one way like regular
+files and directories operations which are same for whole file system. RedirFS
+Framework is ready for this.
+
+\subsection{Root Objects Manipulation}
+RedirFS provides several functions which operate over root hierarchy. Base function
+are \texttt{redirfs\_add\_root{}}, \texttt{redirfs\_remove\_root},
+\texttt{find\_root\_parent} and \texttt{redirfs\_find\_root}. 
+
+Most important is \texttt{redirfs\_walk\_roots()}, defined in \texttt{root.c}. This
+function goes through all root objects. It takes three arguments. Root object from
+which to start, callback function and callback function data. If start root object is
+NULL then callback function is called for every root object in root hierarchy. This
+function is used for attaching and detaching filter to and from root objects
+(\texttt{redirfs\_attach\_flt} and \texttt{redirfs\_detach\_flt}). 
+
+\subsection{Operations}
+Each root object contains two sets of operations. First are operations in which are
+stored pointers to the native filesystem operations. These operations are
+never changed and are used when RedirFS Framework wants to set original operations
+back to the VFS objects. These operations are stored in the \texttt{orig\_ops} field
+in root object. Note that pointers in \texttt{orig\_ops} field cannot be changed
+because any change affects the whole native filesystem. The second operations contains copies
+of native filesystem operations and are stored in the \texttt{new\_ops} field in
+root object. These pointers can be modified because root object has its own copy. 
+To all VFS objects which belong to specific root object are changed operations to the
+operations stored in \texttt{new\_ops}. At the beginning \texttt{new\_ops} contains
+copies of native filesystem operations. Only several function needed directly by RedirFS
+Framework like create, mkdir or lookup are redirected.
+
+RedirFS Framework contains global operations \texttt{redirfs\_fw\_ops} defined in
+\texttt{redir.c}. When filter wants to register new callback function then
+corresponding function pointer in \texttt{new\_ops} is replaced by pointer
+from \texttt{redirfs\_fw\_ops}. So only one pointer assignment changes
+specific operation for all involved VFS objects. Operation from
+\texttt{redirfs\_fw\_ops} calls all filters which are interested in VFS event which
+occurs. Each operation in \texttt{new\_ops} has counter. If counter for specific
+operation is zero then pointer for this operation in \texttt{new\_ops} is replaced
+back to original operation from \texttt{orig\_ops}.
+
+\subsection{RedirFS Inodes Manipulation}
+Selected VFS objects operations are redirected to the RedirFS Framework operations.
+VFS then calls RedirFS operations instead of native
+filesystem operations. Interfaces of native filesystem operations does not know anything
+about RedirFS Framework objects. For example, VFS calls permission function which is
+redirected to the \texttt{redirfs\_reg\_permission()} function. This function has
+three arguments. Inode object, mode, and nameidata structure. So RedirFS Framework has
+to introduce some way how to obtain corresponding root object. The root object contains
+attached filters which have to be called. For this purpose RedirFS Framework has its
+own inodes which contains pointers to the corresponding root objects. VFS inode object
+can be somehow obtained in every function. Each VFS inode is unambiguously identified
+by super block pointer and inode number. So RedirFS uses these two values as a key
+how to find correspond RedirFS inode to the VFS inode. RedirFS inode is created
+for each vfs object which has redirected operations.
+
+Note that RedirFS inodes have to stay consistent with VFS inodes. In VFS can exist
+dentry object without inodes and inodes without dentry object. For example Linux
+kernel can in every time prune dentry cache. For this reason RedirFS Framework
+redirect dentry operation \texttt{d\_iput} which is called when dentry object is going
+to be removed from dentry cache.
+
+\subsection{Example of Including New Path}
+\begin{enumerate}
+	\item Filter calls \texttt{redifs\_include\_path()} with path argument. 
+	\item Function \texttt{redirfs\_find\_root()} tries to find corresponding root
+		object in root hierarchy. If the root has been found,  go to 3 else
+		go to a.
+		\begin{enumerate}
+			\item \texttt{redirfs\_alloc\_root()} allocates new root
+				object.
+			\item \texttt{redirfs\_find\_root\_parent()} tries to find
+				parent root for newly created root. If the parent has
+				been found, goto i else goto c.
+				\begin{enumerate}
+					\item \texttt{redirfs\_inherit\_root()} copies
+						all operations from parent to the new
+						root object.
+				\end{enumerate}
+			\item \texttt{redirfs\_add\_root()} adds new root to the root
+				hierarchy.
+			\item \texttt{redirfs\_walk\_dcache()} with \texttt{
+				redirfs\_set\_new\_ops()} function redirects all operations of
+				VFS objects which belong to the new root.
+			\item \texttt{redirfs\_replace\_files\_ops()} replaces
+				operations in corresponding file objects.
+		\end{enumerate}
+	\item \texttt{redirfs\_walk\_roots()} with \texttt{redirfs\_attach\_flt()}
+		function attaches filter object to the all corresponding root objects in root
+		hierarchy.
+\end{enumerate}
+
+
+
+\section{RedirFS Interface}
+\label{lab:redirfs_interface}
+The whole interface to the RedirFS Framework is stored in the \texttt{redirfs.h} header
+file. In this section are described all data types and operations provided by RedirFS
+Framework to filters.
+
+\subsection{Data types}
+
+\subsubsection{File and Operations group identifiers}
+Linux distinguishes between seven file types -- regular files, directories, fifos,
+sockets, pipes, char devices and block devices. Each file type has its own groups of
+operations. For example inode and file operations. When a filter wants to register some 
+callback function it has to specify to which file type and operation group the
+callback function is related. For example \texttt{REDIRFS\_I\_DIR} specifies that the
+filter callback function is related to the inode operations group for directory.
+All other file types and operation groups identifiers are defined in
+\texttt{redirfs.h}.
+
+\subsubsection{Specific Operation identifier}
+From previous paragraph we know how to distinguish between file types and operations
+groups. Other thing which filter has to specify in callback function registration is
+specific operation in operations group. RedirFS Framework defines identifier for each
+operation in each operations group. For example \texttt{REDIRFS\_IOP\_MKDIR}
+represents mkdir inode operation. So when filter wants to register callback function
+it has to specify two identifiers. First is file type and operations group and second
+is specific operation. These two identifiers provide way how to unambiguously
+identify each VFS operation.
+
+\subsubsection{\texttt{enum redirfs\_retv}}
+This enum contains all return values which can be returned from the filter callback
+function back to the RedirFS Framework. For now it has only two fields.
+\texttt{REDIRFS\_RETV\_STOP} tells RedirFS Framework to interrupt calling of subsequent
+filters and \texttt{REDIRFS\_RETV\_CONTINUE} allows to call next filter in chain.
+
+\subsubsection{\texttt{typedef void* redirfs\_filter}}
+After registration filter receives handler of this type. Filter then has to, in every
+further interaction with RedirFS Framework, identify itself with this handler.
+
+\subsubsection{\texttt{typedef void* redirfs\_context}}
+This type has for now no functionality. It is reserved for future usage. In future it
+will keep operation context data and will allow filter for example to attach its private
+data to VFS objects. For now it is used only for filter callback functions interface
+entireness.
+
+\subsubsection{\texttt{union redirfs\_op\_args\_t}}
+Each native file system call has several arguments. Arguments for each file system
+function are grouped into a structure and \texttt{redirfs\_op\_args\_t} contains union
+of all these structures. For example all arguments for inode create function are
+grouped in \texttt{i\_create} structure. Filter callback function receives pointer to
+this union and in proper field will be all arguments for the native filesystem
+function.
+
+\subsubsection{\texttt{union redirfs\_op\_retv\_t}}
+Contains union of all data types which can be returned from native file system calls.
+Filter callback function has to return proper value in specific field so that RedirFS
+Framework can return this value to the VFS. This value has to be set only when filter
+forbids to call other filters with lower priority.
+
+\subsubsection{\texttt{struct redirfs\_op\_exts\_t}}
+Stores extended data which might be useful for some filters. At this moment this
+structure is not used and is reserved for future usage.
+\begin{list}{}{}
+	\item \textbf{DATA FIELDS}
+		\begin{list}{}{}
+			\item \texttt{const char* fill\_path} -- Full path name of
+				accessed inode.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{struct redirfs\_args\_t}}
+Contains all information which filter callback function can receive from the RedirFS
+Framework. It just encapsulates several other structures and provide a flexible way for
+future extensions without interface modification.  
+
+\begin{list}{}{}
+	\item \textbf{DATA FIELDS}
+		\begin{list}{}{}
+			\item \texttt{union redirfs\_op\_args\_t args} -- Arguments of
+				original native file system function.
+			\item \texttt{struct redirfs\_op\_exts\_t exts} -- Extended
+				information.
+			\item \texttt{union redirfs\_op\_retv\_t retv} -- Return value
+				of original native filesystem function.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{struct redirfs\_op\_t}}
+Is used for filter callback function registration and unregistration. Pre and post
+callback functions pointers can be set to NULL. This has different behavior for
+registration and unregistration. For registration NULL pointer means that filter
+doesn't want to register this function, but for unregistration it means that filter
+wants to remove this callback function. For example if the filter wants to register only
+pre callback function it sets the post callback function pointer to NULL. If the
+filter wants to remove the post callback function, but keep pre callback function it
+has to set the post callback function pointer to NULL and the pre callback
+function pointer to some value different from NULL. 
+
+\begin{list}{}{}
+	\item \textbf{DATA FIELDS}
+		\begin{list}{}{}
+			\item \texttt{int type} -- File and operation type identifier. As
+				mentioned earlier, Linux has seven file types. Here
+				has to be specified to which file type callback
+				function belong. Please note that every file is in
+				Linux represented by several structures and each
+				structure has its own operations. So this field
+				identifies aside from a file type also operation type.
+				All usable values are defined in \texttt{redirfs.h}.
+				For example \texttt{REDIRFS\_I\_REG} says that
+				callback function will be used for regular file and inode
+				operations.
+			\item \texttt{int op} -- By \texttt{type} field is selected
+				group of operations. This field selects specified
+				function in this group. If \texttt{REDIRFS\_I\_REG} value is
+				set in \texttt{type} field then \texttt{op} field has to
+				contain inode operation identifier. For example
+				\texttt{REDIRFS\_IOP\_LOOKUP} value.
+			\item \texttt{enum redirfs\_retv (*pre\_op)(redirfs\_context
+				context,\\struct redirfs\_args\_t *args)} -- Pre
+				callback function pointer.
+			\item \texttt{enum redirfs\_retv (*post\_op)(redirfs\_context
+				context,\\struct redirfs\_args\_t *args)} -- Post
+				callback function pointer.
+		\end{list}
+\end{list}
+
+\subsubsection{Filter Callback Function Interface}
+Each filter callback function has to have following interface \\
+\texttt{enum redirfs\_retv func\_name(redirfs\_context context,\\struct redirfs\_args\_t *args)}.
+
+\subsection{Operations}
+
+\subsubsection{\texttt{redirfs\_filter  redirfs\_register\_filter(const char *name,
+int priority,\\unsigned long flags)}} 
+\begin{list}{}{}
+	\item \textbf{ARGUMENTS}
+		\begin{list}{}{}
+			\item \texttt{name} -- Filter name.
+			\item \texttt{priority} -- Filter priority.
+			\item \texttt{flags} -- Filter flags. For now this argument
+				is not used. It is reserved for future usage.
+		\end{list}
+	\item \textbf{RETURN VALUE}
+		\begin{quotation}
+			\noindent On success, filter handler is returned. On
+			error, a
+			negative value is returned. For return value testing has to be
+			used Linux kernel functions \texttt{IS\_ERR} and
+			\texttt{PTR\_ERR} defined in \texttt{include/linux/err.h}. It
+			is because \texttt{redirfs\_filter} type is defined as a void
+			pointer and integer error value is returned as a pointer
+			value. Kernel uses those functions to return pointer or error
+			in the same return value.
+		\end{quotation}
+	\item \textbf{ERRORS}
+		\begin{list}{}{}
+			\item \texttt{-EEXIST} -- Other filter with same priority is
+				already registered.
+			\item \texttt{-EINVAL} -- Invalid filter name.
+			\item \texttt{-ENOMEM} -- Out of kernel memory.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{int redirfs\_unregister\_filter(redirfs\_filter filter)}} 
+\begin{list}{}{}
+	\item \textbf{ARGUMENTS}
+		\begin{list}{}{}
+			\item \texttt{filter} -- Filter handler.
+		\end{list}
+	\item \textbf{RETURN VALUE}
+		\begin{quotation}
+			\noindent On success, zero is returned. On error, negative
+			value is returned.
+		\end{quotation}
+	\item \textbf{ERRORS}
+		\begin{list}{}{}
+			\item \texttt{-EINVAL} -- Invalid filter handler.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{void redirfs\_activate\_filter(redirfs\_filter filter)}}
+\begin{list}{}{}
+	\item \textbf{ARGUMENTS}
+		\begin{list}{}{}
+			\item \texttt{filter} -- Filter handler.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{void redirfs\_deactivate\_filter(redirfs\_filter filter)}}
+\begin{list}{}{}
+	\item \textbf{ARGUMENTS}
+		\begin{list}{}{}
+			\item \texttt{filter} -- Filter handler.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{int redirfs\_set\_operations(redirfs\_filter filter,\\struct
+redirfs\_op\_t ops[])}}
+\begin{list}{}{}
+	\item \textbf{ARGUMENTS}
+		\begin{list}{}{}
+			\item \texttt{filter} -- Filter handler.
+			\item \texttt{ops} -- Pointer to the array of
+				\texttt{redirfs\_op\_t} objects.
+		\end{list}
+	\item \textbf{RETURN VALUE}
+		\begin{quotation}
+			\noindent On success, zero is returned. On error, negative
+			value is returned.
+		\end{quotation}
+	\item \textbf{ERRORS}
+		\begin{list}{}{}
+			\item \texttt{-EINVAL} -- Invalid filter handler or operations
+				array.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{int redirfs\_remove\_operations(redirfs\_filter filter,\\
+struct redirfs\_op\_t ops[])}}
+\begin{list}{}{}
+	\item \textbf{ARGUMENTS}
+		\begin{list}{}{}
+			\item \texttt{filter} -- Filter handler.
+			\item \texttt{ops} -- Pointer to the array of
+				\texttt{redirfs\_op\_t} objects.
+		\end{list}
+	\item \textbf{RETURN VALUE}
+		\begin{quotation}
+			\noindent On success, zero is returned. On error, negative
+			value is returned.
+		\end{quotation}
+	\item \textbf{ERRORS}
+		\begin{list}{}{}
+			\item \texttt{-EINVAL} -- Invalid filter handler or operations
+				array.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{int redirfs\_include\_path(redirfs\_filter filter, const char *path)}}
+\begin{list}{}{}
+	\item \textbf{ARGUMENTS}
+		\begin{list}{}{}
+			\item \texttt{filter} -- Filter handler.
+			\item \texttt{path} -- Directory subtree path.
+		\end{list}
+	\item \textbf{RETURN VALUE}
+		\begin{quotation}
+			\noindent On success, zero is returned. On error, negative
+			value is returned.
+		\end{quotation}
+	\item \textbf{ERRORS}
+		\begin{list}{}{}
+			\item \texttt{-EINVAL} -- Invalid filter handler or path name.
+			\item \texttt{-ENOMEM} -- Out of kernel memory.
+			\item \texttt{-ENOTDIR} -- Path name is not directory.
+		\end{list}
+\end{list}
+
+\subsubsection{\texttt{int redirfs\_exclude\_path(redirfs\_filter filter, const char *path)}}
+\begin{list}{}{}
+	\item \textbf{ARGUMENTS}
+		\begin{list}{}{}
+			\item \texttt{filter} -- Filter handler.
+			\item \texttt{path} -- Directory subtree path.
+		\end{list}
+	\item \textbf{RETURN VALUE}
+		\begin{quotation}
+			\noindent On success, zero is returned. On error, negative
+			value is returned.
+		\end{quotation}
+	\item \textbf{ERRORS}
+		\begin{list}{}{}
+			\item \texttt{-EINVAL} -- Invalid filter handler or path name.
+			\item \texttt{-ENOMEM} -- Out of kernel memory.
+			\item \texttt{-ENOTDIR} -- Path name is not directory.
+		\end{list}
+\end{list}

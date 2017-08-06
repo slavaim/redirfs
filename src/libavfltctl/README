@@ -1,0 +1,28 @@
+		===================================
+		libavfltctl - AVFlt Control Library
+			       README
+		===================================
+
+This software is distributed under the Boost Software License, Version 1.0.
+
+1. Introduction
+
+	AVFlt Control Library is a userspace library, which provides interface
+	for basic management of AVFlt. It extends functionality of the librfsctl
+	library for options specific for AVFlt.
+
+	For an overview of the RedirFS project, visit 
+
+		http://www.redirfs.org
+
+2. Installation
+
+	See the INSTALL file.
+
+3. Documentation
+
+	http://www.redirfs.org/tiki-index.php?page=redirfs_doc
+
+4. Problems & Bugs
+	
+	http://www.redirfs.org/cgi-bin/bugzilla/index.cgi
