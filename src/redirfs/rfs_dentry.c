@@ -363,7 +363,7 @@ static int rfs_d_compare(struct dentry *dentry, struct qstr *name1,
 	return rargs.rv.rv_int;
 }
 
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 
 static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
 		const struct dentry *dentry, const struct inode *d_inode,
@@ -430,7 +430,68 @@ static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
 	return rargs.rv.rv_int;
 }
 
+#else
+
+static int rfs_d_compare(const struct dentry *dentry,
+		unsigned int len, const char *str, const struct qstr *name)
+{
+	struct rfs_dentry *rdentry;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+	struct redirfs_args rargs;
+
+	rdentry = rfs_dentry_find(dentry);
+	rinfo = rfs_dentry_get_rinfo(rdentry);
+	rfs_context_init(&rcont, 0);
+
+	if (dentry->d_inode) {
+		if (S_ISREG(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_REG_DOP_D_COMPARE;
+		else if (S_ISDIR(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_DIR_DOP_D_COMPARE;
+		else if (S_ISLNK(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_LNK_DOP_D_COMPARE;
+		else if (S_ISCHR(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_CHR_DOP_D_COMPARE;
+		else if (S_ISBLK(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_BLK_DOP_D_COMPARE;
+		else if (S_ISFIFO(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_FIFO_DOP_D_COMPARE;
+		else
+			rargs.type.id = REDIRFS_SOCK_DOP_D_COMPARE;
+	} else
+		rargs.type.id = REDIRFS_NONE_DOP_D_COMPARE;
+
+	rargs.args.d_compare.dentry = dentry;
+	rargs.args.d_compare.len = len;
+	rargs.args.d_compare.str = str;
+	rargs.args.d_compare.name = name;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rdentry->op_old && rdentry->op_old->d_compare)
+			rargs.rv.rv_int = rdentry->op_old->d_compare(
+					rargs.args.d_compare.dentry,
+					rargs.args.d_compare.len,
+					rargs.args.d_compare.str,
+					rargs.args.d_compare.name);
+		else
+			rargs.rv.rv_int = rfs_d_compare_default(
+					&rargs.args.d_compare.dentry->d_name,
+					rargs.args.d_compare.name);
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_dentry_put(rdentry);
+	rfs_info_put(rinfo);
+
+	return rargs.rv.rv_int;
+}
+
 #endif
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 
 static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 {
@@ -481,6 +542,60 @@ static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 
 	return rargs.rv.rv_int;
 }
+
+#else
+
+static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
+{
+	struct rfs_dentry *rdentry;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+	struct redirfs_args rargs;
+
+	rdentry = rfs_dentry_find(dentry);
+	rinfo = rfs_dentry_get_rinfo(rdentry);
+	rfs_context_init(&rcont, 0);
+
+	if (dentry->d_inode) {
+		if (S_ISREG(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_REG_DOP_D_REVALIDATE;
+		else if (S_ISDIR(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_DIR_DOP_D_REVALIDATE;
+		else if (S_ISLNK(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_LNK_DOP_D_REVALIDATE;
+		else if (S_ISCHR(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_CHR_DOP_D_REVALIDATE;
+		else if (S_ISBLK(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_BLK_DOP_D_REVALIDATE;
+		else if (S_ISFIFO(dentry->d_inode->i_mode))
+			rargs.type.id = REDIRFS_FIFO_DOP_D_REVALIDATE;
+		else
+			rargs.type.id = REDIRFS_SOCK_DOP_D_REVALIDATE;
+	} else
+		rargs.type.id = REDIRFS_NONE_DOP_D_REVALIDATE;
+
+	rargs.args.d_revalidate.dentry = dentry;
+	rargs.args.d_revalidate.flags = flags;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rdentry->op_old && rdentry->op_old->d_revalidate)
+			rargs.rv.rv_int = rdentry->op_old->d_revalidate(
+					rargs.args.d_revalidate.dentry,
+					rargs.args.d_revalidate.flags);
+		else
+			rargs.rv.rv_int = 1;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_dentry_put(rdentry);
+	rfs_info_put(rinfo);
+
+	return rargs.rv.rv_int;
+}
+
+#endif
 
 static void rfs_dentry_set_ops_none(struct rfs_dentry *rdentry)
 {

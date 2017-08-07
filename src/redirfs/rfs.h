@@ -31,6 +31,14 @@
 #include <linux/slab.h>
 #include "redirfs.h"
 
+#ifndef f_dentry
+    #define f_dentry	f_path.dentry
+#endif
+
+#ifndef f_vfsmnt
+    #define f_vfsmnt	f_path.mnt
+#endif
+
 #define RFS_ADD_OP(ops_new, op) \
 	(ops_new.op = rfs_##op)
 
@@ -73,41 +81,69 @@
 struct rfs_file;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16))
-#define rfs_mutex_t semaphore
-#define RFS_DEFINE_MUTEX(mutex) DECLARE_MUTEX(mutex)
-#define rfs_mutex_init(mutex) init_MUTEX(mutex)
-#define rfs_mutex_lock(mutex) down(mutex)
-#define rfs_mutex_unlock(mutex) up(mutex)
-#define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_child)
-inline static void rfs_inode_mutex_lock(struct inode *inode)
-{
-	down(&inode->i_sem);
-}
-inline static void rfs_inode_mutex_unlock(struct inode *inode)
-{
-	up(&inode->i_sem);
-}
+    #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_child)
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0))
+    #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_u.d_child)
 #else
-#define rfs_mutex_t mutex
-#define RFS_DEFINE_MUTEX(mutex) DEFINE_MUTEX(mutex)
-#define rfs_mutex_init(mutex) mutex_init(mutex)
-#define rfs_mutex_lock(mutex) mutex_lock(mutex)
-#define rfs_mutex_unlock(mutex) mutex_unlock(mutex)
-#define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_u.d_child)
-inline static void rfs_inode_mutex_lock(struct inode *inode)
-{
-	mutex_lock(&inode->i_mutex);
-}
-inline static void rfs_inode_mutex_unlock(struct inode *inode)
-{
-	mutex_unlock(&inode->i_mutex);
-}
+    #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_child)
+#endif
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16))
+
+    #define rfs_mutex_t semaphore
+    #define RFS_DEFINE_MUTEX(mutex) DECLARE_MUTEX(mutex)
+    #define rfs_mutex_init(mutex) init_MUTEX(mutex)
+    #define rfs_mutex_lock(mutex) down(mutex)
+    #define rfs_mutex_unlock(mutex) up(mutex)
+
+    inline static void rfs_inode_mutex_lock(struct inode *inode)
+    {
+        down(&inode->i_sem);
+    }
+    inline static void rfs_inode_mutex_unlock(struct inode *inode)
+    {
+        up(&inode->i_sem);
+    }
+
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0))
+
+    #define rfs_mutex_t mutex
+    #define RFS_DEFINE_MUTEX(mutex) DEFINE_MUTEX(mutex)
+    #define rfs_mutex_init(mutex) mutex_init(mutex)
+    #define rfs_mutex_lock(mutex) mutex_lock(mutex)
+    #define rfs_mutex_unlock(mutex) mutex_unlock(mutex)
+
+    inline static void rfs_inode_mutex_lock(struct inode *inode)
+    {
+        mutex_lock(&inode->i_mutex);
+    }
+    inline static void rfs_inode_mutex_unlock(struct inode *inode)
+    {
+        mutex_unlock(&inode->i_mutex);
+    }
+
+#else
+
+    #define rfs_mutex_t rw_semaphore
+    #define RFS_DEFINE_MUTEX(mutex) DECLARE_RWSEM(mutex)
+    #define rfs_mutex_init(mutex) init_rwsem(mutex)
+    #define rfs_mutex_lock(mutex) down_write(mutex)
+    #define rfs_mutex_unlock(mutex) up_write(mutex)
+
+    inline static void rfs_inode_mutex_lock(struct inode *inode)
+    {
+	    down_write(&inode->i_rwsem);
+    }
+    inline static void rfs_inode_mutex_unlock(struct inode *inode)
+    {
+	    up_write(&inode->i_rwsem);
+    }
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,15))
-#define rfs_kmem_cache_t kmem_cache_t
+    #define rfs_kmem_cache_t kmem_cache_t
 #else
-#define rfs_kmem_cache_t struct kmem_cache
+    #define rfs_kmem_cache_t struct kmem_cache
 #endif
 
 struct rfs_op_info {
@@ -309,8 +345,15 @@ struct rfs_inode {
 	 rfs_inode_get(container_of(inode->i_op, struct rfs_inode, op_new)) : \
 	 NULL)
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
 int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		struct inode *new_dir, struct dentry *new_dentry);
+#else
+int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
+		struct inode *new_dir, struct dentry *new_dentry,
+        unsigned int flags);
+#endif
+
 struct rfs_inode *rfs_inode_get(struct rfs_inode *rinode);
 void rfs_inode_put(struct rfs_inode *rinode);
 struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo);
@@ -482,7 +525,8 @@ static inline struct vfsmount *rfs_nameidata_mnt(struct nameidata *nd)
 	return nd->mnt;
 }
 
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
+
 
 static inline void rfs_nameidata_put(struct nameidata *nd)
 {
@@ -498,6 +542,12 @@ static inline struct vfsmount *rfs_nameidata_mnt(struct nameidata *nd)
 {
 	return nd->path.mnt;
 }
+
+#else
+
+/*
+* Nothing to declare for the latest kernels as struct path is used
+*/
 
 #endif
 
@@ -578,7 +628,7 @@ static inline int rfs_path_lookup(const char *name, struct nameidata *nd)
 	return path_lookup(name, LOOKUP_FOLLOW, nd);
 }
 
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 
 static inline int rfs_path_lookup(const char *name, struct nameidata *nd)
 {
@@ -591,6 +641,13 @@ static inline int rfs_path_lookup(const char *name, struct nameidata *nd)
 
 	nd->path = path;
 	return 0;
+}
+
+#else
+
+static inline int rfs_path_lookup(const char *name, struct path *path)
+{
+	return kern_path(name, LOOKUP_FOLLOW, path);
 }
 
 #endif

@@ -234,6 +234,7 @@ static int rfs_release(struct inode *inode, struct file *file)
 	return rargs.rv.rv_int;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 {
 	LIST_HEAD(sibs);
@@ -303,6 +304,7 @@ exit:
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
+#endif
 
 static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 {
@@ -310,7 +312,10 @@ static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 
 static void rfs_file_set_ops_dir(struct rfs_file *rfile)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 	rfile->op_new.readdir = rfs_readdir;
+#endif
+//TODO: dir operations
 }
 
 static void rfs_file_set_ops_lnk(struct rfs_file *rfile)

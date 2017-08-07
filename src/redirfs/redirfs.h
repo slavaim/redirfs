@@ -234,10 +234,17 @@ union redirfs_op_rv {
 };
 
 union redirfs_op_args {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	struct {
 		struct dentry *dentry;
 		struct nameidata *nd;
-	} d_revalidate;	
+	} d_revalidate;
+#else
+	struct {
+		struct dentry *dentry;
+		unsigned int flags;
+	} d_revalidate;
+#endif
 
 	/*
 	struct {
@@ -252,7 +259,7 @@ union redirfs_op_args {
 		struct qstr *name1;
 		struct qstr *name2;
 	} d_compare;
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 	struct {
 		const struct dentry *parent;
 		const struct inode *inode;
@@ -262,6 +269,13 @@ union redirfs_op_args {
 		const char *tname;
 		const struct qstr *name;
 	} d_compare;
+#else
+    struct {
+        const struct dentry *dentry;
+		unsigned int len;
+        const char   *str;
+        const struct qstr *name;
+    } d_compare;
 #endif
 
 	/*
@@ -279,6 +293,7 @@ union redirfs_op_args {
 		struct inode *inode;
 	} d_iput;	
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	struct {
 		struct inode *dir;
 		struct dentry *dentry;
@@ -291,6 +306,20 @@ union redirfs_op_args {
 		struct dentry *dentry;
 		struct nameidata *nd;
 	} i_lookup;
+#else
+	struct {
+		struct inode *dir;
+		struct dentry *dentry;
+		umode_t mode;
+		bool excl;
+	} i_create;
+
+	struct {
+		struct inode *dir;
+		struct dentry *dentry;
+		unsigned int flags;
+	} i_lookup;
+#endif
 
 	struct {
 		struct dentry *old_dentry;
@@ -309,30 +338,58 @@ union redirfs_op_args {
 		const char *oldname;
 	} i_symlink;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 	struct {
 		struct inode *dir;
 		struct dentry *dentry;
 		int mode;
 	} i_mkdir;
+#else
+	struct {
+		struct inode *dir;
+		struct dentry *dentry;
+		umode_t mode;
+	} i_mkdir;
+#endif
 
 	struct {
 		struct inode *dir;
 		struct dentry *dentry;
 	} i_rmdir;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 	struct {
 		struct inode *dir;
 		struct dentry *dentry;
 		int mode;
 		dev_t rdev;
 	} i_mknod;
+#else
+	struct {
+		struct inode *dir;
+		struct dentry *dentry;
+		umode_t mode;
+		dev_t rdev;
+	} i_mknod;
+#endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
 	struct {
 		struct inode *old_dir;
 		struct dentry *old_dentry;
 		struct inode *new_dir;
 		struct dentry *new_dentry;
 	} i_rename;
+#else
+    // TODO: rename2 (4.0.0 - 4.9.0)
+	struct {
+		struct inode *old_dir;
+		struct dentry *old_dentry;
+		struct inode *new_dir;
+		struct dentry *new_dentry;
+        unsigned int flags;
+	} i_rename;
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
 	struct {

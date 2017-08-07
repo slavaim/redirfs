@@ -142,7 +142,11 @@ static int rfs_flt_paths_add(redirfs_filter filter, const char *buf,
 	struct rfs_flt *rflt = filter;
 	struct rfs_path *rpath;
 	struct redirfs_path_info info;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	struct nameidata nd;
+#else
+    struct path spath;
+#endif
 	char *path;
 	char type;
 	int rv;
@@ -167,14 +171,23 @@ static int rfs_flt_paths_add(redirfs_filter filter, const char *buf,
 		return -EINVAL;
 	}
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	rv = rfs_path_lookup(path, &nd);
+#else
+    rv = rfs_path_lookup(path, &spath);
+#endif
 	if (rv) {
 		kfree(path);
 		return rv;
 	}
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	info.dentry = rfs_nameidata_dentry(&nd);
 	info.mnt = rfs_nameidata_mnt(&nd);
+#else
+	info.dentry = spath.dentry;
+	info.mnt = spath.mnt;
+#endif
 
 	if (!rflt->ops || !rflt->ops->add_path) {
 		rpath = redirfs_add_path(filter, &info);
@@ -185,7 +198,12 @@ static int rfs_flt_paths_add(redirfs_filter filter, const char *buf,
 	} else
 		rv = rflt->ops->add_path(&info);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	rfs_nameidata_put(&nd);
+#else
+    path_put(&spath);
+#endif
+
 	kfree(path);
 
 	return rv;
@@ -225,7 +243,11 @@ static int rfs_flt_paths_rem_name(redirfs_filter filter, const char *buf,
 {
 	struct rfs_flt *rflt = filter;
 	char *path;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	struct nameidata nd;
+#else
+    struct path spath;
+#endif
 	struct dentry *dentry;
 	struct vfsmount *mnt;
 	struct rfs_path *rpath;
@@ -240,20 +262,33 @@ static int rfs_flt_paths_rem_name(redirfs_filter filter, const char *buf,
 		return -EINVAL;
 	}
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	rv = rfs_path_lookup(path, &nd);
+#else
+    rv = rfs_path_lookup(path, &spath);
+#endif
 	if (rv) {
 		kfree(path);
 		return rv;
 	}
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	dentry = rfs_nameidata_dentry(&nd);
 	mnt = rfs_nameidata_mnt(&nd);
+#else
+	dentry = spath.dentry;
+	mnt = spath.mnt;
+#endif
 
 	rfs_mutex_lock(&rfs_path_mutex);
 	rpath = rfs_path_find(mnt, dentry);
 	if (!rpath) {
 		rfs_mutex_unlock(&rfs_path_mutex);
+    #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 		rfs_nameidata_put(&nd);
+#else
+        path_put(&spath);
+#endif
 		kfree(path);
 		return -EINVAL;
 	}
@@ -266,7 +301,12 @@ static int rfs_flt_paths_rem_name(redirfs_filter filter, const char *buf,
 
 	rfs_path_put(rpath);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	rfs_nameidata_put(&nd);
+#else
+    path_put(&spath);
+#endif
+
 	kfree(path);
 
 	return rv;

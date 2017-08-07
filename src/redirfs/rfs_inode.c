@@ -280,8 +280,13 @@ void rfs_inode_cache_destroy(void)
 	kmem_cache_destroy(rfs_inode_cache);
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
 		struct nameidata *nd)
+#else
+static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
+		unsigned int flags)
+#endif
 {
 	struct rfs_inode *rinode;
 	struct rfs_info *rinfo;
@@ -300,16 +305,29 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
 
 	rargs.args.i_lookup.dir = dir;
 	rargs.args.i_lookup.dentry = dentry;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	rargs.args.i_lookup.nd = nd;
+#else
+    rargs.args.i_lookup.flags = flags;
+#endif
 
 	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rinode->op_old && rinode->op_old->lookup)
+		if (rinode->op_old && rinode->op_old->lookup) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 			rargs.rv.rv_dentry = rinode->op_old->lookup(
 					rargs.args.i_lookup.dir,
 					rargs.args.i_lookup.dentry,
 					rargs.args.i_lookup.nd);
-		else
+#else
+			rargs.rv.rv_dentry = rinode->op_old->lookup(
+					rargs.args.i_lookup.dir,
+					rargs.args.i_lookup.dentry,
+					rargs.args.i_lookup.flags);
+
+#endif
+        } else {
 			rargs.rv.rv_dentry = ERR_PTR(-ENOSYS);
+        }
 	}
 
 	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
@@ -329,7 +347,11 @@ exit:
 	return rargs.rv.rv_dentry;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 static int rfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
+#else
+static int rfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
+#endif
 {
 	struct rfs_inode *rinode;
 	struct rfs_info *rinfo;
@@ -372,8 +394,13 @@ static int rfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	return rargs.rv.rv_int;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 static int rfs_create(struct inode *dir, struct dentry *dentry, int mode,
 		struct nameidata *nd)
+#else
+static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
+		bool excl)
+#endif
 {
 	struct rfs_inode *rinode;
 	struct rfs_info *rinfo;
@@ -392,17 +419,30 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, int mode,
 	rargs.args.i_create.dir = dir;
 	rargs.args.i_create.dentry = dentry;
 	rargs.args.i_create.mode = mode;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	rargs.args.i_create.nd = nd;
+#else
+    rargs.args.i_create.excl = excl;
+#endif
 
 	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rinode->op_old && rinode->op_old->create)
+		if (rinode->op_old && rinode->op_old->create) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 			rargs.rv.rv_int = rinode->op_old->create(
 					rargs.args.i_create.dir,
 					rargs.args.i_create.dentry,
 					rargs.args.i_create.mode,
 					rargs.args.i_create.nd);
-		else
+#else
+			rargs.rv.rv_int = rinode->op_old->create(
+					rargs.args.i_create.dir,
+					rargs.args.i_create.dentry,
+					rargs.args.i_create.mode,
+					rargs.args.i_create.excl);
+#endif
+        } else {
 			rargs.rv.rv_int = -ENOSYS;
+        }
 	}
 
 	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
@@ -506,8 +546,13 @@ static int rfs_symlink(struct inode *dir, struct dentry *dentry,
 	return rargs.rv.rv_int;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 static int rfs_mknod(struct inode * dir, struct dentry *dentry, int mode,
 		dev_t rdev)
+#else
+static int rfs_mknod(struct inode * dir, struct dentry *dentry, umode_t mode,
+		dev_t rdev)
+#endif
 {
 	struct rfs_inode *rinode;
 	struct rfs_info *rinfo;
@@ -838,7 +883,11 @@ static int rfs_setattr_default(struct dentry *dentry, struct iattr *iattr)
 	struct inode *inode = dentry->d_inode;
 	int rv;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
 	rv = inode_change_ok(inode, iattr);
+#else
+    rv = setattr_prepare(dentry, iattr);
+#endif
 	if (rv)
 		return rv;
 
@@ -966,6 +1015,7 @@ static void rfs_postcall_flts_rename(struct rfs_info *rinfo,
 	rcont->idx++;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
 int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		struct inode *new_dir, struct dentry *new_dentry)
 {
@@ -1033,7 +1083,79 @@ skip:
 	rfs_info_put(rinfo_new);
 	return rargs.rv.rv_int;
 }
+#else
+// TODO: add rename2 (4.0.0 - 4.9.0)
+int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
+		struct inode *new_dir, struct dentry *new_dentry,
+        unsigned int flags)
+{
+	struct rfs_inode *rinode_old;
+	struct rfs_inode *rinode_new;
+	struct rfs_info *rinfo_old;
+	struct rfs_info *rinfo_new;
+	struct rfs_context rcont_old;
+	struct rfs_context rcont_new;
+	struct redirfs_args rargs;
 
+	rfs_context_init(&rcont_old, 0);
+	rinode_old = rfs_inode_find(old_dir);
+	rinfo_old = rfs_inode_get_rinfo(rinode_old);
+
+	rfs_context_init(&rcont_new, 0);
+	rinode_new = rfs_inode_find(new_dir);
+
+	if (rinode_new)
+		rinfo_new = rfs_inode_get_rinfo(rinode_new);
+	else
+		rinfo_new = NULL;
+
+	if (S_ISDIR(old_dir->i_mode))
+		rargs.type.id = REDIRFS_DIR_IOP_RENAME;
+	else
+		BUG();
+
+	rargs.args.i_rename.old_dir = old_dir;
+	rargs.args.i_rename.old_dentry = old_dentry;
+	rargs.args.i_rename.new_dir = new_dir;
+	rargs.args.i_rename.new_dentry = new_dentry;
+    rargs.args.i_rename.flags = flags;
+
+	if (rfs_precall_flts(rinfo_old->rchain, &rcont_old, &rargs))
+		goto skip;
+
+	if (rfs_precall_flts_rename(rinfo_new, &rcont_new, &rargs))
+		goto skip;
+
+	if (rinode_old->op_old && rinode_old->op_old->rename)
+		rargs.rv.rv_int = rinode_old->op_old->rename(
+				rargs.args.i_rename.old_dir,
+				rargs.args.i_rename.old_dentry,
+				rargs.args.i_rename.new_dir,
+				rargs.args.i_rename.new_dentry,
+                rargs.args.i_rename.flags);
+	else
+		rargs.rv.rv_int = -ENOSYS;
+	
+skip:
+	if (!rargs.rv.rv_int)
+		rargs.rv.rv_int = rfs_fsrename(
+				rargs.args.i_rename.old_dir,
+				rargs.args.i_rename.old_dentry,
+				rargs.args.i_rename.new_dir,
+				rargs.args.i_rename.new_dentry);
+
+	rfs_postcall_flts_rename(rinfo_new, &rcont_new, &rargs);
+	rfs_postcall_flts(rinfo_old->rchain, &rcont_old, &rargs);
+
+	rfs_context_deinit(&rcont_old);
+	rfs_context_deinit(&rcont_new);
+	rfs_inode_put(rinode_old);
+	rfs_inode_put(rinode_new);
+	rfs_info_put(rinfo_old);
+	rfs_info_put(rinfo_new);
+	return rargs.rv.rv_int;
+}
+#endif
 
 static void rfs_inode_set_ops_reg(struct rfs_inode *rinode)
 {

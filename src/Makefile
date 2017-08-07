@@ -16,7 +16,8 @@ KDIR ?= /lib/modules/`uname -r`/build
 
 # module include directories
 
-MINC := -I$(PWD)/redirfs
+# MINC := -I$(PWD)/redirfs
+MINC := '-I$(PWD)/redirfs -v'
 
 modules:
 	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(MINC) modules
