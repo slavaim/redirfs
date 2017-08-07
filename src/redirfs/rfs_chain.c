@@ -1,8 +1,10 @@
 /*
  * RedirFS: Redirecting File System
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+ * 2017 - changing for the latest kernels by Slava Imameev
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
+ 
  * All rights reserved.
  *
  * This file is part of RedirFS.
