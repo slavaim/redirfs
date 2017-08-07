@@ -1,2 +1,2 @@
-# RedirFS - Redirecting File System
-THIS PROJECT IS NO LONGER DEVELOPED OR MAINTAINED
+# RedirFS
+This is an attempt to resurect the discontinued redirfs project from https://github.com/fhrbata/redirfs
