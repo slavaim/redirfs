@@ -1,3 +1,3 @@
 # obj-m := redirfs/ avflt/ dummyflt/
-obj-m := redirfs/
+obj-m := redirfs/ dummyflt/
 

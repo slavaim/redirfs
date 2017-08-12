@@ -111,7 +111,7 @@ struct rfs_dentry *rfs_dentry_add(struct dentry *dentry, struct rfs_info *rinfo)
 	}
 
 	if (!rd) {
-		rd_new->rinfo = rfs_info_get(rinfo);
+		rd_new->rinfo = rfs_info_get_unsafe(rinfo);
 		dentry->d_op = &rd_new->op_new;
 		rfs_dentry_get(rd_new);
 		rd = rfs_dentry_get(rd_new);
@@ -180,7 +180,9 @@ struct rfs_info *rfs_dentry_get_rinfo(struct rfs_dentry *rdentry)
 	struct rfs_info *rinfo;
 
 	spin_lock(&rdentry->lock);
-	rinfo = rfs_info_get(rdentry->rinfo);
+    {
+	    rinfo = rfs_info_get_unsafe(rdentry->rinfo);
+    }
 	spin_unlock(&rdentry->lock);
 
 	return rinfo;
@@ -188,25 +190,37 @@ struct rfs_info *rfs_dentry_get_rinfo(struct rfs_dentry *rdentry)
 
 void rfs_dentry_set_rinfo(struct rfs_dentry *rdentry, struct rfs_info *rinfo)
 {
+    struct rfs_info *rinfo_old;
+
 	spin_lock(&rdentry->lock);
-	rfs_info_put(rdentry->rinfo);
-	rdentry->rinfo = rfs_info_get(rinfo);
+    {
+        rinfo_old = rdentry->rinfo;
+	    rdentry->rinfo = rfs_info_get_unsafe(rinfo);
+    }
 	spin_unlock(&rdentry->lock);
+
+    rfs_info_put(rinfo_old);
 }
 
 void rfs_dentry_add_rfile(struct rfs_dentry *rdentry, struct rfs_file *rfile)
 {
+    rfs_file_get(rfile);
+
 	spin_lock(&rdentry->lock);
-	list_add_tail(&rfile->rdentry_list, &rdentry->rfiles);
+    {
+	    list_add_tail(&rfile->rdentry_list, &rdentry->rfiles);
+    }
 	spin_unlock(&rdentry->lock);
-	rfs_file_get(rfile);
 }
 
 void rfs_dentry_rem_rfile(struct rfs_file *rfile)
 {
 	spin_lock(&rfile->rdentry->lock);
-	list_del_init(&rfile->rdentry_list);
+    {
+	    list_del_init(&rfile->rdentry_list);
+    }
 	spin_unlock(&rfile->rdentry->lock);
+
 	rfs_file_put(rfile);
 }
 

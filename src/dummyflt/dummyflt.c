@@ -2,6 +2,9 @@
  * DummyFlt: Dummy Filter
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
+ * History:
+ *   2017 - modified for new kernels by Slava Imameev
+ *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
  *
@@ -22,7 +25,18 @@
  */
 
 #include <redirfs.h>
-#include <linux/slab.h> 
+#include <linux/slab.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
+    #include <linux/mount.h>
+#endif
+
+#ifndef f_dentry
+    #define f_dentry	f_path.dentry
+#endif
+
+#ifndef f_vfsmnt
+    #define f_vfsmnt	f_path.mnt
+#endif
 
 #define DUMMYFLT_VERSION "0.5"
 
@@ -151,8 +165,14 @@ enum redirfs_rv dummyflt_lookup(redirfs_context context,
 	char *call;
 	int rv;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	if (!args->args.i_lookup.nd)
 		return REDIRFS_CONTINUE;
+#else
+    struct vfsmount mnt = {0};
+    mnt.mnt_root = args->args.i_lookup.dir->i_sb->s_root;
+    mnt.mnt_sb = args->args.i_lookup.dir->i_sb;
+#endif
 
 	path = dummyflt_alloc(sizeof(char) * PAGE_SIZE);
 	if (!path)
@@ -161,10 +181,12 @@ enum redirfs_rv dummyflt_lookup(redirfs_context context,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,25))
 	rv = redirfs_get_filename(args->args.i_lookup.nd->mnt,
 			args->args.i_lookup.nd->dentry, path, PAGE_SIZE);
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	rv = redirfs_get_filename(args->args.i_lookup.nd->path.mnt,
 			args->args.i_lookup.nd->path.dentry, path, PAGE_SIZE);
-
+#else
+	rv = redirfs_get_filename(&mnt,
+			args->args.i_lookup.dentry, path, PAGE_SIZE);
 #endif
 
 	if (rv) {
@@ -195,13 +217,19 @@ static struct redirfs_op_info dummyflt_op_info[] = {
 	{REDIRFS_OP_END, NULL, NULL}
 };
 
+// to facilitate with module initialization put dummyflt_init in the .text segment
+#undef __init
+#define __init
+
 static int __init dummyflt_init(void)
 {
-	/*
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
+    struct nameidata nd;
+#else
+    struct path spath;
+#endif
 	struct redirfs_path_info dummyflt_path_info;
-	struct nameidata nd;
 	redirfs_path path;
-	*/
 
 	int err;
 	int rv;
@@ -219,28 +247,44 @@ static int __init dummyflt_init(void)
 		goto error;
 	}
 
-	/*
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
 	rv = path_lookup("/tmp", LOOKUP_FOLLOW, &nd);
+#else
+    rv = kern_path("/tmp", LOOKUP_FOLLOW, &spath);
+#endif
 	if (rv) {
 		printk(KERN_ERR "dummyflt: path lookup failed(%d)\n", rv);
 		goto error;
 	}
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
 	dummyflt_path_info.dentry = nd.path.dentry;
 	dummyflt_path_info.mnt  = nd.path.mnt;
 	dummyflt_path_info.flags  = REDIRFS_PATH_INCLUDE;
+#else
+	dummyflt_path_info.dentry = spath.dentry;
+	dummyflt_path_info.mnt  = spath.mnt;
+	dummyflt_path_info.flags  = REDIRFS_PATH_INCLUDE;
+#endif
 
 	path = redirfs_add_path(dummyflt, &dummyflt_path_info);
 	if (IS_ERR(path)) {
 		rv = PTR_ERR(path);
 		printk(KERN_ERR "dummyflt: redirfs_set_path failed(%d)\n", rv);
-		path_put(&nd.path);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
+	    path_put(&nd.path);
+#else
+        path_put(&spath);
+#endif
 		goto error;
 	}
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
 	path_put(&nd.path);
+#else
+    path_put(&spath);
+#endif
 	redirfs_put_path(path);
-	*/
 
 	printk(KERN_INFO "Dummy Filter Version "
 			DUMMYFLT_VERSION " <www.redirfs.org>\n");

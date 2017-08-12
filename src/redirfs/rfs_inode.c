@@ -97,7 +97,7 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 
 	ri = rfs_inode_find(inode);
 	if (!ri) {
-		ri_new->rinfo = rfs_info_get(rinfo);
+		ri_new->rinfo = rfs_info_get_unsafe(rinfo);
 		if (!S_ISSOCK(inode->i_mode))
 			inode->i_fop = &rfs_file_ops;
 
@@ -157,7 +157,7 @@ static struct rfs_chain *rfs_inode_join_rchains(struct rfs_inode *rinode)
 
 	list_for_each_entry(rdentry, &rinode->rdentries, rinode_list) {
 		spin_lock(&rdentry->lock);
-		rinfo = rfs_info_get(rdentry->rinfo);
+		rinfo = rfs_info_get_unsafe(rdentry->rinfo);
 		spin_unlock(&rdentry->lock);
 
 		rchain = rfs_chain_join(rinfo->rchain, rchain_old);
@@ -177,6 +177,7 @@ static struct rfs_chain *rfs_inode_join_rchains(struct rfs_inode *rinode)
 static int rfs_inode_set_rinfo_fast(struct rfs_inode *rinode)
 {
 	struct rfs_dentry *rdentry;
+    struct rfs_info   *rinfo_old;
 
 	if (!rinode->rdentries_nr)
 		return 0;
@@ -188,10 +189,14 @@ static int rfs_inode_set_rinfo_fast(struct rfs_inode *rinode)
 
 	spin_lock(&rdentry->lock);
 	spin_lock(&rinode->lock);
-	rfs_info_put(rinode->rinfo);
-	rinode->rinfo = rfs_info_get(rdentry->rinfo);
+    {
+	    rinfo_old = rinode->rinfo;
+	    rinode->rinfo = rfs_info_get_unsafe(rdentry->rinfo);
+    }
 	spin_unlock(&rinode->lock);
 	spin_unlock(&rdentry->lock);
+
+    rfs_info_put(rinfo_old);
 
 	return 0;
 }
@@ -201,7 +206,9 @@ struct rfs_info *rfs_inode_get_rinfo(struct rfs_inode *rinode)
 	struct rfs_info *rinfo;
 
 	spin_lock(&rinode->lock);
-	rinfo = rfs_info_get(rinode->rinfo);
+    {
+	    rinfo = rfs_info_get_unsafe(rinode->rinfo);
+    }
 	spin_unlock(&rinode->lock);
 
 	return rinfo;
@@ -254,7 +261,7 @@ int rfs_inode_set_rinfo(struct rfs_inode *rinode)
 
 	if (!rinfo->rchain) {
 		rfs_info_put(rinfo);
-		rinfo = rfs_info_get(rfs_info_none);
+		rinfo = rfs_info_get_unsafe(rfs_info_none);
 	}
 
 	rfs_chain_ops(rinfo->rchain, rinfo->rops);
