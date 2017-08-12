@@ -3,7 +3,7 @@
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - changing for the latest kernels by Slava Imameev
+ * 2017 - Modification for the latest kernels by Slava Imameev
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -48,6 +48,9 @@
 #define RFS_REM_OP(ops_new, ops_old, op) \
 	(ops_new.op = ops_old ? ops_old->op : NULL)
 
+//
+// if there is a filter registered for this operation then hook it
+//
 #define RFS_SET_OP(arr, id, ops_new, ops_old, op, f) \
 	(arr[id] ? \
 	 	RFS_ADD_OP(ops_new, op, f) : \
@@ -228,8 +231,18 @@ void rfs_root_add_walk(struct dentry *dentry);
 void rfs_root_set_rinfo(struct rfs_root *rroot, struct rfs_info *rinfo);
 
 struct rfs_ops {
+    //
+    // arr counts the number of registered filters for each operations,
+    // see redirfs_op_id for the full list of operations indexed by this
+    // array
+    //
 	char *arr;
+
+    //
+    // reference count
+    //
 	atomic_t count;
+
 	int flags;
 };
 

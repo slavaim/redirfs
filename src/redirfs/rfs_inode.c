@@ -1,9 +1,9 @@
 /*
  * RedirFS: Redirecting File System
- * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+ * Original version was written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - changing for the latest kernels by Slava Imameev
+ * 2017 - Modified by Slava Imameev
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -219,6 +219,7 @@ int rfs_inode_set_rinfo(struct rfs_inode *rinode)
 	struct rfs_chain *rchain;
 	struct rfs_info *rinfo;
 	struct rfs_ops *rops;
+    struct rfs_info *rinfo_old = NULL;
 	int rv;
 
 	if (!rinode)
@@ -243,33 +244,39 @@ int rfs_inode_set_rinfo(struct rfs_inode *rinode)
 	rinfo->rops = rops;
 
 	rfs_mutex_lock(&rinode->mutex);
-	rv = rfs_inode_set_rinfo_fast(rinode);
-	if (!rv) {
-		rfs_mutex_unlock(&rinode->mutex);
-		rfs_info_put(rinfo);
-		return 0;
-	}
+    { // start of the mutex lock
+	    rv = rfs_inode_set_rinfo_fast(rinode);
+	    if (!rv) {
+		    rfs_mutex_unlock(&rinode->mutex);
+		    rfs_info_put(rinfo);
+		    return 0;
+	    }
 
-	rchain = rfs_inode_join_rchains(rinode);
-	if (IS_ERR(rchain)) {
-		rfs_mutex_unlock(&rinode->mutex);
-		rfs_info_put(rinfo);
-		return PTR_ERR(rchain);
-	}
+	    rchain = rfs_inode_join_rchains(rinode);
+	    if (IS_ERR(rchain)) {
+		    rfs_mutex_unlock(&rinode->mutex);
+		    rfs_info_put(rinfo);
+		    return PTR_ERR(rchain);
+	    }
 
-	rinfo->rchain = rchain;
+	    rinfo->rchain = rchain;
 
-	if (!rinfo->rchain) {
-		rfs_info_put(rinfo);
-		rinfo = rfs_info_get_unsafe(rfs_info_none);
-	}
+	    if (!rinfo->rchain) {
+		    rfs_info_put(rinfo);
+		    rinfo = rfs_info_get_unsafe(rfs_info_none);
+	    }
 
-	rfs_chain_ops(rinfo->rchain, rinfo->rops);
-	spin_lock(&rinode->lock);
-	rfs_info_put(rinode->rinfo);
-	rinode->rinfo = rinfo;
-	spin_unlock(&rinode->lock);
+	    rfs_chain_ops(rinfo->rchain, rinfo->rops);
+	    spin_lock(&rinode->lock);
+        { // start of the lock
+	        rinfo_old = rinode->rinfo;
+	        rinode->rinfo = rinfo;
+        } // end of the lock
+	    spin_unlock(&rinode->lock);
+    } // end of the mutex lock
 	rfs_mutex_unlock(&rinode->mutex);
+
+    rfs_info_put(rinfo_old);
 
 	return 0;
 }
@@ -1185,6 +1192,10 @@ static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)
 	RFS_SET_IOP_MGT(rinode, mknod, rfs_mknod);
 	RFS_SET_IOP_MGT(rinode, symlink, rfs_symlink);
 
+    //
+    // the following two operations are required to support hooking,
+    // their registration do not dependent on registered filters
+    //
 	rinode->op_new.lookup = rfs_lookup;
 	rinode->op_new.mkdir = rfs_mkdir;
 }
