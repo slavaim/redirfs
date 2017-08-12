@@ -614,50 +614,50 @@ static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 
 static void rfs_dentry_set_ops_none(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_NONE_DOP_D_COMPARE, d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_NONE_DOP_D_REVALIDATE, d_revalidate);
+	RFS_SET_DOP(rdentry, REDIRFS_NONE_DOP_D_COMPARE, d_compare, rfs_d_compare);
+	RFS_SET_DOP(rdentry, REDIRFS_NONE_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_reg(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_REG_DOP_D_COMPARE, d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_REG_DOP_D_REVALIDATE, d_revalidate);
+	RFS_SET_DOP(rdentry, REDIRFS_REG_DOP_D_COMPARE, d_compare, rfs_d_compare);
+	RFS_SET_DOP(rdentry, REDIRFS_REG_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_dir(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_DIR_DOP_D_COMPARE, d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_DIR_DOP_D_REVALIDATE, d_revalidate);
+	RFS_SET_DOP(rdentry, REDIRFS_DIR_DOP_D_COMPARE, d_compare, rfs_d_compare);
+	RFS_SET_DOP(rdentry, REDIRFS_DIR_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_lnk(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_LNK_DOP_D_COMPARE, d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_LNK_DOP_D_REVALIDATE, d_revalidate);
+	RFS_SET_DOP(rdentry, REDIRFS_LNK_DOP_D_COMPARE, d_compare, rfs_d_compare);
+	RFS_SET_DOP(rdentry, REDIRFS_LNK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_chr(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_CHR_DOP_D_COMPARE, d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_CHR_DOP_D_REVALIDATE, d_revalidate);
+	RFS_SET_DOP(rdentry, REDIRFS_CHR_DOP_D_COMPARE, d_compare, rfs_d_compare);
+	RFS_SET_DOP(rdentry, REDIRFS_CHR_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_blk(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_BLK_DOP_D_COMPARE, d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_BLK_DOP_D_REVALIDATE, d_revalidate);
+	RFS_SET_DOP(rdentry, REDIRFS_BLK_DOP_D_COMPARE, d_compare, rfs_d_compare);
+	RFS_SET_DOP(rdentry, REDIRFS_BLK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_fifo(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_FIFO_DOP_D_COMPARE, d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_FIFO_DOP_D_REVALIDATE, d_revalidate);
+	RFS_SET_DOP(rdentry, REDIRFS_FIFO_DOP_D_COMPARE, d_compare, rfs_d_compare);
+	RFS_SET_DOP(rdentry, REDIRFS_FIFO_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_sock(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_SOCK_DOP_D_COMPARE, d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_SOCK_DOP_D_REVALIDATE, d_revalidate);
+	RFS_SET_DOP(rdentry, REDIRFS_SOCK_DOP_D_COMPARE, d_compare, rfs_d_compare);
+	RFS_SET_DOP(rdentry, REDIRFS_SOCK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 void rfs_dentry_set_ops(struct rfs_dentry *rdentry)

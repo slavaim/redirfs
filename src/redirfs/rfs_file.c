@@ -237,7 +237,7 @@ static int rfs_release(struct inode *inode, struct file *file)
 	return rargs.rv.rv_int;
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 {
 	LIST_HEAD(sibs);

@@ -94,19 +94,19 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 		return ri_new;
 
 	spin_lock(&inode->i_lock);
+    {
+	    ri = rfs_inode_find(inode);
+	    if (!ri) {
+		    ri_new->rinfo = rfs_info_get_unsafe(rinfo);
+		    if (!S_ISSOCK(inode->i_mode))
+			    inode->i_fop = &rfs_file_ops;
 
-	ri = rfs_inode_find(inode);
-	if (!ri) {
-		ri_new->rinfo = rfs_info_get_unsafe(rinfo);
-		if (!S_ISSOCK(inode->i_mode))
-			inode->i_fop = &rfs_file_ops;
-
-		inode->i_op = &ri_new->op_new;
-		rfs_inode_get(ri_new);
-		ri = rfs_inode_get(ri_new);
-	} else
-		atomic_inc(&ri->nlink);
-
+		    inode->i_op = &ri_new->op_new;
+		    rfs_inode_get(ri_new);
+		    ri = rfs_inode_get(ri_new);
+	    } else
+		    atomic_inc(&ri->nlink);
+    }
 	spin_unlock(&inode->i_lock);
 
 	rfs_inode_put(ri_new);
@@ -1169,21 +1169,21 @@ skip:
 
 static void rfs_inode_set_ops_reg(struct rfs_inode *rinode)
 {
-	RFS_SET_IOP(rinode, REDIRFS_REG_IOP_PERMISSION, permission);
-	RFS_SET_IOP(rinode, REDIRFS_REG_IOP_SETATTR, setattr);
+	RFS_SET_IOP(rinode, REDIRFS_REG_IOP_PERMISSION, permission, rfs_permission);
+	RFS_SET_IOP(rinode, REDIRFS_REG_IOP_SETATTR, setattr, rfs_setattr);
 }
 
 static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)
 {
-	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_UNLINK, unlink);
-	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_RMDIR, rmdir);
-	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_PERMISSION, permission);
-	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_SETATTR, setattr);
+	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_UNLINK, unlink, rfs_unlink);
+	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_RMDIR, rmdir, rfs_rmdir);
+	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_PERMISSION, permission, rfs_permission);
+	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_SETATTR, setattr, rfs_setattr);
 
-	RFS_SET_IOP_MGT(rinode, create);
-	RFS_SET_IOP_MGT(rinode, link);
-	RFS_SET_IOP_MGT(rinode, mknod);
-	RFS_SET_IOP_MGT(rinode, symlink);
+	RFS_SET_IOP_MGT(rinode, create, rfs_create);
+	RFS_SET_IOP_MGT(rinode, link, rfs_link);
+	RFS_SET_IOP_MGT(rinode, mknod, rfs_mknod);
+	RFS_SET_IOP_MGT(rinode, symlink, rfs_symlink);
 
 	rinode->op_new.lookup = rfs_lookup;
 	rinode->op_new.mkdir = rfs_mkdir;
@@ -1191,32 +1191,32 @@ static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)
 
 static void rfs_inode_set_ops_lnk(struct rfs_inode *rinode)
 {
-	RFS_SET_IOP(rinode, REDIRFS_LNK_IOP_PERMISSION, permission);
-	RFS_SET_IOP(rinode, REDIRFS_LNK_IOP_SETATTR, setattr);
+	RFS_SET_IOP(rinode, REDIRFS_LNK_IOP_PERMISSION, permission, rfs_permission);
+	RFS_SET_IOP(rinode, REDIRFS_LNK_IOP_SETATTR, setattr, rfs_setattr);
 }
 
 static void rfs_inode_set_ops_chr(struct rfs_inode *rinode)
 {
-	RFS_SET_IOP(rinode, REDIRFS_CHR_IOP_PERMISSION, permission);
-	RFS_SET_IOP(rinode, REDIRFS_CHR_IOP_SETATTR, setattr);
+	RFS_SET_IOP(rinode, REDIRFS_CHR_IOP_PERMISSION, permission, rfs_permission);
+	RFS_SET_IOP(rinode, REDIRFS_CHR_IOP_SETATTR, setattr, rfs_setattr);
 }
 
 static void rfs_inode_set_ops_blk(struct rfs_inode *rinode)
 {
-	RFS_SET_IOP(rinode, REDIRFS_BLK_IOP_PERMISSION, permission);
-	RFS_SET_IOP(rinode, REDIRFS_BLK_IOP_SETATTR, setattr);
+	RFS_SET_IOP(rinode, REDIRFS_BLK_IOP_PERMISSION, permission, rfs_permission);
+	RFS_SET_IOP(rinode, REDIRFS_BLK_IOP_SETATTR, setattr, rfs_setattr);
 }
 
 static void rfs_inode_set_ops_fifo(struct rfs_inode *rinode)
 {
-	RFS_SET_IOP(rinode, REDIRFS_FIFO_IOP_PERMISSION, permission);
-	RFS_SET_IOP(rinode, REDIRFS_FIFO_IOP_SETATTR, setattr);
+	RFS_SET_IOP(rinode, REDIRFS_FIFO_IOP_PERMISSION, permission, rfs_permission);
+	RFS_SET_IOP(rinode, REDIRFS_FIFO_IOP_SETATTR, setattr, rfs_setattr);
 }
 
 static void rfs_inode_set_ops_sock(struct rfs_inode *rinode)
 {
-	RFS_SET_IOP(rinode, REDIRFS_SOCK_IOP_PERMISSION, permission);
-	RFS_SET_IOP(rinode, REDIRFS_SOCK_IOP_SETATTR, setattr);
+	RFS_SET_IOP(rinode, REDIRFS_SOCK_IOP_PERMISSION, permission, rfs_permission);
+	RFS_SET_IOP(rinode, REDIRFS_SOCK_IOP_SETATTR, setattr, rfs_setattr);
 }
 
 static void rfs_inode_set_aops_reg(struct rfs_inode *rinode)

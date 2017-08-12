@@ -42,42 +42,42 @@
     #define f_vfsmnt	f_path.mnt
 #endif
 
-#define RFS_ADD_OP(ops_new, op) \
-	(ops_new.op = rfs_##op)
+#define RFS_ADD_OP(ops_new, op, f) \
+	(ops_new.op = f)
 
 #define RFS_REM_OP(ops_new, ops_old, op) \
 	(ops_new.op = ops_old ? ops_old->op : NULL)
 
-#define RFS_SET_OP(arr, id, ops_new, ops_old, op) \
+#define RFS_SET_OP(arr, id, ops_new, ops_old, op, f) \
 	(arr[id] ? \
-	 	RFS_ADD_OP(ops_new, op) : \
+	 	RFS_ADD_OP(ops_new, op, f) : \
 	 	RFS_REM_OP(ops_new, ops_old, op) \
 	)
 
-#define RFS_SET_FOP(rf, id, op) \
+#define RFS_SET_FOP(rf, id, op, f) \
 	(rf->rdentry->rinfo->rops ? \
 		RFS_SET_OP(rf->rdentry->rinfo->rops->arr, id, rf->op_new, \
-			rf->op_old, op) : \
+			rf->op_old, op, f) : \
 	 	RFS_REM_OP(rf->op_new, rf->op_old, op) \
 	)
 
-#define RFS_SET_DOP(rd, id, op) \
+#define RFS_SET_DOP(rd, id, op, f) \
 	(rd->rinfo->rops ? \
 		RFS_SET_OP(rd->rinfo->rops->arr, id, rd->op_new,\
-			rd->op_old, op) : \
+			rd->op_old, op, f) : \
 	 	RFS_REM_OP(rd->op_new, rd->op_old, op) \
 	)
 
-#define RFS_SET_IOP_MGT(ri, op) \
+#define RFS_SET_IOP_MGT(ri, op, f) \
 	(ri->rinfo->rops ? \
-	 	RFS_ADD_OP(ri->op_new, op) : \
+	 	RFS_ADD_OP(ri->op_new, op, f) : \
 	 	RFS_REM_OP(ri->op_new, ri->op_old, op) \
 	)
 
-#define RFS_SET_IOP(ri, id, op) \
+#define RFS_SET_IOP(ri, id, op, f) \
 	(ri->rinfo->rops ? \
 	 	RFS_SET_OP(ri->rinfo->rops->arr, id, ri->op_new, \
-			ri->op_old, op) : \
+			ri->op_old, op, f) : \
 	 	RFS_REM_OP(ri->op_new, ri->op_old, op) \
 	)
 
