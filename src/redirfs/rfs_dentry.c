@@ -137,26 +137,24 @@ int rfs_dentry_add_rinode(struct rfs_dentry *rdentry, struct rfs_info *rinfo)
 	if (!rdentry->dentry->d_inode)
 		return 0;
 
-	spin_lock(&rdentry->lock);
 	if (rdentry->rinode) {
-		spin_unlock(&rdentry->lock);
 		return 0;
 	}
-	spin_unlock(&rdentry->lock);
 
 	rinode = rfs_inode_add(rdentry->dentry->d_inode, rinfo);
 	if (IS_ERR(rinode))
 		return PTR_ERR(rinode);
 
 	spin_lock(&rdentry->lock);
-	if (rdentry->rinode) {
-		spin_unlock(&rdentry->lock);
-		rfs_inode_del(rinode);
-		rfs_inode_put(rinode);
-		return 0;
-	}
-
-	rdentry->rinode = rfs_inode_get(rinode);
+    {
+	    if (rdentry->rinode) {
+		    spin_unlock(&rdentry->lock);
+		    rfs_inode_del(rinode);
+		    rfs_inode_put(rinode);
+		    return 0;
+	    }
+	    rdentry->rinode = rfs_inode_get(rinode);
+    }
 	spin_unlock(&rdentry->lock);
 
 	rfs_inode_add_rdentry(rinode, rdentry);
