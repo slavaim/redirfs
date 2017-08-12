@@ -231,17 +231,18 @@ void rfs_root_add_walk(struct dentry *dentry);
 void rfs_root_set_rinfo(struct rfs_root *rroot, struct rfs_info *rinfo);
 
 struct rfs_ops {
-    //
-    // arr counts the number of registered filters for each operations,
-    // see redirfs_op_id for the full list of operations indexed by this
-    // array
-    //
-	char *arr;
 
     //
     // reference count
     //
 	atomic_t count;
+
+    //
+    // arr counts the number of registered filters for each operations,
+    // see redirfs_op_id for the full list of operations indexed by this
+    // array
+    //
+	short arr[ REDIRFS_OP_END ];
 
 	int flags;
 };
