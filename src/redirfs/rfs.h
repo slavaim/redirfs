@@ -237,14 +237,15 @@ struct rfs_ops {
     //
 	atomic_t count;
 
-    //
-    // arr counts the number of registered filters for each operations,
-    // see redirfs_op_id for the full list of operations indexed by this
-    // array
-    //
-	short arr[ REDIRFS_OP_END ];
+    int flags;
 
-	int flags;
+    //
+    // arr[i] counts the number of registered filters for each operations,
+    // see redirfs_op_id for the full list of operations indexed by this
+    // array, this allows register up to 127 filters ( pre and post callbacks
+    // are accounted separatelly )
+    //
+	unsigned char arr[REDIRFS_OP_END];
 };
 
 struct rfs_ops *rfs_ops_alloc(void);
