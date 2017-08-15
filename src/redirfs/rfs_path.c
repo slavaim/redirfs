@@ -654,12 +654,21 @@ int redirfs_get_filename(struct vfsmount *mnt, struct dentry *dentry, char *buf,
 	char *fn;
 	size_t len;
 
-	fn = d_path(dentry, mnt, buf, size);
-	if (IS_ERR(fn))
-		return PTR_ERR(fn);
+    if (!size)
+        return -EINVAL;
 
-	len = strlen(fn);
-	memmove(buf, fn, len);
+    if (!current->fs) {
+        len = min((int)strlen(dentry->d_name.name), size-1);
+        memcpy(buf, dentry->d_name.name, len);
+    } else {
+	    fn = d_path(dentry, mnt, buf, size);
+	    if (IS_ERR(fn))
+		    return PTR_ERR(fn);
+
+	    len = strlen(fn);
+	    memmove(buf, fn, len);
+    }
+
 	buf[len] = 0;
 	return 0;
 }
@@ -673,14 +682,24 @@ int redirfs_get_filename(struct vfsmount *mnt, struct dentry *dentry, char *buf,
 	char *fn;	
 	size_t len;
 
-	path.mnt = mnt;
-	path.dentry = dentry;
-	fn = d_path(&path, buf, size);
-	if (IS_ERR(fn))
-		return PTR_ERR(fn);
+    if (!size)
+        return -EINVAL;
 
-	len = strlen(fn);
-	memmove(buf, fn, len);
+    /*d_path requires a valid current->fs*/
+    if (!current->fs) {
+        len = min((int)strlen(dentry->d_name.name), size-1);
+        memcpy(buf, dentry->d_name.name, len);
+    } else {
+	    path.mnt = mnt;
+	    path.dentry = dentry;
+	    fn = d_path(&path, buf, size);
+	    if (IS_ERR(fn))
+		    return PTR_ERR(fn);
+
+	    len = strlen(fn);
+	    memmove(buf, fn, len);
+    }
+
 	buf[len] = 0;
 	return 0;
 }
