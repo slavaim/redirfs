@@ -687,7 +687,7 @@ int redirfs_get_filename(struct vfsmount *mnt, struct dentry *dentry, char *buf,
 
     /*d_path requires a valid current->fs*/
     if (!current->fs) {
-        len = min((int)strlen(dentry->d_name.name), size-1);
+        len = min(strlen(dentry->d_name.name), (size_t)size-1);
         memcpy(buf, dentry->d_name.name, len);
     } else {
 	    path.mnt = mnt;
