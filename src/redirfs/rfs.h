@@ -42,6 +42,9 @@
     #define f_vfsmnt	f_path.mnt
 #endif
 
+//
+// do not replace NULL operations to preserve file system driver semantics
+//
 #define RFS_ADD_OP(ops_new, ops_old, op, f) \
 	(ops_old->op ? (ops_new.op = f) : (void)0)
 
