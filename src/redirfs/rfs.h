@@ -42,8 +42,8 @@
     #define f_vfsmnt	f_path.mnt
 #endif
 
-#define RFS_ADD_OP(ops_new, op, f) \
-	(ops_new.op = f)
+#define RFS_ADD_OP(ops_new, ops_old, op, f) \
+	(ops_old->op ? (ops_new.op = f) : (void)0)
 
 #define RFS_REM_OP(ops_new, ops_old, op) \
 	(ops_new.op = ops_old ? ops_old->op : NULL)
@@ -53,7 +53,7 @@
 //
 #define RFS_SET_OP(arr, id, ops_new, ops_old, op, f) \
 	(arr[id] ? \
-	 	RFS_ADD_OP(ops_new, op, f) : \
+	 	RFS_ADD_OP(ops_new, ops_old, op, f) : \
 	 	RFS_REM_OP(ops_new, ops_old, op) \
 	)
 
@@ -73,7 +73,7 @@
 
 #define RFS_SET_IOP_MGT(ri, op, f) \
 	(ri->rinfo->rops ? \
-	 	RFS_ADD_OP(ri->op_new, op, f) : \
+	 	RFS_ADD_OP(ri->op_new, ri->op_old, op, f) : \
 	 	RFS_REM_OP(ri->op_new, ri->op_old, op) \
 	)
 
