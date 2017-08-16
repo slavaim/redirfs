@@ -16,11 +16,13 @@ KDIR ?= /lib/modules/`uname -r`/build
 
 # module include directories
 
-# MINC := -I$(PWD)/redirfs
-MINC := '-I$(PWD)/redirfs -v'
+MINC := -I$(PWD)/redirfs
 
 modules:
 	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(MINC) modules
+
+modules_debug:
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS='$(MINC) -v -O1 -g' modules
 
 modules_install: modules
 	mkdir -p $(MDIR)

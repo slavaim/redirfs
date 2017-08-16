@@ -118,6 +118,34 @@ exit:
 	return REDIRFS_CONTINUE;
 }
 
+enum redirfs_rv dummyflt_read(redirfs_context context,
+		struct redirfs_args *args)
+{
+	char *path;
+	char *call;
+	int rv;
+
+	path = dummyflt_alloc(sizeof(char) * PAGE_SIZE);
+	if (!path)
+		return REDIRFS_CONTINUE;
+
+	rv = redirfs_get_filename(args->args.f_read.file->f_vfsmnt,
+			args->args.f_read.file->f_dentry, path, PAGE_SIZE);
+
+	if (rv) {
+		printk(KERN_ERR "dummyflt: rfs_get_filename failed(%d)\n", rv);
+		goto exit;
+	}
+
+	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
+
+	printk(KERN_ALERT "dummyflt: read: %s, call: %s\n", path, call);
+
+exit:
+	kfree(path);
+	return REDIRFS_CONTINUE;
+}
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
 
 enum redirfs_rv dummyflt_permission(redirfs_context context,
@@ -168,10 +196,6 @@ enum redirfs_rv dummyflt_lookup(redirfs_context context,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 	if (!args->args.i_lookup.nd)
 		return REDIRFS_CONTINUE;
-#else
-    struct vfsmount mnt = {0};
-    mnt.mnt_root = args->args.i_lookup.dir->i_sb->s_root;
-    mnt.mnt_sb = args->args.i_lookup.dir->i_sb;
 #endif
 
 	path = dummyflt_alloc(sizeof(char) * PAGE_SIZE);
@@ -185,7 +209,11 @@ enum redirfs_rv dummyflt_lookup(redirfs_context context,
 	rv = redirfs_get_filename(args->args.i_lookup.nd->path.mnt,
 			args->args.i_lookup.nd->path.dentry, path, PAGE_SIZE);
 #else
-	rv = redirfs_get_filename(&mnt,
+    //
+    // it is not possible to reliably get vfsmount from a dentry or inode
+    // as dentry might be mapped at multiple paths,
+    // see https://unix.stackexchange.com/questions/198590/what-is-a-bind-mount
+	rv = redirfs_get_filename(NULL,
 			args->args.i_lookup.dentry, path, PAGE_SIZE);
 #endif
 
@@ -209,6 +237,7 @@ static struct redirfs_op_info dummyflt_op_info[] = {
 	{REDIRFS_REG_FOP_RELEASE, dummyflt_release, dummyflt_release},
 	{REDIRFS_DIR_FOP_OPEN, dummyflt_open, dummyflt_open},
 	{REDIRFS_DIR_FOP_RELEASE, dummyflt_release, dummyflt_release},
+    {REDIRFS_REG_FOP_READ, dummyflt_read, dummyflt_read},
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
 	{REDIRFS_REG_IOP_PERMISSION, dummyflt_permission, dummyflt_permission},
 	{REDIRFS_DIR_IOP_PERMISSION, dummyflt_permission, dummyflt_permission},
@@ -250,7 +279,7 @@ static int __init dummyflt_init(void)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
 	rv = path_lookup("/tmp", LOOKUP_FOLLOW, &nd);
 #else
-    rv = kern_path("/tmp", LOOKUP_FOLLOW, &spath);
+    rv = kern_path("/", LOOKUP_FOLLOW, &spath);
 #endif
 	if (rv) {
 		printk(KERN_ERR "dummyflt: path lookup failed(%d)\n", rv);

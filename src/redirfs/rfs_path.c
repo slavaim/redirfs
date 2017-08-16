@@ -657,7 +657,7 @@ int redirfs_get_filename(struct vfsmount *mnt, struct dentry *dentry, char *buf,
     if (!size)
         return -EINVAL;
 
-    if (!current->fs) {
+    if (!current->fs || !mnt) {
         len = min((int)strlen(dentry->d_name.name), size-1);
         memcpy(buf, dentry->d_name.name, len);
     } else {
@@ -686,7 +686,7 @@ int redirfs_get_filename(struct vfsmount *mnt, struct dentry *dentry, char *buf,
         return -EINVAL;
 
     /*d_path requires a valid current->fs*/
-    if (!current->fs) {
+    if (!current->fs || !mnt) {
         len = min(strlen(dentry->d_name.name), (size_t)size-1);
         memcpy(buf, dentry->d_name.name, len);
     } else {

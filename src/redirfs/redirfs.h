@@ -143,7 +143,7 @@ enum redirfs_op_id {
 	REDIRFS_REG_FOP_OPEN,
 	REDIRFS_REG_FOP_RELEASE,
 	/* REDIRFS_REG_FOP_LLSEEK, */
-	/* REDIRFS_REG_FOP_READ, */
+	REDIRFS_REG_FOP_READ,
 	/* REDIRFS_REG_FOP_WRITE, */
 	/* REDIRFS_REG_FOP_AIO_READ, */
 	/* REDIRFS_REG_FOP_AIO_WRITE, */
@@ -461,14 +461,12 @@ union redirfs_op_args {
 	} f_llseek;
 	*/
 
-	/*
 	struct {
 		struct file *file;
 		char __user *buf;
 		size_t count;
 		loff_t *pos;
 	} f_read;
-	*/
 
 	/*
 	struct {

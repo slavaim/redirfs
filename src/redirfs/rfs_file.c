@@ -164,6 +164,8 @@ int rfs_open(struct inode *inode, struct file *file)
 		rargs.type.id = REDIRFS_BLK_FOP_OPEN;
 	else if (S_ISFIFO(inode->i_mode))
 		rargs.type.id = REDIRFS_FIFO_FOP_OPEN;
+    else
+        BUG();
 
 	rargs.args.f_open.inode = inode;
 	rargs.args.f_open.file = file;
@@ -252,25 +254,29 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-	if (S_ISDIR(file->f_dentry->d_inode->i_mode))
+	if (S_ISDIR(file->f_dentry->d_inode->i_mode)) {
 		rargs.type.id = REDIRFS_DIR_FOP_READDIR;
 
-	rargs.args.f_readdir.file = file;
-	rargs.args.f_readdir.dirent = dirent;
-	rargs.args.f_readdir.filldir = filldir;
+	    rargs.args.f_readdir.file = file;
+	    rargs.args.f_readdir.dirent = dirent;
+	    rargs.args.f_readdir.filldir = filldir;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rfile->op_old && rfile->op_old->readdir) 
-			rargs.rv.rv_int = rfile->op_old->readdir(
-					rargs.args.f_readdir.file,
-					rargs.args.f_readdir.dirent,
-					rargs.args.f_readdir.filldir);
-		else
-			rargs.rv.rv_int = -ENOTDIR;
-	}
+	    if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		    if (rfile->op_old && rfile->op_old->readdir) 
+			    rargs.rv.rv_int = rfile->op_old->readdir(
+					    rargs.args.f_readdir.file,
+					    rargs.args.f_readdir.dirent,
+					    rargs.args.f_readdir.filldir);
+		    else
+			    rargs.rv.rv_int = -ENOTDIR;
+	    }
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
-	rfs_context_deinit(&rcont);
+	    rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	    rfs_context_deinit(&rcont);
+
+    } else {
+        rargs.rv.rv_int = -ENOTDIR;
+    }
 
 	if (rargs.rv.rv_int)
 		goto exit;
@@ -309,8 +315,11 @@ exit:
 }
 #endif
 
+extern ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos);
+
 static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 {
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_READ, read, rfs_read);
 }
 
 static void rfs_file_set_ops_dir(struct rfs_file *rfile)
