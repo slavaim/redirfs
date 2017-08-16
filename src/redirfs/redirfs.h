@@ -144,6 +144,7 @@ enum redirfs_op_id {
 	REDIRFS_REG_FOP_RELEASE,
 	/* REDIRFS_REG_FOP_LLSEEK, */
 	REDIRFS_REG_FOP_READ,
+    REDIRFS_REG_FOP_READ_ITER,
 	/* REDIRFS_REG_FOP_WRITE, */
 	/* REDIRFS_REG_FOP_AIO_READ, */
 	/* REDIRFS_REG_FOP_AIO_WRITE, */
@@ -467,6 +468,13 @@ union redirfs_op_args {
 		size_t count;
 		loff_t *pos;
 	} f_read;
+
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+    struct {
+        struct kiocb *kiocb;
+        struct iov_iter *iov_iter;
+    } f_read_iter;
+#endif
 
 	/*
 	struct {

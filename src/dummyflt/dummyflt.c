@@ -146,6 +146,36 @@ exit:
 	return REDIRFS_CONTINUE;
 }
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+enum redirfs_rv dummyflt_read_iter(redirfs_context context,
+		struct redirfs_args *args)
+{
+	char *path;
+	char *call;
+	int rv;
+
+	path = dummyflt_alloc(sizeof(char) * PAGE_SIZE);
+	if (!path)
+		return REDIRFS_CONTINUE;
+
+	rv = redirfs_get_filename(args->args.f_read_iter.kiocb->ki_filp->f_vfsmnt,
+			args->args.f_read_iter.kiocb->ki_filp->f_dentry, path, PAGE_SIZE);
+
+	if (rv) {
+		printk(KERN_ERR "dummyflt: rfs_get_filename failed(%d)\n", rv);
+		goto exit;
+	}
+
+	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
+
+	printk(KERN_ALERT "dummyflt: dummyflt_read_iter: %s, call: %s\n", path, call);
+
+exit:
+	kfree(path);
+	return REDIRFS_CONTINUE;
+}
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
 
 enum redirfs_rv dummyflt_permission(redirfs_context context,
@@ -238,6 +268,9 @@ static struct redirfs_op_info dummyflt_op_info[] = {
 	{REDIRFS_DIR_FOP_OPEN, dummyflt_open, dummyflt_open},
 	{REDIRFS_DIR_FOP_RELEASE, dummyflt_release, dummyflt_release},
     {REDIRFS_REG_FOP_READ, dummyflt_read, dummyflt_read},
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+    {REDIRFS_REG_FOP_READ_ITER, dummyflt_read_iter, dummyflt_read_iter},
+#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
 	{REDIRFS_REG_IOP_PERMISSION, dummyflt_permission, dummyflt_permission},
 	{REDIRFS_DIR_IOP_PERMISSION, dummyflt_permission, dummyflt_permission},

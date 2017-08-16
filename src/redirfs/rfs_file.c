@@ -316,10 +316,16 @@ exit:
 #endif
 
 extern ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter);
+#endif
 
 static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 {
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_READ, read, rfs_read);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_READ_ITER, read_iter, rfs_read_iter);
+#endif
 }
 
 static void rfs_file_set_ops_dir(struct rfs_file *rfile)

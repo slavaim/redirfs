@@ -55,3 +55,37 @@ ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
+
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(kiocb->ki_filp);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = REDIRFS_REG_FOP_READ_ITER;
+	rargs.args.f_read_iter.kiocb = kiocb;
+	rargs.args.f_read_iter.iov_iter = iov_iter;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->read_iter) 
+			rargs.rv.rv_int = rfile->op_old->read_iter(
+					rargs.args.f_read_iter.kiocb,
+					rargs.args.f_read_iter.iov_iter);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_int;
+}
+#endif
