@@ -3,7 +3,8 @@
  * Original version was written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - Modified by Slava Imameev
+ * 2017 - development continued by Slava Imameev
+ *      - adress_space_operations hooks
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -41,6 +42,7 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 	rinode->inode = inode;
 	rinode->op_old = inode->i_op;
 	rinode->fop_old = inode->i_fop;
+    rinode->a_ops_old = inode->i_mapping ? inode->i_mapping->a_ops : NULL;
 	spin_lock_init(&rinode->lock);
 	rfs_mutex_init(&rinode->mutex);
 	atomic_set(&rinode->count, 1);
@@ -50,6 +52,10 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 	if (inode->i_op)
 		memcpy(&rinode->op_new, inode->i_op,
 				sizeof(struct inode_operations));
+
+    if (inode->i_mapping && inode->i_mapping->a_ops)
+        memcpy(&rinode->a_ops_new, inode->i_mapping->a_ops,
+				sizeof(struct address_space_operations));
 
 	rinode->op_new.rename = rfs_rename;
 
@@ -102,6 +108,10 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 			    inode->i_fop = &rfs_file_ops;
 
 		    inode->i_op = &ri_new->op_new;
+
+            if (inode->i_mapping && inode->i_mapping->a_ops)
+                inode->i_mapping->a_ops = &ri_new->a_ops_new;
+
 		    rfs_inode_get(ri_new);
 		    ri = rfs_inode_get(ri_new);
 	    } else
@@ -1174,10 +1184,17 @@ skip:
 }
 #endif
 
+extern int rfs_readpage(struct file *, struct page *);
+extern int rfs_readpages(struct file *file, struct address_space *mapping,
+                    struct list_head *pages, unsigned int nr_pages);
+
 static void rfs_inode_set_ops_reg(struct rfs_inode *rinode)
 {
 	RFS_SET_IOP(rinode, REDIRFS_REG_IOP_PERMISSION, permission, rfs_permission);
 	RFS_SET_IOP(rinode, REDIRFS_REG_IOP_SETATTR, setattr, rfs_setattr);
+
+    RFS_SET_AOP(rinode, REDIRFS_REG_AOP_READPAGE, readpage, rfs_readpage);
+    RFS_SET_AOP(rinode, REDIRFS_REG_AOP_READPAGES, readpages, rfs_readpages);
 }
 
 static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)

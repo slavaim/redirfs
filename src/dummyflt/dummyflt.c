@@ -146,6 +146,62 @@ exit:
 	return REDIRFS_CONTINUE;
 }
 
+enum redirfs_rv dummyflt_readpage(redirfs_context context,
+		struct redirfs_args *args)
+{
+	char *path;
+	char *call;
+	int rv;
+
+	path = dummyflt_alloc(sizeof(char) * PAGE_SIZE);
+	if (!path)
+		return REDIRFS_CONTINUE;
+
+	rv = redirfs_get_filename(args->args.a_readpage.file->f_vfsmnt,
+			args->args.a_readpage.file->f_dentry, path, PAGE_SIZE);
+
+	if (rv) {
+		printk(KERN_ERR "dummyflt: rfs_get_filename failed(%d)\n", rv);
+		goto exit;
+	}
+
+	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
+
+	printk(KERN_ALERT "dummyflt: readpage: %s, call: %s\n", path, call);
+
+exit:
+	kfree(path);
+	return REDIRFS_CONTINUE;
+}
+
+enum redirfs_rv dummyflt_readpages(redirfs_context context,
+		struct redirfs_args *args)
+{
+	char *path;
+	char *call;
+	int rv;
+
+	path = dummyflt_alloc(sizeof(char) * PAGE_SIZE);
+	if (!path)
+		return REDIRFS_CONTINUE;
+
+	rv = redirfs_get_filename(args->args.a_readpages.file->f_vfsmnt,
+			args->args.a_readpages.file->f_dentry, path, PAGE_SIZE);
+
+	if (rv) {
+		printk(KERN_ERR "dummyflt: rfs_get_filename failed(%d)\n", rv);
+		goto exit;
+	}
+
+	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
+
+	printk(KERN_ALERT "dummyflt: readpage: %s, call: %s\n", path, call);
+
+exit:
+	kfree(path);
+	return REDIRFS_CONTINUE;
+}
+
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
 enum redirfs_rv dummyflt_read_iter(redirfs_context context,
 		struct redirfs_args *args)
@@ -276,6 +332,8 @@ static struct redirfs_op_info dummyflt_op_info[] = {
 	{REDIRFS_DIR_IOP_PERMISSION, dummyflt_permission, dummyflt_permission},
 #endif
 	{REDIRFS_DIR_IOP_LOOKUP, dummyflt_lookup, dummyflt_lookup},
+    {REDIRFS_REG_AOP_READPAGE, dummyflt_readpage, dummyflt_readpage},
+    {REDIRFS_REG_AOP_READPAGES, dummyflt_readpages, dummyflt_readpages},
 	{REDIRFS_OP_END, NULL, NULL}
 };
 
