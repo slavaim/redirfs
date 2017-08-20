@@ -337,11 +337,11 @@ static struct redirfs_op_info dummyflt_op_info[] = {
 	{REDIRFS_OP_END, NULL, NULL}
 };
 
-// to facilitate with module initialization put dummyflt_init in the .text segment
-#undef __init
-#define __init
-
-static int __init dummyflt_init(void)
+//
+// to facilitate with module initialization debugging
+// put dummyflt_init in the .text segment
+//
+static int dummyflt_init(void)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
     struct nameidata nd;

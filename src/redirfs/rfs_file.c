@@ -51,7 +51,8 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 		memcpy(&rfile->op_new, rfile->op_old,
 				sizeof(struct file_operations));
 
-	rfile->op_new.open = rfs_open;
+    RFS_ADD_OP(rfile->op_new, rfile->op_old, open, rfs_open);
+	BUG_ON(rfile->op_new.open != rfs_open);
 
 	return rfile;
 }
@@ -315,25 +316,48 @@ exit:
 }
 #endif
 
+extern loff_t rfs_llseek(struct file *file, loff_t offset, int origin);
 extern ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos);
+extern ssize_t rfs_write(struct file *file, const char __user *buf, size_t count, loff_t *pos);
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
-ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter);
+extern ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter);
+extern ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter);
 #endif
+extern int rfs_iterate(struct file *file, struct dir_context *dir_context);
+extern int rfs_iterate_shared(struct file *file, struct dir_context *dir_context);
+extern unsigned int rfs_poll(struct file *file, struct poll_table_struct *poll_table_struct);
+extern long rfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+extern long rfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+extern int rfs_mmap(struct file *file, struct vm_area_struct *vma);
+extern int rfs_flush(struct file *, fl_owner_t owner);
+extern int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync);
 
 static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 {
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_LLSEEK, llseek, rfs_llseek);
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_READ, read, rfs_read);
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_WRITE, write, rfs_write);
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_READ_ITER, read_iter, rfs_read_iter);
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_WRITE_ITER, write_iter, rfs_write_iter);
 #endif
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_POLL, poll, rfs_poll);
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_UNLOCKED_IOCTL, unlocked_ioctl, rfs_unlocked_ioctl);
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_COMPAT_IOCTL, compat_ioctl, rfs_compat_ioctl);
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_MMAP, mmap, rfs_mmap);
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_OPEN, open, rfs_open); // should not be called as called through rfile->op_new.open registered on inode lookup
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FLUSH, flush, rfs_flush);
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FSYNC, fsync, rfs_fsync);
 }
 
 static void rfs_file_set_ops_dir(struct rfs_file *rfile)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 	rfile->op_new.readdir = rfs_readdir;
+#else
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_DIR_ITERATE, iterate, rfs_iterate);
+    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_DIR_ITERATE_SHARED, iterate_shared, rfs_iterate_shared);
 #endif
-//TODO: dir operations
 }
 
 static void rfs_file_set_ops_lnk(struct rfs_file *rfile)
@@ -379,6 +403,7 @@ void rfs_file_set_ops(struct rfs_file *rfile)
 	else if (S_ISFIFO(mode))
 		rfs_file_set_ops_fifo(rfile);
 
-	rfile->op_new.release = rfs_release;
+    RFS_ADD_OP(rfile->op_new, rfile->op_old, release, rfs_release);
+	BUG_ON(rfile->op_new.release != rfs_release);
 }
 

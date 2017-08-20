@@ -104,7 +104,9 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 	    ri = rfs_inode_find(inode);
 	    if (!ri) {
 		    ri_new->rinfo = rfs_info_get_unsafe(rinfo);
-		    if (!S_ISSOCK(inode->i_mode))
+		    if (!S_ISSOCK(inode->i_mode) &&
+                inode->i_fop &&
+                inode->i_fop->open)
 			    inode->i_fop = &rfs_file_ops;
 
 		    inode->i_op = &ri_new->op_new;

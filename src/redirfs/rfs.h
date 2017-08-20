@@ -3,7 +3,7 @@
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - Modification for the latest kernels by Slava Imameev
+ * 2017 - modifications made by Slava Imameev
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -46,10 +46,10 @@
 // do not replace NULL operations to preserve file system driver semantics
 //
 #define RFS_ADD_OP(ops_new, ops_old, op, f) \
-	(ops_old->op ? (ops_new.op = f) : (void)0)
+	((ops_old->op && ops_new.op != f) ? (ops_new.op = f) : (void)0)
 
 #define RFS_REM_OP(ops_new, ops_old, op) \
-	(ops_new.op = ops_old ? ops_old->op : NULL)
+	(ops_new.op = (ops_old ? ops_old->op : NULL))
 
 //
 // if there is a filter registered for this operation then hook it

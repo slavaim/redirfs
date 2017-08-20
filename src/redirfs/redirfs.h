@@ -3,7 +3,7 @@
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
 *
  * History:
- * 2017 - changing for the latest kernels by Slava Imameev
+ * 2017 - Slava Imameev made changes for the latest kernels and extended the functionality
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -142,18 +142,27 @@ enum redirfs_op_id {
 
 	REDIRFS_REG_FOP_OPEN,
 	REDIRFS_REG_FOP_RELEASE,
-	/* REDIRFS_REG_FOP_LLSEEK, */
+	REDIRFS_REG_FOP_LLSEEK,
 	REDIRFS_REG_FOP_READ,
+    REDIRFS_REG_FOP_WRITE,
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
     REDIRFS_REG_FOP_READ_ITER,
-	/* REDIRFS_REG_FOP_WRITE, */
+    REDIRFS_REG_FOP_WRITE_ITER,
+#endif
+    REDIRFS_REG_FOP_POLL,
+    REDIRFS_REG_FOP_UNLOCKED_IOCTL,
+    REDIRFS_REG_FOP_COMPAT_IOCTL,
 	/* REDIRFS_REG_FOP_AIO_READ, */
 	/* REDIRFS_REG_FOP_AIO_WRITE, */
-	/* REDIRFS_REG_FOP_MMAP, */
-	/* REDIRFS_REG_FOP_FLUSH, */
+	REDIRFS_REG_FOP_MMAP,
+	REDIRFS_REG_FOP_FLUSH,
+    REDIRFS_REG_FOP_FSYNC,
 
 	REDIRFS_DIR_FOP_OPEN,
 	REDIRFS_DIR_FOP_RELEASE,
 	REDIRFS_DIR_FOP_READDIR,
+    REDIRFS_REG_FOP_DIR_ITERATE,
+    REDIRFS_REG_FOP_DIR_ITERATE_SHARED,
 	/* REDIRFS_DIR_FOP_FLUSH, */
 
 	REDIRFS_CHR_FOP_OPEN,
@@ -226,15 +235,19 @@ typedef void *redirfs_context;
 typedef void *redirfs_path;
 typedef void *redirfs_root;
 
+//
+// a union for returned values
+//
 union redirfs_op_rv {
-	int		rv_int;
-	ssize_t		rv_ssize;
-	unsigned int	rv_uint;
-	unsigned long	rv_ulong;
-	loff_t		rv_loff;
+    int	             rv_int;
+	unsigned int	 rv_uint;
+	unsigned long	 rv_ulong;
+    long	         rv_long;
+	loff_t		     rv_loff;
 	struct dentry	*rv_dentry;
-	sector_t	rv_sector;
-	struct page	*rv_page;
+	sector_t	     rv_sector;
+	struct page	    *rv_page;
+    ssize_t          rv_ssize;
 };
 
 union redirfs_op_args {
@@ -434,19 +447,15 @@ union redirfs_op_args {
 		struct file *file;
 	} f_release;
 
-	/*
 	struct {
 		struct file *file;
-		fl_owner_t id;
+		fl_owner_t  owner;
 	} f_flush;
-	*/
 
-	/*
 	struct {
 		struct file *file;
 		struct vm_area_struct *vma;
 	} f_mmap;
-	*/
 
 	struct {
 		struct file *file;
@@ -454,13 +463,11 @@ union redirfs_op_args {
 		filldir_t filldir;
 	} f_readdir;
 
-	/*
 	struct {
-                struct file *file;
-                loff_t offset;
-                int origin;
+        struct file *file;
+        loff_t offset;
+        int origin;
 	} f_llseek;
-	*/
 
 	struct {
 		struct file *file;
@@ -469,21 +476,58 @@ union redirfs_op_args {
 		loff_t *pos;
 	} f_read;
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
-    struct {
-        struct kiocb *kiocb;
-        struct iov_iter *iov_iter;
-    } f_read_iter;
-#endif
-
-	/*
 	struct {
 		struct file *file;
 		const char __user *buf;
 		size_t count;
 		loff_t *pos;
 	} f_write;
-	*/
+
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+    struct {
+        struct kiocb *kiocb;
+        struct iov_iter *iov_iter;
+    } f_read_iter;
+
+    struct {
+        struct kiocb *kiocb;
+        struct iov_iter *iov_iter;
+    } f_write_iter;
+#endif
+
+    struct {
+        struct file *file;
+        struct dir_context *dir_context;
+    } f_iterate;
+
+    struct {
+        struct file *file;
+        struct dir_context *dir_context;
+    } f_iterate_shared;
+
+    struct {
+        struct file *file;
+        struct poll_table_struct *poll_table_struct;
+    } f_poll;
+
+    struct {
+        struct file *file;
+        unsigned int cmd;
+        unsigned long arg;
+    } f_unlocked_ioctl;
+
+    struct {
+        struct file *file;
+        unsigned int cmd;
+        unsigned long arg;
+    } f_compat_ioctl;
+
+    struct{
+        struct file *file;
+        loff_t start;
+        loff_t end;
+        int datasync;
+    } f_fsync;
 
 	/*
 	struct {
