@@ -3,7 +3,10 @@
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - modifications made by Slava Imameev
+ * 2017 - Slava Imameev made the following changes
+ *        - modification for 4.x kernels
+ *        - extended functionality
+ *        - new operation IDs model
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -54,22 +57,22 @@
 //
 // if there is a filter registered for this operation then hook it
 //
-#define RFS_SET_OP(arr, id, ops_new, ops_old, op, f) \
-	(arr[id] ? \
+#define RFS_SET_OP(arr, idc, ops_new, ops_old, op, f) \
+	((arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) ? \
 	 	RFS_ADD_OP(ops_new, ops_old, op, f) : \
 	 	RFS_REM_OP(ops_new, ops_old, op) \
 	)
 
-#define RFS_SET_FOP(rf, id, op, f) \
+#define RFS_SET_FOP(rf, idc, op, f) \
 	(rf->rdentry->rinfo->rops ? \
-		RFS_SET_OP(rf->rdentry->rinfo->rops->arr, id, rf->op_new, \
+		RFS_SET_OP(rf->rdentry->rinfo->rops->arr, idc, rf->op_new, \
 			rf->op_old, op, f) : \
 	 	RFS_REM_OP(rf->op_new, rf->op_old, op) \
 	)
 
-#define RFS_SET_DOP(rd, id, op, f) \
+#define RFS_SET_DOP(rd, idc, op, f) \
 	(rd->rinfo->rops ? \
-		RFS_SET_OP(rd->rinfo->rops->arr, id, rd->op_new,\
+		RFS_SET_OP(rd->rinfo->rops->arr, idc, rd->op_new,\
 			rd->op_old, op, f) : \
 	 	RFS_REM_OP(rd->op_new, rd->op_old, op) \
 	)
@@ -80,16 +83,16 @@
 	 	RFS_REM_OP(ri->op_new, ri->op_old, op) \
 	)
 
-#define RFS_SET_IOP(ri, id, op, f) \
+#define RFS_SET_IOP(ri, idc, op, f) \
 	(ri->rinfo->rops ? \
-	 	RFS_SET_OP(ri->rinfo->rops->arr, id, ri->op_new, \
+	 	RFS_SET_OP(ri->rinfo->rops->arr, idc, ri->op_new, \
 			ri->op_old, op, f) : \
 	 	RFS_REM_OP(ri->op_new, ri->op_old, op) \
 	)
 
-#define RFS_SET_AOP(ri, id, op, f) \
+#define RFS_SET_AOP(ri, idc, op, f) \
 	(ri->rinfo->rops ? \
-	 	RFS_SET_OP(ri->rinfo->rops->arr, id, ri->a_ops_new, \
+	 	RFS_SET_OP(ri->rinfo->rops->arr, idc, ri->a_ops_new, \
 			ri->a_ops_old, op, f) : \
 	 	RFS_REM_OP(ri->a_ops_new, ri->a_ops_old, op) \
 	)
@@ -169,7 +172,7 @@ struct rfs_op_info {
 
 struct rfs_flt {
 	struct list_head list;
-	struct rfs_op_info cbs[REDIRFS_OP_END];
+	struct rfs_op_info cbs[RFS_INODE_MAX][RFS_OP_MAX];
 	struct module *owner;
 	struct kobject kobj;
 	char *name;
@@ -250,12 +253,12 @@ struct rfs_ops {
     int flags;
 
     //
-    // arr[i] counts the number of registered filters for each operations,
+    // arr[][] counts the number of registered filters for each operations,
     // see redirfs_op_id for the full list of operations indexed by this
     // array, this allows register up to 127 filters ( pre and post callbacks
-    // are accounted separatelly )
+    // are accounted separatelly ) for each inode type
     //
-	unsigned char arr[REDIRFS_OP_END];
+	unsigned char arr[RFS_INODE_MAX][RFS_OP_MAX];
 };
 
 struct rfs_ops *rfs_ops_alloc(void);

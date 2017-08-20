@@ -155,18 +155,24 @@ struct rfs_chain *rfs_chain_rem(struct rfs_chain *rchain, struct rfs_flt *rflt)
 
 void rfs_chain_ops(struct rfs_chain *rchain, struct rfs_ops *rops)
 {
-	int i, j;
+	int i;
 
 	if (!rchain)
 		return;
 
 	for (i = 0; i < rchain->rflts_nr; i++) {
-		for (j = 0; j < REDIRFS_OP_END; j++) {
-			if (rchain->rflts[i]->cbs[j].pre_cb)
-				rops->arr[j]++;
-			if (rchain->rflts[i]->cbs[j].post_cb)
-				rops->arr[j]++;
-		}
+
+        int it;
+        for (it=0; it < RFS_INODE_MAX; it++) {
+
+            int j;
+		    for (j = 0; j < RFS_OP_MAX; j++) {
+			    if (rchain->rflts[i]->cbs[it][j].pre_cb)
+				    rops->arr[it][j]++;
+			    if (rchain->rflts[i]->cbs[it][j].post_cb)
+				    rops->arr[it][j]++;
+		    }
+        }
 	}
 }
 

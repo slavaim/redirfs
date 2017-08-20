@@ -245,8 +245,15 @@ int redirfs_set_operations(redirfs_filter filter, struct redirfs_op_info ops[])
 		return -EINVAL;
 
 	while (ops[i].op_id != REDIRFS_OP_END) {
-		rflt->cbs[ops[i].op_id].pre_cb = ops[i].pre_cb;
-		rflt->cbs[ops[i].op_id].post_cb = ops[i].post_cb;
+
+        enum rfs_inode_type  it = RFS_IDC_TO_ITYPE(ops[i].op_id);
+        enum rfs_op_id       op_id = RFS_IDC_TO_OP_ID(ops[i].op_id);
+
+        BUG_ON(it >= RFS_INODE_MAX);
+        BUG_ON(op_id >= RFS_OP_MAX);
+
+		rflt->cbs[it][op_id].pre_cb = ops[i].pre_cb;
+		rflt->cbs[it][op_id].post_cb = ops[i].post_cb;
 		i++;
 	}
 

@@ -3,7 +3,10 @@
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
 *
  * History:
- * 2017 - Slava Imameev made changes for the latest kernels and extended the functionality
+ * 2017 - Slava Imameev made the following changes
+ *        - modification for 4.x kernels
+ *        - extended functionality
+ *        - new operation IDs model
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -45,128 +48,260 @@
 #define REDIRFS_FILTER_ATTRIBUTE(__name, __mode, __show, __store) \
 	__ATTR(__name, __mode, __show, __store)
 
-enum redirfs_op_id {
-	REDIRFS_NONE_DOP_D_REVALIDATE,
+enum rfs_inode_type{
+
+    // dentry
+    RFS_INODE_DNONE, // negative dentry
+    RFS_INODE_DSOCK, // dentry for sock
+    RFS_INODE_DLINK, // dentry for link
+    RFS_INODE_DREG,  // dentry for dreg
+    RFS_INODE_DBULK,
+    RFS_INODE_DDIR,
+    RFS_INODE_DCHAR,
+    RFS_INODE_DFIFO,
+
+    // inode
+    RFS_INODE_SOCK,
+    RFS_INODE_LINK,
+    RFS_INODE_REG,
+    RFS_INODE_BULK,
+    RFS_INODE_DIR,
+    RFS_INODE_CHAR,
+    RFS_INODE_FIFO,
+
+    // the last enum value
+    RFS_INODE_MAX
+};
+
+enum rfs_op_id {
+
+    // dentry
+    RFS_OP_d_revalidate,
+    RFS_OP_d_weak_revalidate,
+    RFS_OP_d_hash,
+    RFS_OP_d_compare,
+    RFS_OP_d_delete,
+    RFS_OP_d_init,
+    RFS_OP_d_release,
+    RFS_OP_d_prune,
+    RFS_OP_d_iput,
+    RFS_OP_d_dname,
+    RFS_OP_d_automount,
+    RFS_OP_d_manage,
+    RFS_OP_d_real,
+
+    // inode
+    RFS_OP_i_lookup,
+    RFS_OP_i_get_link,
+    RFS_OP_i_permission,
+    RFS_OP_i_get_acl,
+    RFS_OP_i_readlink,
+    RFS_OP_i_create,
+    RFS_OP_i_link,
+    RFS_OP_i_unlink,
+    RFS_OP_i_symlink,
+    RFS_OP_i_mkdir,
+    RFS_OP_i_rmdir,
+    RFS_OP_i_mknod,
+    RFS_OP_i_rename,
+    RFS_OP_i_setattr,
+    RFS_OP_i_getattr,
+    RFS_OP_i_listxattr,
+    RFS_OP_i_fiemap,
+    RFS_OP_i_update_time,
+    RFS_OP_i_atomic_open,
+    RFS_OP_i_tmpfile,
+    RFS_OP_i_set_acl,
+
+    // file
+    RFS_OP_f_llseek,
+    RFS_OP_f_read,
+    RFS_OP_f_write,
+    RFS_OP_f_read_iter,
+    RFS_OP_f_write_iter,
+    RFS_OP_f_readdir, // old interface
+    RFS_OP_f_iterate,
+    RFS_OP_f_iterate_shared,
+    RFS_OP_f_poll,
+    RFS_OP_f_unlocked_ioctl,
+    RFS_OP_f_compat_ioctl,
+    RFS_OP_f_mmap,
+    RFS_OP_f_open,
+    RFS_OP_f_flush,
+    RFS_OP_f_release,
+    RFS_OP_f_fsync,
+    RFS_OP_f_fasync,
+    RFS_OP_f_lock,
+    RFS_OP_f_sendpage,
+    RFS_OP_f_get_unmapped_area,
+    RFS_OP_f_check_flags,
+    RFS_OP_f_flock,
+    RFS_OP_f_splice_write,
+    RFS_OP_f_splice_read,
+    RFS_OP_f_setlease,
+    RFS_OP_f_fallocate,
+    RFS_OP_f_show_fdinfo,
+    RFS_OP_f_copy_file_range,
+    RFS_OP_f_clone_file_range,
+    RFS_OP_f_dedupe_file_range,
+
+    // address_space
+    RFS_OP_a_writepage,
+    RFS_OP_a_readpage,
+    RFS_OP_a_writepages,
+    RFS_OP_a_set_page_dirty,
+    RFS_OP_a_readpages,
+    RFS_OP_a_write_begin,
+    RFS_OP_a_write_end,
+    RFS_OP_a_bmap,
+    RFS_OP_a_invalidatepage,
+    RFS_OP_a_releasepage,
+    RFS_OP_a_freepage,
+    RFS_OP_a_direct_IO,
+    RFS_OP_a_migratepage,
+    RFS_OP_a_isolate_page,
+    RFS_OP_a_putback_page,
+    RFS_OP_a_launder_page,
+    RFS_OP_a_is_partially_uptodate,
+    RFS_OP_a_is_dirty_writeback,
+    RFS_OP_a_error_remove_page,
+    RFS_OP_a_swap_activate,
+    RFS_OP_a_swap_deactivate,
+
+    // the last entry
+    RFS_OP_MAX
+};
+
+#define  RFS_OP_IDC(itype, op_id) (itype<<16 | op_id)
+#define  RFS_IDC_TO_ITYPE(idc) ((enum rfs_inode_type) (((idc) >> 16) & 0xFFFF))
+#define  RFS_IDC_TO_OP_ID(idc) ((enum rfs_op_id) ((idc) & 0xFFFF))
+
+//
+// the new code should use RFS_OP_IDC macro instead of xtending
+// the enum redirfs_op_id_combined type
+//
+enum redirfs_op_id_combined {
+	REDIRFS_NONE_DOP_D_REVALIDATE = RFS_OP_IDC(RFS_INODE_DNONE, RFS_OP_d_revalidate),
 	/* REDIRFS_NONE_DOP_D_HASH, */
-	REDIRFS_NONE_DOP_D_COMPARE,
+	REDIRFS_NONE_DOP_D_COMPARE    = RFS_OP_IDC(RFS_INODE_DNONE, RFS_OP_d_compare),
 	/* REDIRFS_NONE_DOP_D_DELETE, */
-	REDIRFS_NONE_DOP_D_RELEASE,
-	REDIRFS_NONE_DOP_D_IPUT,
+	REDIRFS_NONE_DOP_D_RELEASE    = RFS_OP_IDC(RFS_INODE_DNONE, RFS_OP_d_release),
+	REDIRFS_NONE_DOP_D_IPUT       = RFS_OP_IDC(RFS_INODE_DNONE, RFS_OP_d_iput),
 	/* REDIRFS_NODE_DOP_D_NAME, */
 
-	REDIRFS_REG_DOP_D_REVALIDATE,
+	REDIRFS_REG_DOP_D_REVALIDATE  = RFS_OP_IDC(RFS_INODE_DREG, RFS_OP_d_revalidate),
 	/* REDIRFS_REG_DOP_D_HASH, */
-	REDIRFS_REG_DOP_D_COMPARE,
+	REDIRFS_REG_DOP_D_COMPARE     = RFS_OP_IDC(RFS_INODE_DREG, RFS_OP_d_compare),
 	/* REDIRFS_REG_DOP_D_DELETE, */
-	REDIRFS_REG_DOP_D_RELEASE,
-	REDIRFS_REG_DOP_D_IPUT,
+	REDIRFS_REG_DOP_D_RELEASE     = RFS_OP_IDC(RFS_INODE_DREG, RFS_OP_d_release),
+	REDIRFS_REG_DOP_D_IPUT        = RFS_OP_IDC(RFS_INODE_DREG, RFS_OP_d_iput),
 	/* REDIRFS_REG_DOP_D_NAME, */
 
-	REDIRFS_DIR_DOP_D_REVALIDATE,
+	REDIRFS_DIR_DOP_D_REVALIDATE  = RFS_OP_IDC(RFS_INODE_DDIR, RFS_OP_d_revalidate),
 	/* REDIRFS_DIR_DOP_D_HASH, */
-	REDIRFS_DIR_DOP_D_COMPARE,
+	REDIRFS_DIR_DOP_D_COMPARE     = RFS_OP_IDC(RFS_INODE_DDIR, RFS_OP_d_compare),
 	/* REDIRFS_DIR_DOP_D_DELETE, */
-	REDIRFS_DIR_DOP_D_RELEASE,
-	REDIRFS_DIR_DOP_D_IPUT,
+	REDIRFS_DIR_DOP_D_RELEASE     = RFS_OP_IDC(RFS_INODE_DDIR, RFS_OP_d_release),
+	REDIRFS_DIR_DOP_D_IPUT        = RFS_OP_IDC(RFS_INODE_DDIR, RFS_OP_d_iput),
 	/* REDIRFS_DIR_DOP_D_NAME, */
 
-	REDIRFS_CHR_DOP_D_REVALIDATE,
+	REDIRFS_CHR_DOP_D_REVALIDATE  = RFS_OP_IDC(RFS_INODE_DCHAR, RFS_OP_d_revalidate),
 	/* REDIRFS_CHR_DOP_D_HASH, */
-	REDIRFS_CHR_DOP_D_COMPARE,
+	REDIRFS_CHR_DOP_D_COMPARE     = RFS_OP_IDC(RFS_INODE_DCHAR, RFS_OP_d_compare),
 	/* REDIRFS_CHR_DOP_D_DELETE, */
-	REDIRFS_CHR_DOP_D_RELEASE,
-	REDIRFS_CHR_DOP_D_IPUT,
+	REDIRFS_CHR_DOP_D_RELEASE     = RFS_OP_IDC(RFS_INODE_DCHAR, RFS_OP_d_release),
+	REDIRFS_CHR_DOP_D_IPUT        = RFS_OP_IDC(RFS_INODE_DCHAR, RFS_OP_d_iput),
 	/* REDIRFS_CHR_DOP_D_NAME, */
 
-	REDIRFS_BLK_DOP_D_REVALIDATE,
+	REDIRFS_BLK_DOP_D_REVALIDATE  = RFS_OP_IDC(RFS_INODE_DBULK, RFS_OP_d_revalidate),
 	/* REDIRFS_BLK_DOP_D_HASH, */
-	REDIRFS_BLK_DOP_D_COMPARE,
+	REDIRFS_BLK_DOP_D_COMPARE     = RFS_OP_IDC(RFS_INODE_DBULK, RFS_OP_d_compare),
 	/* REDIRFS_BLK_DOP_D_DELETE, */
-	REDIRFS_BLK_DOP_D_RELEASE,
-	REDIRFS_BLK_DOP_D_IPUT,
+	REDIRFS_BLK_DOP_D_RELEASE     = RFS_OP_IDC(RFS_INODE_DBULK, RFS_OP_d_release),
+	REDIRFS_BLK_DOP_D_IPUT        = RFS_OP_IDC(RFS_INODE_DBULK, RFS_OP_d_iput),
 	/* REDIRFS_BLK_DOP_D_NAME, */
 
-	REDIRFS_FIFO_DOP_D_REVALIDATE,
+	REDIRFS_FIFO_DOP_D_REVALIDATE = RFS_OP_IDC(RFS_INODE_DFIFO, RFS_OP_d_revalidate),
 	/* REDIRFS_FIFO_DOP_D_HASH, */
-	REDIRFS_FIFO_DOP_D_COMPARE,
+	REDIRFS_FIFO_DOP_D_COMPARE    = RFS_OP_IDC(RFS_INODE_DFIFO, RFS_OP_d_compare),
 	/* REDIRFS_FIFO_DOP_D_DELETE, */
-	REDIRFS_FIFO_DOP_D_RELEASE,
-	REDIRFS_FIFO_DOP_D_IPUT,
+	REDIRFS_FIFO_DOP_D_RELEASE    = RFS_OP_IDC(RFS_INODE_DFIFO, RFS_OP_d_release),
+	REDIRFS_FIFO_DOP_D_IPUT       = RFS_OP_IDC(RFS_INODE_DFIFO, RFS_OP_d_iput),
 	/* REDIRFS_FIFO_DOP_D_NAME, */
 
-	REDIRFS_LNK_DOP_D_REVALIDATE,
+	REDIRFS_LNK_DOP_D_REVALIDATE  = RFS_OP_IDC(RFS_INODE_DLINK, RFS_OP_d_revalidate),
 	/* REDIRFS_LNK_DOP_D_HASH, */
-	REDIRFS_LNK_DOP_D_COMPARE,
+	REDIRFS_LNK_DOP_D_COMPARE     = RFS_OP_IDC(RFS_INODE_DLINK, RFS_OP_d_compare),
 	/* REDIRFS_LNK_DOP_D_DELETE, */
-	REDIRFS_LNK_DOP_D_RELEASE,
-	REDIRFS_LNK_DOP_D_IPUT,
+	REDIRFS_LNK_DOP_D_RELEASE     = RFS_OP_IDC(RFS_INODE_DLINK, RFS_OP_d_release),
+	REDIRFS_LNK_DOP_D_IPUT        = RFS_OP_IDC(RFS_INODE_DLINK, RFS_OP_d_iput),
 	/* REDIRFS_LNK_DOP_D_NAME, */
 
-	REDIRFS_SOCK_DOP_D_REVALIDATE,
+	REDIRFS_SOCK_DOP_D_REVALIDATE = RFS_OP_IDC(RFS_INODE_DSOCK, RFS_OP_d_revalidate),
 	/* REDIRFS_SOCK_DOP_D_HASH, */
-	REDIRFS_SOCK_DOP_D_COMPARE,
+	REDIRFS_SOCK_DOP_D_COMPARE    = RFS_OP_IDC(RFS_INODE_DSOCK, RFS_OP_d_compare),
 	/* REDIRFS_SOCK_DOP_D_DELETE, */
-	REDIRFS_SOCK_DOP_D_RELEASE,
-	REDIRFS_SOCK_DOP_D_IPUT,
+	REDIRFS_SOCK_DOP_D_RELEASE    = RFS_OP_IDC(RFS_INODE_DSOCK, RFS_OP_d_release),
+	REDIRFS_SOCK_DOP_D_IPUT       = RFS_OP_IDC(RFS_INODE_DSOCK, RFS_OP_d_iput),
 	/* REDIRFS_SOCK_DOP_D_NAME, */
 
-	REDIRFS_REG_IOP_PERMISSION,
-	REDIRFS_REG_IOP_SETATTR,
+	REDIRFS_REG_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_i_permission),
+	REDIRFS_REG_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_i_setattr),
 
-	REDIRFS_DIR_IOP_CREATE,
-	REDIRFS_DIR_IOP_LOOKUP,
-	REDIRFS_DIR_IOP_LINK,
-	REDIRFS_DIR_IOP_UNLINK,
-	REDIRFS_DIR_IOP_SYMLINK, 
-	REDIRFS_DIR_IOP_MKDIR,
-	REDIRFS_DIR_IOP_RMDIR,
-	REDIRFS_DIR_IOP_MKNOD,
-	REDIRFS_DIR_IOP_RENAME,
-	REDIRFS_DIR_IOP_PERMISSION,
-	REDIRFS_DIR_IOP_SETATTR,
+	REDIRFS_DIR_IOP_CREATE       = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_create),
+	REDIRFS_DIR_IOP_LOOKUP       = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_lookup),
+	REDIRFS_DIR_IOP_LINK         = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_link),
+	REDIRFS_DIR_IOP_UNLINK       = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_unlink),
+	REDIRFS_DIR_IOP_SYMLINK      = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_symlink), 
+	REDIRFS_DIR_IOP_MKDIR        = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_mkdir),
+	REDIRFS_DIR_IOP_RMDIR        = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_rmdir),
+	REDIRFS_DIR_IOP_MKNOD        = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_mknod),
+	REDIRFS_DIR_IOP_RENAME       = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_rename),
+	REDIRFS_DIR_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_permission),
+	REDIRFS_DIR_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_setattr),
 
-	REDIRFS_CHR_IOP_PERMISSION,
-	REDIRFS_CHR_IOP_SETATTR,
+	REDIRFS_CHR_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_i_permission),
+	REDIRFS_CHR_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_i_setattr),
 
-	REDIRFS_BLK_IOP_PERMISSION,
-	REDIRFS_BLK_IOP_SETATTR,
+	REDIRFS_BLK_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_BULK, RFS_OP_i_permission),
+	REDIRFS_BLK_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_BULK, RFS_OP_i_setattr),
 
-	REDIRFS_FIFO_IOP_PERMISSION,
-	REDIRFS_FIFO_IOP_SETATTR,
+	REDIRFS_FIFO_IOP_PERMISSION  = RFS_OP_IDC(RFS_INODE_FIFO, RFS_OP_i_permission),
+	REDIRFS_FIFO_IOP_SETATTR     = RFS_OP_IDC(RFS_INODE_FIFO, RFS_OP_i_setattr),
 
-	REDIRFS_LNK_IOP_PERMISSION,
-	REDIRFS_LNK_IOP_SETATTR,
+	REDIRFS_LNK_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_LINK, RFS_OP_i_permission),
+	REDIRFS_LNK_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_LINK, RFS_OP_i_setattr),
 
-	REDIRFS_SOCK_IOP_PERMISSION,
-	REDIRFS_SOCK_IOP_SETATTR,
+	REDIRFS_SOCK_IOP_PERMISSION  = RFS_OP_IDC(RFS_INODE_SOCK, RFS_OP_i_permission),
+	REDIRFS_SOCK_IOP_SETATTR     = RFS_OP_IDC(RFS_INODE_SOCK, RFS_OP_i_setattr),
 
-	REDIRFS_REG_FOP_OPEN,
-	REDIRFS_REG_FOP_RELEASE,
-	REDIRFS_REG_FOP_LLSEEK,
-	REDIRFS_REG_FOP_READ,
-    REDIRFS_REG_FOP_WRITE,
+	REDIRFS_REG_FOP_OPEN         = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_open),
+	REDIRFS_REG_FOP_RELEASE      = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_release),
+	REDIRFS_REG_FOP_LLSEEK       = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_llseek),
+	REDIRFS_REG_FOP_READ         = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_read),
+    REDIRFS_REG_FOP_WRITE        = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_write),
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
-    REDIRFS_REG_FOP_READ_ITER,
-    REDIRFS_REG_FOP_WRITE_ITER,
+    REDIRFS_REG_FOP_READ_ITER    = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_read_iter),
+    REDIRFS_REG_FOP_WRITE_ITER   = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_write_iter),
 #endif
-    REDIRFS_REG_FOP_POLL,
-    REDIRFS_REG_FOP_UNLOCKED_IOCTL,
-    REDIRFS_REG_FOP_COMPAT_IOCTL,
+    REDIRFS_REG_FOP_POLL         = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_poll),
+    REDIRFS_REG_FOP_UNLOCKED_IOCTL = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_unlocked_ioctl),
+    REDIRFS_REG_FOP_COMPAT_IOCTL   = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_compat_ioctl),
 	/* REDIRFS_REG_FOP_AIO_READ, */
 	/* REDIRFS_REG_FOP_AIO_WRITE, */
-	REDIRFS_REG_FOP_MMAP,
-	REDIRFS_REG_FOP_FLUSH,
-    REDIRFS_REG_FOP_FSYNC,
+	REDIRFS_REG_FOP_MMAP        = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_mmap),
+	REDIRFS_REG_FOP_FLUSH       = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_flush),
+    REDIRFS_REG_FOP_FSYNC       = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_fsync),
 
-	REDIRFS_DIR_FOP_OPEN,
-	REDIRFS_DIR_FOP_RELEASE,
-	REDIRFS_DIR_FOP_READDIR,
-    REDIRFS_REG_FOP_DIR_ITERATE,
-    REDIRFS_REG_FOP_DIR_ITERATE_SHARED,
+	REDIRFS_DIR_FOP_OPEN        = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_open),
+	REDIRFS_DIR_FOP_RELEASE     = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_release),
+	REDIRFS_DIR_FOP_READDIR     = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_readdir),
+    REDIRFS_REG_FOP_DIR_ITERATE = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate),
+    REDIRFS_REG_FOP_DIR_ITERATE_SHARED = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate_shared),
 	/* REDIRFS_DIR_FOP_FLUSH, */
 
-	REDIRFS_CHR_FOP_OPEN,
-	REDIRFS_CHR_FOP_RELEASE,
+	REDIRFS_CHR_FOP_OPEN         = RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_open),
+	REDIRFS_CHR_FOP_RELEASE      = RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_release),
 	/* REDIRFS_CHR_FOP_LLSEEK, */
 	/* REDIRFS_CHR_FOP_READ, */
 	/* REDIRFS_CHR_FOP_WRITE, */
@@ -174,8 +309,8 @@ enum redirfs_op_id {
 	/* REDIRFS_CHR_FOP_AIO_WRITE, */
 	/* REDIRFS_CHR_FOP_FLUSH, */
 
-	REDIRFS_BLK_FOP_OPEN,
-	REDIRFS_BLK_FOP_RELEASE,
+	REDIRFS_BLK_FOP_OPEN       = RFS_OP_IDC(RFS_INODE_BULK, RFS_OP_f_open),
+	REDIRFS_BLK_FOP_RELEASE    = RFS_OP_IDC(RFS_INODE_BULK, RFS_OP_f_release),
 	/* REDIRFS_BLK_FOP_LLSEEK, */
 	/* REDIRFS_BLK_FOP_READ, */
 	/* REDIRFS_BLK_FOP_WRITE, */
@@ -183,8 +318,8 @@ enum redirfs_op_id {
 	/* REDIRFS_BLK_FOP_AIO_WRITE, */
 	/* REDIRFS_BLK_FOP_FLUSH, */
 
-	REDIRFS_FIFO_FOP_OPEN,
-	REDIRFS_FIFO_FOP_RELEASE,
+	REDIRFS_FIFO_FOP_OPEN      = RFS_OP_IDC(RFS_INODE_FIFO, RFS_OP_f_open),
+	REDIRFS_FIFO_FOP_RELEASE   = RFS_OP_IDC(RFS_INODE_FIFO, RFS_OP_f_release),
 	/* REDIRFS_FIFO_FOP_LLSEEK, */
 	/* REDIRFS_FIFO_FOP_READ, */
 	/* REDIRFS_FIFO_FOP_WRITE, */
@@ -192,8 +327,8 @@ enum redirfs_op_id {
 	/* REDIRFS_FIFO_FOP_AIO_WRITE, */
 	/* REDIRFS_FIFO_FOP_FLUSH, */
 
-	REDIRFS_LNK_FOP_OPEN,
-	REDIRFS_LNK_FOP_RELEASE,
+	REDIRFS_LNK_FOP_OPEN       = RFS_OP_IDC(RFS_INODE_LINK, RFS_OP_f_open),
+	REDIRFS_LNK_FOP_RELEASE    = RFS_OP_IDC(RFS_INODE_LINK, RFS_OP_f_release),
 	/* REDIRFS_LNK_FOP_LLSEEK, */
 	/* REDIRFS_LNK_FOP_READ, */
 	/* REDIRFS_LNK_FOP_WRITE, */
@@ -201,9 +336,9 @@ enum redirfs_op_id {
 	/* REDIRFS_LNK_FOP_AIO_WRITE, */
 	/* REDIRFS_LNK_FOP_FLUSH, */
 
-	REDIRFS_REG_AOP_READPAGE,
+	REDIRFS_REG_AOP_READPAGE  = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_a_readpage),
 	/* REDIRFS_REG_AOP_WRITEPAGE, */
-	REDIRFS_REG_AOP_READPAGES,
+	REDIRFS_REG_AOP_READPAGES = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_a_readpages),
 	/* REDIRFS_REG_AOP_WRITEPAGES, */
 	/* REDIRFS_REG_AOP_SYNC_PAGE, */
 	/* REDIRFS_REG_AOP_SET_PAGE_DIRTY, */
@@ -217,7 +352,8 @@ enum redirfs_op_id {
 	/* REDIRFS_REG_AOP_MIGRATEPAGE, */
 	/* REDIRFS_REG_AOP_LAUNDER_PAGE, */
 
-	REDIRFS_OP_END
+    REDIRFS_OP_MAX = RFS_OP_IDC(RFS_INODE_MAX, RFS_OP_MAX),
+	REDIRFS_OP_END = (-1)
 };
 
 enum redirfs_op_call {
@@ -658,7 +794,7 @@ union redirfs_op_args {
 };
 
 struct redirfs_op_type {
-	enum redirfs_op_id id;
+	enum redirfs_op_id_combined id;
 	enum redirfs_op_call call;
 };
 
@@ -675,7 +811,7 @@ struct redirfs_path_info {
 };
 
 struct redirfs_op_info {
-	enum redirfs_op_id op_id;
+	enum redirfs_op_id_combined op_id;
 	enum redirfs_rv (*pre_cb)(redirfs_context, struct redirfs_args *);
 	enum redirfs_rv (*post_cb)(redirfs_context, struct redirfs_args *);
 };

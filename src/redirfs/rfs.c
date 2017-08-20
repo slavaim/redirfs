@@ -3,7 +3,7 @@
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - changing for the latest kernels by Slava Imameev
+ * 2017 - redesigned by Slava Imameev for new kernels and new hook ID model
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -31,11 +31,19 @@ struct rfs_info *rfs_info_none;
 int rfs_precall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
 		struct redirfs_args *rargs)
 {
-	enum redirfs_rv (*rop)(redirfs_context, struct redirfs_args *);
-	enum redirfs_rv rv;
+	enum redirfs_rv      (*rop)(redirfs_context, struct redirfs_args *);
+	enum redirfs_rv      rv;
+    enum rfs_inode_type  it;
+    enum rfs_op_id       op_id;
 
 	if (!rchain)
 		return 0;
+
+    it = RFS_IDC_TO_ITYPE(rargs->type.id);
+    op_id = RFS_IDC_TO_OP_ID(rargs->type.id);
+
+    BUG_ON(it >= RFS_INODE_MAX);
+    BUG_ON(op_id >= RFS_OP_MAX);
 
 	rargs->type.call = REDIRFS_PRECALL;
 
@@ -45,7 +53,7 @@ int rfs_precall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
 		if (!atomic_read(&rchain->rflts[rcont->idx]->active))
 			continue;
 
-		rop = rchain->rflts[rcont->idx]->cbs[rargs->type.id].pre_cb;
+		rop = rchain->rflts[rcont->idx]->cbs[it][op_id].pre_cb;
 		if (!rop)
 			continue;
 
@@ -62,10 +70,18 @@ int rfs_precall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
 void rfs_postcall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
 		struct redirfs_args *rargs)
 {
-	enum redirfs_rv (*rop)(redirfs_context, struct redirfs_args *);
+	enum redirfs_rv      (*rop)(redirfs_context, struct redirfs_args *);
+    enum rfs_inode_type  it;
+    enum rfs_op_id       op_id;
 
 	if (!rchain)
 		return;
+
+    it = RFS_IDC_TO_ITYPE(rargs->type.id);
+    op_id = RFS_IDC_TO_OP_ID(rargs->type.id);
+
+    BUG_ON(it >= RFS_INODE_MAX);
+    BUG_ON(op_id >= RFS_OP_MAX);
 
 	rargs->type.call = REDIRFS_POSTCALL;
 
@@ -73,7 +89,7 @@ void rfs_postcall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
 		if (!atomic_read(&rchain->rflts[rcont->idx]->active))
 			continue;
 
-		rop = rchain->rflts[rcont->idx]->cbs[rargs->type.id].post_cb;
+		rop = rchain->rflts[rcont->idx]->cbs[it][op_id].post_cb;
 		if (rop) 
 			rop(rcont, rargs);
 	}
