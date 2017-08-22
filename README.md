@@ -6,5 +6,5 @@ Milestones
  - some fixies to vfsmount usage
  - read and read_iter hooks were added
  - address_space_operations hooks support was added
- - character devices hooks (requires adding /dev path as redirfs_add_path doesn't cross mount points)
+ - character devices hooks (requires adding /dev path as ```redirfs_add_path``` doesn't cross mount points)
  - debug build without optimization (make modules_debug)
