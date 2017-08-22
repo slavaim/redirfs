@@ -4,17 +4,9 @@ RedirFS sysfs interface
 /sys/fs/redirfs/filters
 
 	<filter name>/
-	|-- active	rw
-	|-- exclude/
-	|   |-- add	wo
-	|   |-- paths	ro
-	|   `-- remove	wo
-	|-- include/
-	|   |-- add	wo
-	|   |-- paths	ro
-	|   `-- remove	wo
-	|-- priority	ro
-	|-- remall	wo
+	|-- active	    rw
+    |-- paths       rw
+	|-- priority    ro
 	`-- unregister	wo
 
 
