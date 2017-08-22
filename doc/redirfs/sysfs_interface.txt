@@ -61,45 +61,37 @@ example for dummyflt
 # insmod dummyflt
 
 3) exclude "/tmp/include/exclude" directory
-# echo -n "/tmp/include/exclude" > /sys/fs/redirfs/filters/dummyflt/exclude/add
+# echo -n "a:e:/tmp/include/exclude" > /sys/fs/redirfs/filters/dummyflt/paths
 
 4) include "/tmp/include" directory
-# echo -n "/tmp/include" > /sys/fs/redirfs/filters/dummyflt/include/add
+# echo -n "a:i:/tmp/include" > /sys/fs/redirfs/filters/dummyflt/paths
 
 5) include "/tmp/include/exclude/fin" file
-# echo -n "/tmp/include/exclude/fin" > /sys/fs/redirfs/filters/dummyflt/include/add
+# echo -n "a:i:/tmp/include/exclude/fin" > /sys/fs/redirfs/filters/dummyflt/paths
 
 6) exclude "/tmp/include/fex" file
-# echo -n "/tmp/include/fex" > /sys/fs/redirfs/filters/dummyflt/exclude/add
+# echo -n "a:e:/tmp/include/fex" > /sys/fs/redirfs/filters/dummyflt/paths
 
-7) show included paths
-# cat /sys/fs/redirfs/filters/dummyflt/include/paths
-# 1:/tmp/include2:/tmp/include/exclude/fin
+7) show all paths
+# cat /sys/fs/redirfs/filters/dummyflt/paths
+# 1:/tmp/includee:2:/tmp/include/exclude/fine:3:/tmp/include/excludei:4:/tmp/include/fex
 
-8) show excluded paths
-# cat /sys/fs/redirfs/filters/dummyflt/exclude/paths
-# 0:/tmp/include/exclude3:/tmp/include/fex
+8) remove included "/tmp/include/exclude/fin" file
+# echo -n "r:2" > /sys/fs/redirfs/filters/dummyflt/paths
+or
+# echo -n "R:/tmp/include/exclude/fin" > /sys/fs/redirfs/filters/dummyflt/paths
 
-9) remove included "/tmp/include/exclude/fin" file
-# echo -n "2" > /sys/fs/redirfs/filters/dummyflt/include/remove
+9) remove excluded "/tmp/include/exclude" direcotry
+# echo -n "r:3" > /sys/fs/redirfs/filters/dummyflt/paths
+or
+# echo -n "R:/tmp/include/exclude" > /sys/fs/redirfs/filters/dummyflt/paths
 
-10) remove excluded "/tmp/include/exclude" direcotry
-# echo -n "0" > /sys/fs/redirfs/filters/dummyflt/exclude/remove
-
-11) show included paths
-# cat /sys/fs/redirfs/filters/dummyflt/include/paths
-# 1:/tmp/include
-
-12) show excluded paths
-# cat /sys/fs/redirfs/filters/dummyflt/exclude/paths
-# 3:/tmp/include/fex
-
-13) remove all paths
+10) remove all paths
 # echo -n "1" > /sys/fs/redirfs/filters/dummyflt/remall
 
-14) unregister filter
+11) unregister filter
 # echo -n "1" > /sys/fs/redirfs/filters/dummyflt/unregister
 
-15) remove dummyflt
+12) remove dummyflt
 # rmmod dummyflt
 
