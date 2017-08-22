@@ -26,6 +26,11 @@
 
 #include "rfs.h"
 
+#ifdef DBG
+    #pragma GCC push_options
+    #pragma GCC optimize ("O0")
+#endif // DBG
+
 void rfs_data_remove(struct list_head *head)
 {
 	struct redirfs_data *data;
@@ -483,3 +488,6 @@ EXPORT_SYMBOL(redirfs_attach_data_root);
 EXPORT_SYMBOL(redirfs_detach_data_root);
 EXPORT_SYMBOL(redirfs_get_data_root);
 
+#ifdef DBG
+    #pragma GCC pop_options
+#endif // DBG

@@ -49,6 +49,26 @@ static struct redirfs_filter_info dummyflt_info = {
 	.active = 1
 };
 
+const char* imode_to_str(umode_t i_mode)
+{
+    if (S_ISREG(i_mode))
+        return "REG";
+    else if (S_ISDIR(i_mode))
+        return "DIR";
+    else if (S_ISLNK(i_mode))
+        return "LINK";
+    else if (S_ISCHR(i_mode))
+        return "CHAR";
+    else if (S_ISBLK(i_mode))
+        return "BLK";
+    else if (S_ISFIFO(i_mode))
+        return "FIFO";
+    else if (S_ISSOCK(i_mode))
+        return "SOCK";
+    else
+        return "UNKNOWN";
+}
+
 static void *dummyflt_alloc(size_t size)
 {
 	void *p;
@@ -67,7 +87,8 @@ enum redirfs_rv dummyflt_open(redirfs_context context,
 {
 	char *path;
 	char *call;
-	int rv;
+	int   rv;
+    char* imode = imode_to_str(args->args.f_open.file->f_inode->i_mode);
 
 	path = dummyflt_alloc(sizeof(char) * PAGE_SIZE);
 	if (!path)
@@ -83,7 +104,7 @@ enum redirfs_rv dummyflt_open(redirfs_context context,
 
 	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
 
-	printk(KERN_ALERT "dummyflt: open: %s, call: %s\n", path, call);
+	printk(KERN_ALERT "dummyflt: open: %s [%s], call: %s\n", path, imode, call);
 
 exit:
 	kfree(path);
@@ -320,6 +341,7 @@ exit:
 
 static struct redirfs_op_info dummyflt_op_info[] = {
 	{REDIRFS_REG_FOP_OPEN, dummyflt_open, dummyflt_open},
+    {REDIRFS_CHR_FOP_OPEN, dummyflt_open, dummyflt_open},
 	{REDIRFS_REG_FOP_RELEASE, dummyflt_release, dummyflt_release},
 	{REDIRFS_DIR_FOP_OPEN, dummyflt_open, dummyflt_open},
 	{REDIRFS_DIR_FOP_RELEASE, dummyflt_release, dummyflt_release},

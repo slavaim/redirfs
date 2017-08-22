@@ -22,7 +22,7 @@ modules:
 	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(MINC) modules
 
 modules_debug:
-	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS='$(MINC) -v -O1 -g' modules
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS='$(MINC) -v -O1 -g -DDBG' modules
 
 modules_install: modules
 	mkdir -p $(MDIR)

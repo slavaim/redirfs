@@ -472,6 +472,9 @@ int rfs_precall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
 void rfs_postcall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
 		struct redirfs_args *rargs);
 
+enum rfs_inode_type rfs_imode_to_type(umode_t i_mode, bool is_dentry);
+enum redirfs_op_idc rfs_inode_to_idc(struct inode* inode, enum rfs_op_id id);
+
 #define rfs_kobj_to_rflt(__kobj) container_of(__kobj, struct rfs_flt, kobj)
 int rfs_flt_sysfs_init(struct rfs_flt *rflt);
 void rfs_flt_sysfs_exit(struct rfs_flt *rflt);

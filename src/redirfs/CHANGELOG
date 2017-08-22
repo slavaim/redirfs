@@ -1,3 +1,14 @@
+version 0.12 experimental 2017
+    * Slava Imameev <https://github.com/slavaim/redirfs>
+    - 4.x kernel compatibility
+    - removing redundant spin lock acquisitions
+    - new operations
+      file read and write and some other file operations
+    - address space operation hooks were added
+    - redesign for the operation ID to divide it to an object type and operation type
+      with introduction of RFS_OP_IDC to generate IDs
+    - some debugging facilities
+
 version 0.11 experimental 2011-09-05
 	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
 	- added pre_rename and post_rename callback to redirfs_filter_operations

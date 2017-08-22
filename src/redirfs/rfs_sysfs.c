@@ -26,6 +26,11 @@
 
 #include "rfs.h"
 
+#ifdef DBG
+    #pragma GCC push_options
+    #pragma GCC optimize ("O0")
+#endif // DBG
+
 #define rfs_kattr_to_rattr(__kattr) \
 	container_of(__kattr, struct redirfs_filter_attribute, attr)
 
@@ -754,3 +759,6 @@ EXPORT_SYMBOL(redirfs_create_attribute);
 EXPORT_SYMBOL(redirfs_remove_attribute);
 EXPORT_SYMBOL(redirfs_filter_kobject);
 
+#ifdef DBG
+    #pragma GCC pop_options
+#endif // DBG

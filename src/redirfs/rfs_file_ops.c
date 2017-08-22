@@ -20,6 +20,11 @@
 
 #include "rfs.h"
 
+#ifdef DBG
+    #pragma GCC push_options
+    #pragma GCC optimize ("O0")
+#endif // DBG
+
 loff_t rfs_llseek(struct file *file, loff_t offset, int origin)
 {
 	struct rfs_file *rfile;
@@ -31,7 +36,7 @@ loff_t rfs_llseek(struct file *file, loff_t offset, int origin)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_LLSEEK;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_llseek);
 	rargs.args.f_llseek.file = file;
 	rargs.args.f_llseek.offset = offset;
 	rargs.args.f_llseek.origin = origin;
@@ -65,7 +70,7 @@ ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_READ;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_read);
 	rargs.args.f_read.file = file;
 	rargs.args.f_read.buf = buf;
 	rargs.args.f_read.count = count;
@@ -101,7 +106,7 @@ ssize_t rfs_write(struct file *file, const char __user *buf, size_t count, loff_
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_WRITE;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_write);
 	rargs.args.f_write.file = file;
 	rargs.args.f_write.buf = buf;
 	rargs.args.f_write.count = count;
@@ -138,7 +143,7 @@ ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_READ_ITER;
+    rargs.type.id = rfs_inode_to_idc(kiocb->ki_filp->f_inode, RFS_OP_f_read_iter);
 	rargs.args.f_read_iter.kiocb = kiocb;
 	rargs.args.f_read_iter.iov_iter = iov_iter;
 
@@ -170,7 +175,7 @@ ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_WRITE_ITER;
+    rargs.type.id = rfs_inode_to_idc(kiocb->ki_filp->f_inode, RFS_OP_f_write_iter);
 	rargs.args.f_write_iter.kiocb = kiocb;
 	rargs.args.f_write_iter.iov_iter = iov_iter;
 
@@ -203,10 +208,8 @@ int rfs_iterate(struct file *file, struct dir_context *dir_context)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    if (S_ISDIR(file->f_inode->i_mode))
-		rargs.type.id = REDIRFS_REG_FOP_DIR_ITERATE;
-	else
-		BUG();
+	rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_iterate);
+	BUG_ON(rargs.type.id != REDIRFS_REG_FOP_DIR_ITERATE);
 
     rargs.type.id = REDIRFS_REG_FOP_DIR_ITERATE;
 	rargs.args.f_iterate.file = file;
@@ -240,10 +243,8 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    if (S_ISDIR(file->f_inode->i_mode))
-		rargs.type.id = REDIRFS_REG_FOP_DIR_ITERATE_SHARED;
-	else
-		BUG();
+	rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_iterate_shared);
+	BUG_ON(rargs.type.id != REDIRFS_REG_FOP_DIR_ITERATE_SHARED);
 
 	rargs.args.f_iterate_shared.file = file;
 	rargs.args.f_iterate_shared.dir_context = dir_context;
@@ -276,7 +277,7 @@ unsigned int rfs_poll(struct file *file, struct poll_table_struct *poll_table_st
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_POLL;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_poll);
 	rargs.args.f_poll.file = file;
 	rargs.args.f_poll.poll_table_struct = poll_table_struct;
 
@@ -308,7 +309,7 @@ long rfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_UNLOCKED_IOCTL;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_unlocked_ioctl);
 	rargs.args.f_unlocked_ioctl.file = file;
 	rargs.args.f_unlocked_ioctl.cmd = cmd;
     rargs.args.f_unlocked_ioctl.arg = arg;
@@ -342,7 +343,7 @@ long rfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_COMPAT_IOCTL;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_compat_ioctl);
 	rargs.args.f_compat_ioctl.file = file;
 	rargs.args.f_compat_ioctl.cmd = cmd;
     rargs.args.f_compat_ioctl.arg = arg;
@@ -376,7 +377,7 @@ int rfs_mmap(struct file *file, struct vm_area_struct *vma)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_MMAP;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_mmap);
 	rargs.args.f_mmap.file = file;
 	rargs.args.f_mmap.vma = vma;
 
@@ -408,7 +409,7 @@ int rfs_flush(struct file *file, fl_owner_t owner)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_FLUSH;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_flush);
 	rargs.args.f_flush.file = file;
 	rargs.args.f_flush.owner = owner;
 
@@ -440,7 +441,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 	rfs_context_init(&rcont, 0);
 
-    rargs.type.id = REDIRFS_REG_FOP_FSYNC;
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_fsync);
 	rargs.args.f_fsync.file = file;
 	rargs.args.f_fsync.start = start;
     rargs.args.f_fsync.end = end;
@@ -481,3 +482,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     int (*clone_file_range)(struct file *, loff_t, struct file *, loff_t, u64);
     ssize_t (*dedupe_file_range)(struct file *, u64, u64, struct file *, u64);
 */
+
+#ifdef DBG
+    #pragma GCC pop_options
+#endif // DBG

@@ -26,6 +26,11 @@
 
 #include "rfs.h"
 
+#ifdef DBG
+    #pragma GCC push_options
+    #pragma GCC optimize ("O0")
+#endif // DBG
+
 static rfs_kmem_cache_t *rfs_file_cache = NULL;
 
 struct file_operations rfs_file_ops = {
@@ -51,8 +56,13 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 		memcpy(&rfile->op_new, rfile->op_old,
 				sizeof(struct file_operations));
 
-    RFS_ADD_OP(rfile->op_new, rfile->op_old, open, rfs_open);
-	BUG_ON(rfile->op_new.open != rfs_open);
+    //
+    // unconditionally register open operation to be notified
+    // of open requests, some devices do not register open
+    // operation, e.g. null_fops, but RedirFS requires
+    // open operation to be called through file_operations
+    //
+    rfile->op_new.open = rfs_open;
 
 	return rfile;
 }
@@ -366,6 +376,20 @@ static void rfs_file_set_ops_lnk(struct rfs_file *rfile)
 
 static void rfs_file_set_ops_chr(struct rfs_file *rfile)
 {
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_llseek), llseek, rfs_llseek);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_read), read, rfs_read);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_write), write, rfs_write);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_read_iter), read_iter, rfs_read_iter);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_write_iter), write_iter, rfs_write_iter);
+#endif
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_poll), poll, rfs_poll);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_unlocked_ioctl), unlocked_ioctl, rfs_unlocked_ioctl);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_compat_ioctl), compat_ioctl, rfs_compat_ioctl);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_mmap), mmap, rfs_mmap);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_open), open, rfs_open); // should not be called as called through rfile->op_new.open registered on inode lookup
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_flush), flush, rfs_flush);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fsync), fsync, rfs_fsync);
 }
 
 static void rfs_file_set_ops_blk(struct rfs_file *rfile)
@@ -403,7 +427,12 @@ void rfs_file_set_ops(struct rfs_file *rfile)
 	else if (S_ISFIFO(mode))
 		rfs_file_set_ops_fifo(rfile);
 
-    RFS_ADD_OP(rfile->op_new, rfile->op_old, release, rfs_release);
-	BUG_ON(rfile->op_new.release != rfs_release);
+    //
+    // unconditionally set release hook to match open hooks
+    //
+    rfile->op_new.release = rfs_release;
 }
 
+#ifdef DBG
+    #pragma GCC pop_options
+#endif // DBG

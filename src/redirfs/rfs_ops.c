@@ -26,6 +26,11 @@
 
 #include "rfs.h"
 
+#ifdef DBG
+    #pragma GCC push_options
+    #pragma GCC optimize ("O0")
+#endif // DBG
+
 struct rfs_ops *rfs_ops_alloc(void)
 {
 	struct rfs_ops *rops;
@@ -64,3 +69,6 @@ void rfs_ops_put(struct rfs_ops *rops)
 	kfree(rops);
 }
 
+#ifdef DBG
+    #pragma GCC pop_options
+#endif // DBG

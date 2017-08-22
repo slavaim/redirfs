@@ -26,6 +26,11 @@
 
 #include "rfs.h"
 
+#ifdef DBG
+    #pragma GCC push_options
+    #pragma GCC optimize ("O0")
+#endif // DBG
+
 struct rfs_info *rfs_info_none;
 
 int rfs_precall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
@@ -97,6 +102,50 @@ void rfs_postcall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
 	rcont->idx++;
 }
 
+enum rfs_inode_type  rfs_imode_to_type(umode_t i_mode, bool is_dentry)
+{
+    if (likely(!is_dentry)) {
+	    if (S_ISREG(i_mode))
+            return RFS_INODE_REG;
+	    else if (S_ISDIR(i_mode))
+		    return RFS_INODE_DIR;
+	    else if (S_ISLNK(i_mode))
+		    return RFS_INODE_LINK;
+	    else if (S_ISCHR(i_mode))
+		    return RFS_INODE_CHAR;
+	    else if (S_ISBLK(i_mode))
+		    return RFS_INODE_BULK;
+	    else if (S_ISFIFO(i_mode))
+		    return RFS_INODE_FIFO;
+	    else if (S_ISSOCK(i_mode))
+		    return RFS_INODE_SOCK;
+        else
+            BUG();
+    } else {
+	    if (S_ISREG(i_mode))
+            return RFS_INODE_DREG;
+	    else if (S_ISDIR(i_mode))
+		    return RFS_INODE_DDIR;
+	    else if (S_ISLNK(i_mode))
+		    return RFS_INODE_DLINK;
+	    else if (S_ISCHR(i_mode))
+		    return RFS_INODE_DCHAR;
+	    else if (S_ISBLK(i_mode))
+		    return RFS_INODE_DBULK;
+	    else if (S_ISFIFO(i_mode))
+		    return RFS_INODE_DFIFO;
+	    else if (S_ISSOCK(i_mode))
+		    return RFS_INODE_DSOCK;
+        else
+            BUG();
+    }
+}
+
+enum redirfs_op_idc rfs_inode_to_idc(struct inode* inode, enum rfs_op_id id)
+{
+    return RFS_OP_IDC(rfs_imode_to_type(inode->i_mode, false), id);
+}
+
 static int __init rfs_init(void)
 {
 	int rv;
@@ -144,3 +193,6 @@ MODULE_AUTHOR("Frantisek Hrbata <frantisek.hrbata@redirfs.org>");
 MODULE_DESCRIPTION("Redirecting File System Framework Version "
 		REDIRFS_VERSION " <www.redirfs.org>");
 
+#ifdef DBG
+    #pragma GCC pop_options
+#endif // DBG

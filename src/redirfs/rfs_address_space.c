@@ -22,6 +22,11 @@
 
 #include "rfs.h"
 
+#ifdef DBG
+    #pragma GCC push_options
+    #pragma GCC optimize ("O0")
+#endif // DBG
+
 int rfs_readpage(struct file *file, struct page *page)
 {
 	struct rfs_file *rfile;
@@ -98,3 +103,7 @@ int rfs_readpages(struct file *file, struct address_space *mapping,
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
+
+#ifdef DBG
+    #pragma GCC pop_options
+#endif // DBG

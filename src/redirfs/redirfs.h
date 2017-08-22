@@ -172,15 +172,18 @@ enum rfs_op_id {
     RFS_OP_MAX
 };
 
+//
+// IDC stands for "ID Combined"
+//
 #define  RFS_OP_IDC(itype, op_id) (itype<<16 | op_id)
 #define  RFS_IDC_TO_ITYPE(idc) ((enum rfs_inode_type) (((idc) >> 16) & 0xFFFF))
 #define  RFS_IDC_TO_OP_ID(idc) ((enum rfs_op_id) ((idc) & 0xFFFF))
 
 //
 // the new code should use RFS_OP_IDC macro instead of xtending
-// the enum redirfs_op_id_combined type
+// the enum redirfs_op_idc type
 //
-enum redirfs_op_id_combined {
+enum redirfs_op_idc {
 	REDIRFS_NONE_DOP_D_REVALIDATE = RFS_OP_IDC(RFS_INODE_DNONE, RFS_OP_d_revalidate),
 	/* REDIRFS_NONE_DOP_D_HASH, */
 	REDIRFS_NONE_DOP_D_COMPARE    = RFS_OP_IDC(RFS_INODE_DNONE, RFS_OP_d_compare),
@@ -794,7 +797,7 @@ union redirfs_op_args {
 };
 
 struct redirfs_op_type {
-	enum redirfs_op_id_combined id;
+	enum redirfs_op_idc id;
 	enum redirfs_op_call call;
 };
 
@@ -811,7 +814,7 @@ struct redirfs_path_info {
 };
 
 struct redirfs_op_info {
-	enum redirfs_op_id_combined op_id;
+	enum redirfs_op_idc op_id;
 	enum redirfs_rv (*pre_cb)(redirfs_context, struct redirfs_args *);
 	enum redirfs_rv (*post_cb)(redirfs_context, struct redirfs_args *);
 };

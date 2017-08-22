@@ -27,6 +27,11 @@
 
 #include "rfs.h"
 
+#ifdef DBG
+    #pragma GCC push_options
+    #pragma GCC optimize ("O0")
+#endif // DBG
+
 static rfs_kmem_cache_t *rfs_inode_cache = NULL;
 
 static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
@@ -104,10 +109,14 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 	    ri = rfs_inode_find(inode);
 	    if (!ri) {
 		    ri_new->rinfo = rfs_info_get_unsafe(rinfo);
-		    if (!S_ISSOCK(inode->i_mode) &&
-                inode->i_fop &&
-                inode->i_fop->open)
-			    inode->i_fop = &rfs_file_ops;
+            //
+            // unconditionally register open operation to be notified
+            // of open requests, some devices do not register open
+            // operation, e.g. null_fops, but RedirFS requires
+            // open operation to be called through file_operations
+            //
+            if (!S_ISSOCK(inode->i_mode))
+                inode->i_fop = &rfs_file_ops;
 
 		    inode->i_op = &ri_new->op_new;
 
@@ -1284,3 +1293,6 @@ void rfs_inode_set_ops(struct rfs_inode *rinode)
 	spin_unlock(&rinode->lock);
 }
 
+#ifdef DBG
+    #pragma GCC pop_options
+#endif // DBG
