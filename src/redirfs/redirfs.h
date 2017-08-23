@@ -661,12 +661,107 @@ union redirfs_op_args {
         unsigned long arg;
     } f_compat_ioctl;
 
-    struct{
+    struct {
         struct file *file;
         loff_t start;
         loff_t end;
         int datasync;
     } f_fsync;
+
+    struct {
+        int fd;
+        struct file *file;
+        int on;
+    } f_fasync;
+
+    struct {
+        struct file *file;
+        int cmd;
+        struct file_lock *flock;
+    } f_lock;
+
+    struct {
+        struct file *file;
+        struct page *page;
+        int offset;
+        size_t len;
+        loff_t *pos;
+        int more;
+    } f_sendpage;
+
+    struct {
+        struct file *file;
+        unsigned long addr;
+		unsigned long len;
+        unsigned long pgoff;
+        unsigned long flags;
+    } f_get_unmapped_area;
+
+    struct {
+        struct file *file;
+        int cmd;
+        struct file_lock *flock;
+    } f_flock;
+
+    struct {
+        struct pipe_inode_info *pipe;
+        struct file *out;
+		loff_t *ppos;
+        size_t len;
+        unsigned int flags;
+    } f_splice_write;
+
+    struct {
+        struct file *in;
+        loff_t *ppos;
+		struct pipe_inode_info *pipe;
+        size_t len;
+		unsigned int flags;
+    } f_splice_read;
+
+    struct {
+        struct file *file;
+        long arg;
+        struct file_lock **flock;
+		void **priv;
+    } f_setlease;
+
+    struct {
+        struct file *file;
+        int mode;
+		loff_t offset;
+        loff_t len;
+    } f_fallocate;
+
+    struct {
+        struct seq_file *seq_file;
+        struct file *file;
+    } f_show_fdinfo;
+
+    struct {
+        struct file *file_in;
+        loff_t pos_in;
+		struct file *file_out;
+        loff_t pos_out;
+		size_t count;
+        unsigned int flags;
+    } f_copy_file_range;
+
+    struct {
+        struct file *src_file;
+        loff_t src_off;
+		struct file *dst_file;
+        loff_t dst_off;
+        u64 count;
+    } f_clone_file_range;
+
+    struct {
+        struct file *src_file;
+        u64 loff;
+        u64 len;
+        struct file *dst_file;
+        u64 dst_loff;
+    } f_dedupe_file_range;
 
 	/*
 	struct {

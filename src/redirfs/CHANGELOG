@@ -1,8 +1,8 @@
 version 0.12 experimental 2017
     * Slava Imameev <https://github.com/slavaim/redirfs>
-    - 4.x kernel compatibility
+    - 4.x kernels compatibility
     - removing redundant spin lock acquisitions
-    - new operations
+    - new operations:
       file read and write and some other file operations
     - address space operation hooks were added
     - redesign for the operation ID to divide it to an object type and operation type

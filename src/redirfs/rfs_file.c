@@ -341,6 +341,30 @@ extern long rfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long 
 extern int rfs_mmap(struct file *file, struct vm_area_struct *vma);
 extern int rfs_flush(struct file *, fl_owner_t owner);
 extern int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync);
+extern int rfs_fasync(int fd, struct file *file, int on);
+extern int rfs_lock(struct file *file, int cmd, struct file_lock *flock);
+extern ssize_t rfs_sendpage(struct file *file, struct page *page, int offset,
+                     size_t len, loff_t *pos, int more);
+extern unsigned long rfs_get_unmapped_area(struct file *file, unsigned long addr,
+		unsigned long len, unsigned long pgoff, unsigned long flags);
+extern int rfs_flock(struct file *file, int cmd, struct file_lock *flock);
+extern ssize_t rfs_splice_write(struct pipe_inode_info *pipe, struct file *out,
+			  loff_t *ppos, size_t len, unsigned int flags);
+extern ssize_t rfs_splice_read(struct file *in, loff_t *ppos,
+				 struct pipe_inode_info *pipe, size_t len,
+				 unsigned int flags);
+extern int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
+		  void **priv);
+extern long rfs_fallocate(struct file *file, int mode,
+			  loff_t offset, loff_t len);
+extern void rfs_show_fdinfo(struct seq_file *seq_file, struct file *file);
+extern ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
+				    struct file *file_out, loff_t pos_out,
+				    size_t count, unsigned int flags);
+extern int rfs_clone_file_range(struct file *src_file, loff_t src_off,
+		struct file *dst_file, loff_t dst_off, u64 count);
+extern ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
+                    u64 len, struct file *dst_file, u64 dst_loff);
 
 static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 {
@@ -358,6 +382,19 @@ static void rfs_file_set_ops_reg(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_OPEN, open, rfs_open); // should not be called as called through rfile->op_new.open registered on inode lookup
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FLUSH, flush, rfs_flush);
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FSYNC, fsync, rfs_fsync);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_fasync), fasync, rfs_fasync);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_lock), lock, rfs_lock);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_sendpage), sendpage, rfs_sendpage);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_get_unmapped_area), get_unmapped_area, rfs_get_unmapped_area);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_flock), flock, rfs_flock);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_splice_write), splice_write, rfs_splice_write);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_splice_read), splice_read, rfs_splice_read);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_setlease), setlease, rfs_setlease);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_fallocate), fallocate, rfs_fallocate);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_show_fdinfo), show_fdinfo, rfs_show_fdinfo);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_copy_file_range), copy_file_range, rfs_copy_file_range);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_clone_file_range), clone_file_range, rfs_clone_file_range);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
 }
 
 static void rfs_file_set_ops_dir(struct rfs_file *rfile)
@@ -390,6 +427,19 @@ static void rfs_file_set_ops_chr(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_open), open, rfs_open); // should not be called as called through rfile->op_new.open registered on inode lookup
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_flush), flush, rfs_flush);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fsync), fsync, rfs_fsync);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fasync), fasync, rfs_fasync);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_lock), lock, rfs_lock);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_sendpage), sendpage, rfs_sendpage);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_get_unmapped_area), get_unmapped_area, rfs_get_unmapped_area);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_flock), flock, rfs_flock);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_splice_write), splice_write, rfs_splice_write);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_splice_read), splice_read, rfs_splice_read);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_setlease), setlease, rfs_setlease);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fallocate), fallocate, rfs_fallocate);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_show_fdinfo), show_fdinfo, rfs_show_fdinfo);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_copy_file_range), copy_file_range, rfs_copy_file_range);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_clone_file_range), clone_file_range, rfs_clone_file_range);
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
 }
 
 static void rfs_file_set_ops_blk(struct rfs_file *rfile)

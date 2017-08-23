@@ -466,22 +466,498 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 	return rargs.rv.rv_int;
 }
 
-/*
-    int (*fasync)(int, struct file *, int);
-    int (*lock)(struct file *, int, struct file_lock *);
-    ssize_t (*sendpage)(struct file *, struct page *, int, size_t, loff_t *, int);
-    unsigned long (*get_unmapped_area)(struct file *, unsigned long, unsigned long, unsigned long, unsigned long);
-    int (*check_flags)(int);
-    int (*flock)(struct file *, int, struct file_lock *);
-    ssize_t (*splice_write)(struct pipe_inode_info *, struct file *, loff_t *, size_t, unsigned int);
-    ssize_t (*splice_read)(struct file *, loff_t *, struct pipe_inode_info *, size_t, unsigned int);
-    int (*setlease)(struct file *, long, struct file_lock **, void **);
-    long (*fallocate)(struct file *, int, loff_t, loff_t);
-    void (*show_fdinfo)(struct seq_file *, struct file *);
-    ssize_t (*copy_file_range)(struct file *, loff_t, struct file *, loff_t, size_t, unsigned int);
-    int (*clone_file_range)(struct file *, loff_t, struct file *, loff_t, u64);
-    ssize_t (*dedupe_file_range)(struct file *, u64, u64, struct file *, u64);
-*/
+ int rfs_fasync(int fd, struct file *file, int on)
+ {
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_fasync);
+	rargs.args.f_fasync.file = file;
+	rargs.args.f_fasync.fd = fd;
+    rargs.args.f_fasync.on = on;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->fasync) 
+			rargs.rv.rv_int = rfile->op_old->fasync(
+					rargs.args.f_fasync.fd,
+					rargs.args.f_fasync.file,
+                    rargs.args.f_fasync.on);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_int;
+ }
+
+ int rfs_lock(struct file *file, int cmd, struct file_lock *flock)
+ {
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_lock);
+	rargs.args.f_lock.file = file;
+	rargs.args.f_lock.cmd = cmd;
+    rargs.args.f_lock.flock = flock;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->lock) 
+			rargs.rv.rv_int = rfile->op_old->lock(
+					rargs.args.f_lock.file,
+					rargs.args.f_lock.cmd,
+                    rargs.args.f_lock.flock);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_int;
+ }
+
+ssize_t rfs_sendpage(struct file *file, struct page *page, int offset,
+                     size_t len, loff_t *pos, int more)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_sendpage);
+	rargs.args.f_sendpage.file = file;
+	rargs.args.f_sendpage.page = page;
+    rargs.args.f_sendpage.offset = offset;
+    rargs.args.f_sendpage.len = len;
+    rargs.args.f_sendpage.pos = pos;
+    rargs.args.f_sendpage.more = more;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->sendpage) 
+			rargs.rv.rv_ssize = rfile->op_old->sendpage(
+					rargs.args.f_sendpage.file,
+					rargs.args.f_sendpage.page,
+                    rargs.args.f_sendpage.offset,
+                    rargs.args.f_sendpage.len,
+                    rargs.args.f_sendpage.pos,
+                    rargs.args.f_sendpage.more);
+		else
+			rargs.rv.rv_ssize = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_ssize;
+}
+
+unsigned long rfs_get_unmapped_area(struct file *file, unsigned long addr,
+		unsigned long len, unsigned long pgoff, unsigned long flags)
+ {
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_get_unmapped_area);
+	rargs.args.f_get_unmapped_area.file = file;
+	rargs.args.f_get_unmapped_area.addr = addr;
+    rargs.args.f_get_unmapped_area.len = len;
+    rargs.args.f_get_unmapped_area.pgoff = pgoff;
+    rargs.args.f_get_unmapped_area.flags = flags;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->get_unmapped_area) 
+			rargs.rv.rv_ulong = rfile->op_old->get_unmapped_area(
+					rargs.args.f_get_unmapped_area.file,
+					rargs.args.f_get_unmapped_area.addr,
+                    rargs.args.f_get_unmapped_area.len,
+                    rargs.args.f_get_unmapped_area.pgoff,
+                    rargs.args.f_get_unmapped_area.flags);
+		else
+			rargs.rv.rv_ulong = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_ulong;
+ }
+
+int rfs_flock(struct file *file, int cmd, struct file_lock *flock)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_flock);
+	rargs.args.f_flock.file = file;
+	rargs.args.f_flock.cmd = cmd;
+    rargs.args.f_flock.flock = flock;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->flock) 
+			rargs.rv.rv_int = rfile->op_old->flock(
+					rargs.args.f_flock.file,
+					rargs.args.f_flock.cmd,
+                    rargs.args.f_flock.flock);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_int;
+}
+
+ssize_t rfs_splice_write(struct pipe_inode_info *pipe, struct file *out,
+			  loff_t *ppos, size_t len, unsigned int flags)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(out);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(out->f_inode, RFS_OP_f_splice_write);
+	rargs.args.f_splice_write.pipe = pipe;
+	rargs.args.f_splice_write.out = out;
+    rargs.args.f_splice_write.ppos = ppos;
+    rargs.args.f_splice_write.len = len;
+    rargs.args.f_splice_write.flags = flags;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->splice_write) 
+			rargs.rv.rv_ssize = rfile->op_old->splice_write(
+					rargs.args.f_splice_write.pipe,
+					rargs.args.f_splice_write.out,
+                    rargs.args.f_splice_write.ppos,
+                    rargs.args.f_splice_write.len,
+                    rargs.args.f_splice_write.flags);
+		else
+			rargs.rv.rv_ssize = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_ssize;
+}
+
+ssize_t rfs_splice_read(struct file *in, loff_t *ppos,
+				 struct pipe_inode_info *pipe, size_t len,
+				 unsigned int flags)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(in);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(in->f_inode, RFS_OP_f_splice_read);
+	rargs.args.f_splice_read.in = in;
+	rargs.args.f_splice_read.ppos = ppos;
+    rargs.args.f_splice_read.pipe = pipe;
+    rargs.args.f_splice_read.len = len;
+    rargs.args.f_splice_read.flags = flags;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->splice_read) 
+			rargs.rv.rv_ssize = rfile->op_old->splice_read(
+					rargs.args.f_splice_read.in,
+					rargs.args.f_splice_read.ppos,
+                    rargs.args.f_splice_read.pipe,
+                    rargs.args.f_splice_read.len,
+                    rargs.args.f_splice_read.flags);
+		else
+			rargs.rv.rv_ssize = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_ssize;
+}
+
+int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
+		  void **priv)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_setlease);
+	rargs.args.f_setlease.file = file;
+	rargs.args.f_setlease.arg = arg;
+    rargs.args.f_setlease.flock = flock;
+    rargs.args.f_setlease.priv = priv;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->setlease) 
+			rargs.rv.rv_int = rfile->op_old->setlease(
+					rargs.args.f_setlease.file,
+					rargs.args.f_setlease.arg,
+                    rargs.args.f_setlease.flock,
+                    rargs.args.f_setlease.priv);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_int;
+}
+
+long rfs_fallocate(struct file *file, int mode,
+			  loff_t offset, loff_t len)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_fallocate);
+	rargs.args.f_fallocate.file = file;
+	rargs.args.f_fallocate.mode = mode;
+    rargs.args.f_fallocate.offset = offset;
+    rargs.args.f_fallocate.len = len;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->fallocate) 
+			rargs.rv.rv_long = rfile->op_old->fallocate(
+					rargs.args.f_fallocate.file,
+					rargs.args.f_fallocate.mode,
+                    rargs.args.f_fallocate.offset,
+                    rargs.args.f_fallocate.len);
+		else
+			rargs.rv.rv_long = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_long;
+}
+
+void rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_show_fdinfo);
+	rargs.args.f_show_fdinfo.seq_file = seq_file;
+	rargs.args.f_show_fdinfo.file = file;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->show_fdinfo) 
+			rfile->op_old->show_fdinfo(
+					rargs.args.f_show_fdinfo.seq_file,
+					rargs.args.f_show_fdinfo.file);
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+}
+
+ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
+				    struct file *file_out, loff_t pos_out,
+				    size_t count, unsigned int flags)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file_in);
+    if (!rfile)
+        rfile = rfs_file_find(file_out);
+
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file_in->f_inode, RFS_OP_f_copy_file_range);
+	rargs.args.f_copy_file_range.file_in = file_in;
+	rargs.args.f_copy_file_range.pos_in = pos_in;
+    rargs.args.f_copy_file_range.file_out = file_out;
+    rargs.args.f_copy_file_range.pos_out = pos_out;
+    rargs.args.f_copy_file_range.count = count;
+    rargs.args.f_copy_file_range.flags = flags;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->copy_file_range) 
+			rargs.rv.rv_ssize = rfile->op_old->copy_file_range(
+					rargs.args.f_copy_file_range.file_in,
+					rargs.args.f_copy_file_range.pos_in,
+                    rargs.args.f_copy_file_range.file_out,
+                    rargs.args.f_copy_file_range.pos_out,
+                    rargs.args.f_copy_file_range.count,
+                    rargs.args.f_copy_file_range.flags);
+		else
+			rargs.rv.rv_ssize = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_ssize;
+}
+
+int rfs_clone_file_range(struct file *src_file, loff_t src_off,
+		struct file *dst_file, loff_t dst_off, u64 count)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(src_file);
+    if (!rfile)
+        rfile = rfs_file_find(dst_file);
+
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(src_file->f_inode, RFS_OP_f_clone_file_range);
+	rargs.args.f_clone_file_range.src_file = src_file;
+	rargs.args.f_clone_file_range.src_off = src_off;
+    rargs.args.f_clone_file_range.dst_file = dst_file;
+    rargs.args.f_clone_file_range.dst_off = dst_off;
+    rargs.args.f_clone_file_range.count = count;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->clone_file_range) 
+			rargs.rv.rv_int = rfile->op_old->clone_file_range(
+					rargs.args.f_clone_file_range.src_file,
+					rargs.args.f_clone_file_range.src_off,
+                    rargs.args.f_clone_file_range.dst_file,
+                    rargs.args.f_clone_file_range.dst_off,
+                    rargs.args.f_clone_file_range.count);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_int;
+}
+
+ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
+                    u64 len, struct file *dst_file, u64 dst_loff)
+{
+	struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(src_file);
+    if (!rfile)
+        rfile = rfs_file_find(dst_file);
+
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(src_file->f_inode, RFS_OP_f_dedupe_file_range);
+	rargs.args.f_dedupe_file_range.src_file = src_file;
+	rargs.args.f_dedupe_file_range.loff = loff;
+    rargs.args.f_dedupe_file_range.len = len;
+    rargs.args.f_dedupe_file_range.dst_file = dst_file;
+    rargs.args.f_dedupe_file_range.dst_loff = dst_loff;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rfile->op_old && rfile->op_old->dedupe_file_range) 
+			rargs.rv.rv_ssize = rfile->op_old->dedupe_file_range(
+					rargs.args.f_dedupe_file_range.src_file,
+					rargs.args.f_dedupe_file_range.loff,
+                    rargs.args.f_dedupe_file_range.len,
+                    rargs.args.f_dedupe_file_range.dst_file,
+                    rargs.args.f_dedupe_file_range.dst_loff);
+		else
+			rargs.rv.rv_ssize = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_ssize;
+}
 
 #ifdef DBG
     #pragma GCC pop_options
