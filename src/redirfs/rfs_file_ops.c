@@ -197,6 +197,8 @@ ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 }
 #endif
 
+extern void rfs_add_dir_subs(struct rfs_file *rfile);
+
 int rfs_iterate(struct file *file, struct dir_context *dir_context)
 {
 	struct rfs_file *rfile;
@@ -226,6 +228,9 @@ int rfs_iterate(struct file *file, struct dir_context *dir_context)
 
 	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 	rfs_context_deinit(&rcont);
+
+    if (!rargs.rv.rv_int)
+        rfs_add_dir_subs(rfile);
 
 	rfs_file_put(rfile);
 	rfs_info_put(rinfo);
@@ -260,6 +265,9 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
 
 	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 	rfs_context_deinit(&rcont);
+
+    if (!rargs.rv.rv_int)
+        rfs_add_dir_subs(rfile);
 
 	rfs_file_put(rfile);
 	rfs_info_put(rinfo);

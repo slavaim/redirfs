@@ -25,6 +25,7 @@
  */
 
 #include "rfs.h"
+#include "rfs_file_ops.h"
 
 #ifdef DBG
     #pragma GCC push_options
@@ -250,15 +251,52 @@ static int rfs_release(struct inode *inode, struct file *file)
 	return rargs.rv.rv_int;
 }
 
+void rfs_add_dir_subs(struct rfs_file *rfile)
+{
+    LIST_HEAD(sibs);
+    struct rfs_dentry *rdentry;
+    struct rfs_dcache_entry *sib;
+    struct rfs_info *rinfo;
+
+    rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+
+	if (rfs_dcache_get_subs(rfile->file->f_dentry, &sibs)) {
+		BUG();
+		goto exit;
+	}
+
+	list_for_each_entry(sib, &sibs, list) {
+		rdentry = rfs_dentry_find(sib->dentry);
+		if (rdentry) {
+			rfs_dentry_put(rdentry);
+			continue;
+		}
+
+		if (!rinfo->rops) {
+			if (!sib->dentry->d_inode)
+				continue;
+
+			if (!S_ISDIR(sib->dentry->d_inode->i_mode))
+				continue;
+		}
+
+		if (rfs_dcache_rdentry_add(sib->dentry, rinfo)) {
+			BUG();
+			goto exit;
+		}
+	}
+
+exit:
+    rfs_dcache_entry_free_list(&sibs);
+    rfs_info_put(rinfo);
+}
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 {
-	LIST_HEAD(sibs);
-	struct rfs_dcache_entry *sib;
 	struct rfs_file *rfile;
 	struct rfs_info *rinfo;
 	struct rfs_context rcont;
-	struct rfs_dentry *rdentry;
 	struct redirfs_args rargs;
 
 	rfile = rfs_file_find(file);
@@ -292,79 +330,14 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	if (rargs.rv.rv_int)
 		goto exit;
 
-	if (rfs_dcache_get_subs(file->f_dentry, &sibs)) {
-		BUG();
-		goto exit;
-	}
-
-	list_for_each_entry(sib, &sibs, list) {
-		rdentry = rfs_dentry_find(sib->dentry);
-		if (rdentry) {
-			rfs_dentry_put(rdentry);
-			continue;
-		}
-
-		if (!rinfo->rops) {
-			if (!sib->dentry->d_inode)
-				continue;
-
-			if (!S_ISDIR(sib->dentry->d_inode->i_mode))
-				continue;
-		}
-
-		if (rfs_dcache_rdentry_add(sib->dentry, rinfo)) {
-			BUG();
-			goto exit;
-		}
-	}
+    rfs_add_dir_subs(rfile);
 
 exit:
-	rfs_dcache_entry_free_list(&sibs);
 	rfs_file_put(rfile);
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
 #endif
-
-extern loff_t rfs_llseek(struct file *file, loff_t offset, int origin);
-extern ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos);
-extern ssize_t rfs_write(struct file *file, const char __user *buf, size_t count, loff_t *pos);
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
-extern ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter);
-extern ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter);
-#endif
-extern int rfs_iterate(struct file *file, struct dir_context *dir_context);
-extern int rfs_iterate_shared(struct file *file, struct dir_context *dir_context);
-extern unsigned int rfs_poll(struct file *file, struct poll_table_struct *poll_table_struct);
-extern long rfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
-extern long rfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
-extern int rfs_mmap(struct file *file, struct vm_area_struct *vma);
-extern int rfs_flush(struct file *, fl_owner_t owner);
-extern int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync);
-extern int rfs_fasync(int fd, struct file *file, int on);
-extern int rfs_lock(struct file *file, int cmd, struct file_lock *flock);
-extern ssize_t rfs_sendpage(struct file *file, struct page *page, int offset,
-                     size_t len, loff_t *pos, int more);
-extern unsigned long rfs_get_unmapped_area(struct file *file, unsigned long addr,
-		unsigned long len, unsigned long pgoff, unsigned long flags);
-extern int rfs_flock(struct file *file, int cmd, struct file_lock *flock);
-extern ssize_t rfs_splice_write(struct pipe_inode_info *pipe, struct file *out,
-			  loff_t *ppos, size_t len, unsigned int flags);
-extern ssize_t rfs_splice_read(struct file *in, loff_t *ppos,
-				 struct pipe_inode_info *pipe, size_t len,
-				 unsigned int flags);
-extern int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
-		  void **priv);
-extern long rfs_fallocate(struct file *file, int mode,
-			  loff_t offset, loff_t len);
-extern void rfs_show_fdinfo(struct seq_file *seq_file, struct file *file);
-extern ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
-				    struct file *file_out, loff_t pos_out,
-				    size_t count, unsigned int flags);
-extern int rfs_clone_file_range(struct file *src_file, loff_t src_off,
-		struct file *dst_file, loff_t dst_off, u64 count);
-extern ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
-                    u64 len, struct file *dst_file, u64 dst_loff);
 
 static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 {
@@ -402,8 +375,8 @@ static void rfs_file_set_ops_dir(struct rfs_file *rfile)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 	rfile->op_new.readdir = rfs_readdir;
 #else
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_DIR_ITERATE, iterate, rfs_iterate);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_DIR_ITERATE_SHARED, iterate_shared, rfs_iterate_shared);
+    rfile->op_new.iterate = rfs_iterate;
+    rfile->op_new.iterate_shared = rfs_iterate_shared;
 #endif
 }
 
