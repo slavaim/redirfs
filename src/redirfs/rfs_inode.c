@@ -26,6 +26,7 @@
  */
 
 #include "rfs.h"
+#include "rfs_address_space.h"
 
 #ifdef DBG
     #pragma GCC push_options
@@ -62,7 +63,14 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
         memcpy(&rinode->a_ops_new, inode->i_mapping->a_ops,
 				sizeof(struct address_space_operations));
 
+    //
+    // rename hook is required for correct functioning of rfs_inode_find
+    //
 	rinode->op_new.rename = rfs_rename;
+
+#ifdef DBG
+    rinode->signature = RFS_INODE_SIGNATURE;
+#endif
 
 	return rinode;
 }
@@ -72,6 +80,9 @@ struct rfs_inode *rfs_inode_get(struct rfs_inode *rinode)
 	if (!rinode || IS_ERR(rinode))
 		return NULL;
 
+#ifdef DBG
+    BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
+#endif
 	BUG_ON(!atomic_read(&rinode->count));
 	atomic_inc(&rinode->count);
 
@@ -87,6 +98,9 @@ void rfs_inode_put(struct rfs_inode *rinode)
 	if (!atomic_dec_and_test(&rinode->count))
 		return;
 
+#ifdef DBG
+    BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
+#endif
 	rfs_info_put(rinode->rinfo);
 	rfs_data_remove(&rinode->data);
 	kmem_cache_free(rfs_inode_cache, rinode);
@@ -1195,10 +1209,6 @@ skip:
 }
 #endif
 
-extern int rfs_readpage(struct file *, struct page *);
-extern int rfs_readpages(struct file *file, struct address_space *mapping,
-                    struct list_head *pages, unsigned int nr_pages);
-
 static void rfs_inode_set_ops_reg(struct rfs_inode *rinode)
 {
 	RFS_SET_IOP(rinode, REDIRFS_REG_IOP_PERMISSION, permission, rfs_permission);
@@ -1206,6 +1216,7 @@ static void rfs_inode_set_ops_reg(struct rfs_inode *rinode)
 
     RFS_SET_AOP(rinode, REDIRFS_REG_AOP_READPAGE, readpage, rfs_readpage);
     RFS_SET_AOP(rinode, REDIRFS_REG_AOP_READPAGES, readpages, rfs_readpages);
+    RFS_SET_AOP(rinode, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_a_writepages), writepages, rfs_writepages);
 }
 
 static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)

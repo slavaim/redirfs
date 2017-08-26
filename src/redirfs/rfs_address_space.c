@@ -21,13 +21,15 @@
  */
 
 #include "rfs.h"
+#include <linux/mm.h>
 
 #ifdef DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
 #endif // DBG
 
-int rfs_readpage(struct file *file, struct page *page)
+int rfs_readpage(struct file *file,
+                 struct page *page)
 {
 	struct rfs_file *rfile;
 	struct rfs_info *rinfo;
@@ -63,10 +65,12 @@ int rfs_readpage(struct file *file, struct page *page)
 	return rargs.rv.rv_int;
 }
 
-int rfs_readpages(struct file *file, struct address_space *mapping,
-                    struct list_head *pages, unsigned int nr_pages)
+int rfs_readpages(struct file *file,
+                  struct address_space *mapping,
+                  struct list_head *pages,
+                  unsigned int nr_pages)
 {
-	struct rfs_file *rfile;
+    struct rfs_file *rfile;
 	struct rfs_info *rinfo;
     struct rfs_inode *rinode;
 	struct rfs_context rcont;
@@ -104,6 +108,315 @@ int rfs_readpages(struct file *file, struct address_space *mapping,
 	return rargs.rv.rv_int;
 }
 
+int rfs_writepages(struct address_space *mapping,
+                   struct writeback_control *wbc)
+{
+    struct rfs_info *rinfo;
+    struct rfs_inode *rinode;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rinode = rfs_inode_find(mapping->host);
+	rinfo = rfs_inode_get_rinfo(rinode);
+	rfs_context_init(&rcont, 0);
+
+    BUG_ON(!rinfo);
+
+    rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_writepages);
+	rargs.args.a_writepages.mapping = mapping;
+    rargs.args.a_writepages.wbc = wbc;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rinode->a_ops_old && rinode->a_ops_old->writepages) 
+			rargs.rv.rv_int = rinode->a_ops_old->writepages(
+					rargs.args.a_writepages.mapping,
+					rargs.args.a_writepages.wbc);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_info_put(rinfo);
+    rfs_inode_put(rinode);
+	return rargs.rv.rv_int;
+}
+
+int rfs_set_page_dirty(struct page *page)
+{
+    struct rfs_info *rinfo;
+    struct rfs_inode *rinode;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+	struct address_space *mapping;
+    
+    mapping = page_mapping(page);
+
+    WARN_ON(!mapping);
+	if (unlikely(!mapping))
+        return set_page_dirty(page);
+
+	rinode = rfs_inode_find(mapping->host);
+	rinfo = rfs_inode_get_rinfo(rinode);
+	rfs_context_init(&rcont, 0);
+
+    BUG_ON(!rinfo);
+
+    rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_set_page_dirty);
+	rargs.args.a_set_page_dirty.page = page;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rinode->a_ops_old && rinode->a_ops_old->set_page_dirty) 
+			rargs.rv.rv_int = rinode->a_ops_old->set_page_dirty(
+					rargs.args.a_set_page_dirty.page);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_info_put(rinfo);
+    rfs_inode_put(rinode);
+	return rargs.rv.rv_int;
+}
+
+int rfs_write_begin(struct file *file,
+                    struct address_space *mapping,
+                    loff_t pos,
+                    unsigned len,
+                    unsigned flags,
+                    struct page **pagep,
+                    void **fsdata)
+{
+    struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+    struct rfs_inode *rinode;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rinode = rfile->rdentry->rinode;
+    BUG_ON(!rinode);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_a_write_begin);
+	rargs.args.a_write_begin.file = file;
+	rargs.args.a_write_begin.mapping = mapping;
+    rargs.args.a_write_begin.pos = pos;
+    rargs.args.a_write_begin.len = len;
+    rargs.args.a_write_begin.flags = flags;
+    rargs.args.a_write_begin.pagep = pagep;
+    rargs.args.a_write_begin.fsdata = fsdata;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rinode->a_ops_old && rinode->a_ops_old->write_begin) 
+			rargs.rv.rv_int = rinode->a_ops_old->write_begin(
+					rargs.args.a_write_begin.file,
+					rargs.args.a_write_begin.mapping,
+                    rargs.args.a_write_begin.pos,
+                    rargs.args.a_write_begin.len,
+                    rargs.args.a_write_begin.flags,
+                    rargs.args.a_write_begin.pagep,
+                    rargs.args.a_write_begin.fsdata);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_int;
+}
+
+int rfs_write_end(struct file *file,
+                  struct address_space *mapping,
+                  loff_t pos,
+                  unsigned len,
+                  unsigned copied,
+                  struct page *page,
+                  void *fsdata)
+{
+    struct rfs_file *rfile;
+	struct rfs_info *rinfo;
+    struct rfs_inode *rinode;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rfile = rfs_file_find(file);
+	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+	rfs_context_init(&rcont, 0);
+
+    rinode = rfile->rdentry->rinode;
+    BUG_ON(!rinode);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_a_write_end);
+	rargs.args.a_write_end.file = file;
+	rargs.args.a_write_end.mapping = mapping;
+    rargs.args.a_write_end.pos = pos;
+    rargs.args.a_write_end.len = len;
+    rargs.args.a_write_end.copied = copied;
+    rargs.args.a_write_end.page = page;
+    rargs.args.a_write_end.fsdata = fsdata;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rinode->a_ops_old && rinode->a_ops_old->write_end) 
+			rargs.rv.rv_int = rinode->a_ops_old->write_end(
+					rargs.args.a_write_end.file,
+					rargs.args.a_write_end.mapping,
+                    rargs.args.a_write_end.pos,
+                    rargs.args.a_write_end.len,
+                    rargs.args.a_write_end.copied,
+                    rargs.args.a_write_end.page,
+                    rargs.args.a_write_end.fsdata);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_file_put(rfile);
+	rfs_info_put(rinfo);
+	return rargs.rv.rv_int;
+}
+
+sector_t rfs_bmap(struct address_space *mapping,
+                  sector_t block)
+{
+    struct rfs_info *rinfo;
+    struct rfs_inode *rinode;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+	rinode = rfs_inode_find(mapping->host);
+	rinfo = rfs_inode_get_rinfo(rinode);
+	rfs_context_init(&rcont, 0);
+
+    BUG_ON(!rinfo);
+
+    rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_bmap);
+	rargs.args.a_bmap.mapping = mapping;
+    rargs.args.a_bmap.block = block;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rinode->a_ops_old && rinode->a_ops_old->bmap) 
+			rargs.rv.rv_int = rinode->a_ops_old->bmap(
+					rargs.args.a_bmap.mapping,
+                    rargs.args.a_bmap.block);
+		else
+			rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_info_put(rinfo);
+    rfs_inode_put(rinode);
+	return rargs.rv.rv_int;
+}
+
+void rfs_invalidatepage(struct page *page,
+                        unsigned int offset,
+                        unsigned int length)
+{
+    struct rfs_info *rinfo;
+    struct rfs_inode *rinode;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+	struct address_space *mapping;
+    
+    mapping = page_mapping(page);
+
+    WARN_ON(!mapping);
+	if (unlikely(!mapping))
+        return;
+
+	rinode = rfs_inode_find(mapping->host);
+	rinfo = rfs_inode_get_rinfo(rinode);
+	rfs_context_init(&rcont, 0);
+
+    BUG_ON(!rinfo);
+
+    rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_invalidatepage);
+	rargs.args.a_invalidatepage.page = page;
+    rargs.args.a_invalidatepage.offset = offset;
+    rargs.args.a_invalidatepage.length = length;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rinode->a_ops_old && rinode->a_ops_old->invalidatepage) 
+			rinode->a_ops_old->invalidatepage(
+					rargs.args.a_invalidatepage.page,
+                    rargs.args.a_invalidatepage.offset,
+                    rargs.args.a_invalidatepage.length);
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_info_put(rinfo);
+    rfs_inode_put(rinode);
+}
+
+int rfs_releasepage(struct page *page,
+                    gfp_t flags)
+{
+    struct rfs_info *rinfo;
+    struct rfs_inode *rinode;
+	struct rfs_context rcont;
+    struct redirfs_args rargs;
+	struct address_space *mapping;
+    
+    mapping = page_mapping(page);
+
+    WARN_ON(!mapping);
+	if (unlikely(!mapping))
+        return;
+
+	rinode = rfs_inode_find(mapping->host);
+	rinfo = rfs_inode_get_rinfo(rinode);
+	rfs_context_init(&rcont, 0);
+
+    BUG_ON(!rinfo);
+
+    rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_releasepage);
+	rargs.args.a_releasepage.page = page;
+    rargs.args.a_releasepage.flags = flags;
+
+	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+		if (rinode->a_ops_old && rinode->a_ops_old->releasepage) 
+			rargs.rv.rv_int = rinode->a_ops_old->releasepage(
+					rargs.args.a_releasepage.page,
+                    rargs.args.a_releasepage.flags);
+            else
+			    rargs.rv.rv_int = -EIO;
+	}
+
+	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+	rfs_context_deinit(&rcont);
+
+	rfs_info_put(rinfo);
+    rfs_inode_put(rinode);
+    return rargs.rv.rv_int;
+}
+
+/*
+    ssize_t (*direct_IO)(struct kiocb *, struct iov_iter *);
+    int (*migratepage)(struct address_space *, struct page *, struct page *, enum migrate_mode);
+    bool (*isolate_page)(struct page *, isolate_mode_t);
+    void (*putback_page)(struct page *);
+    int (*launder_page)(struct page *);
+    int (*is_partially_uptodate)(struct page *, unsigned long, unsigned long);
+    void (*is_dirty_writeback)(struct page *, bool *, bool *);
+    int (*error_remove_page)(struct address_space *, struct page *);
+    int (*swap_activate)(struct swap_info_struct *, struct file *, sector_t *);
+    void (*swap_deactivate)(struct file *);
+*/
 #ifdef DBG
     #pragma GCC pop_options
 #endif // DBG
