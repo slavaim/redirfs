@@ -87,3 +87,10 @@ or
 12) remove dummyflt
 # rmmod dummyflt
 
+RedirFS doesn't cross mount points when adding paths. A mounted file system must be added explicitly. For example
+if a root '\' directory has been added to paths the devtmpfs mounted on '\dev' will not be controlled by RedirFS
+untill being explicitly added to filter's paths, for example through sysfs interface with a command
+
+echo -n "a:i:/dev" >  /sys/fs/redirfs/filters/dummyflt/paths
+
+

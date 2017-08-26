@@ -27,10 +27,10 @@
 
 #include "rfs.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 static struct rfs_chain *rfs_chain_alloc(int size, int type)
 {
@@ -290,7 +290,7 @@ struct rfs_chain *rfs_chain_diff(struct rfs_chain *rch1, struct rfs_chain *rch2)
 	return rch;
 }
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG
 

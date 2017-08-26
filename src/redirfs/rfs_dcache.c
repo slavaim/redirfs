@@ -26,10 +26,10 @@
 
 #include "rfs.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 struct rfs_dcache_data *rfs_dcache_data_alloc(struct dentry *dentry,
 		struct rfs_info *rinfo, struct rfs_flt *rflt)
@@ -464,6 +464,6 @@ int rfs_dcache_reset(struct dentry *dentry, void *data)
 	return rfs_dcache_rdentry_add(dentry, rdata->rinfo);
 }
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG

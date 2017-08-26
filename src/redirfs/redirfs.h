@@ -156,7 +156,13 @@ enum rfs_op_id {
     RFS_OP_a_bmap,
     RFS_OP_a_invalidatepage,
     RFS_OP_a_releasepage,
-    RFS_OP_a_freepage,
+    //
+    // RFS_OP_a_freepage hook can be installed only by a client
+    // on its own risk as it is not possible to find original
+    // operation from a page when the mapping field is NULL as
+    // is the case for freepage
+    //
+    // RFS_OP_a_freepage,
     RFS_OP_a_direct_IO,
     RFS_OP_a_migratepage,
     RFS_OP_a_isolate_page,
@@ -800,14 +806,56 @@ union redirfs_op_args {
 		unsigned nr_pages;
 	} a_readpages;
 
-	/*
 	struct {
 		struct address_space *mapping;
 		struct writeback_control *wbc;
 	} a_writepages;
-	*/
 
-	/*
+    struct {
+        struct page *page;
+    } a_set_page_dirty;
+
+    struct {
+        struct file *file;
+        struct address_space *mapping;
+        loff_t pos;
+        unsigned len;
+        unsigned flags;
+        struct page **pagep;
+        void **fsdata;
+    } a_write_begin;
+
+    struct {
+        struct file *file;
+        struct address_space *mapping;
+        loff_t pos;
+        unsigned len;
+        unsigned copied;
+        struct page *page;
+        void *fsdata;
+    } a_write_end;
+
+	struct {
+		struct address_space *mapping;
+		sector_t block;
+	} a_bmap;
+
+	struct {
+		struct page *page;
+		unsigned int offset;
+        unsigned int length;
+	} a_invalidatepage;
+
+	struct {
+		struct page *page;
+		gfp_t flags;
+	} a_releasepage;
+
+	struct {
+		struct page *page;
+	} a_freepage;
+
+    /*
 	struct {
 		struct page *page;
 	} a_sync_page;
@@ -835,27 +883,6 @@ union redirfs_op_args {
 		unsigned from;
 		unsigned to;
 	} a_commit_write;
-	*/
-
-	/*
-	struct {
-		struct address_space *mapping;
-		sector_t block;
-	} a_bmap;
-	*/
-
-	/*
-	struct {
-		struct page *page;
-		unsigned long offset;
-	} a_invalidatepage;
-	*/
-
-	/*
-	struct {
-		struct page *page;
-		gfp_t flags;
-	} a_releasepage;
 	*/
 
 	/*

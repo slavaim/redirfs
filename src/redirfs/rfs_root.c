@@ -26,10 +26,10 @@
 
 #include "rfs.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 LIST_HEAD(rfs_root_list);
 LIST_HEAD(rfs_root_walk_list);
@@ -553,7 +553,7 @@ EXPORT_SYMBOL(redirfs_get_root_path);
 EXPORT_SYMBOL(redirfs_get_root);
 EXPORT_SYMBOL(redirfs_put_root);
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG
 

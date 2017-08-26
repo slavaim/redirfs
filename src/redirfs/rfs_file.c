@@ -27,10 +27,10 @@
 #include "rfs.h"
 #include "rfs_file_ops.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 static rfs_kmem_cache_t *rfs_file_cache = NULL;
 
@@ -61,9 +61,15 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
     // unconditionally register open operation to be notified
     // of open requests, some devices do not register open
     // operation, e.g. null_fops, but RedirFS requires
-    // open operation to be called through file_operations
+    // open operation to be called through file_operations.
+    // Also, rfs_open hook is required for correct operation
+    // of rfs_file_find macro.
     //
     rfile->op_new.open = rfs_open;
+
+#ifdef RFS_DBG
+    rfile->signature = RFS_FILE_SIGNATURE;
+#endif // RFS_DBG
 
 	return rfile;
 }
@@ -73,6 +79,9 @@ struct rfs_file *rfs_file_get(struct rfs_file *rfile)
 	if (!rfile || IS_ERR(rfile))
 		return NULL;
 
+#ifdef RFS_DBG
+    BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
+#endif // RFS_DBG
 	BUG_ON(!atomic_read(&rfile->count));
 	atomic_inc(&rfile->count);
 
@@ -84,6 +93,9 @@ void rfs_file_put(struct rfs_file *rfile)
 	if (!rfile || IS_ERR(rfile))
 		return;
 
+#ifdef RFS_DBG
+    BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
+#endif // RFS_DBG
 	BUG_ON(!atomic_read(&rfile->count));
 	if (!atomic_dec_and_test(&rfile->count))
 		return;
@@ -456,6 +468,6 @@ void rfs_file_set_ops(struct rfs_file *rfile)
     rfile->op_new.release = rfs_release;
 }
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG

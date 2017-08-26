@@ -45,6 +45,12 @@
     #define f_vfsmnt	f_path.mnt
 #endif
 
+#ifdef RFS_DBG
+    #define BUG_ON_DBG(cond, str) (void)(cond)
+#else
+    #define BUG_ON_DBG(cond, str) BUG_ON(cond)
+#endif
+
 //
 // do not replace NULL operations to preserve file system driver semantics
 //
@@ -352,6 +358,10 @@ int rfs_dentry_move(struct dentry *dentry, struct rfs_flt *rflt,
 		struct rfs_root *src, struct rfs_root *dst);
 
 struct rfs_inode {
+#ifdef RFS_DBG
+    #define RFS_INODE_SIGNATURE  0xABCD0002
+    long   signature;
+#endif // RFS_DBG
 	struct list_head rdentries; /* mutex */
 	struct list_head data;
 	struct inode *inode;
@@ -403,6 +413,10 @@ int rfs_inode_cache_create(void);
 void rfs_inode_cache_destroy(void);
 
 struct rfs_file {
+#ifdef RFS_DBG
+    #define RFS_FILE_SIGNATURE  0xABCD0001
+    long  signature;
+#endif
 	struct list_head rdentry_list;
 	struct list_head data;
 	struct file *file;

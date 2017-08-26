@@ -23,10 +23,10 @@
 #include "rfs.h"
 #include <linux/mm.h>
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 int rfs_readpage(struct file *file,
                  struct page *page)
@@ -417,6 +417,6 @@ int rfs_releasepage(struct page *page,
     int (*swap_activate)(struct swap_info_struct *, struct file *, sector_t *);
     void (*swap_deactivate)(struct file *);
 */
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG

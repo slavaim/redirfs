@@ -18,6 +18,9 @@
  * along with RedirFS. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef _RFS_FILE_OPS_H
+#define _RFS_FILE_OPS_H
+
 #include "rfs.h"
 
 loff_t rfs_llseek(struct file *file,
@@ -138,3 +141,5 @@ ssize_t rfs_dedupe_file_range(struct file *src_file,
                               u64 len,
                               struct file *dst_file,
                               u64 dst_loff);
+
+#endif // _RFS_FILE_OPS_H

@@ -26,10 +26,10 @@
 
 #include "rfs.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 static rfs_kmem_cache_t *rfs_dentry_cache = NULL;
 
@@ -773,6 +773,6 @@ int rfs_dentry_move(struct dentry *dentry, struct rfs_flt *rflt,
 	return rv;
 }
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG

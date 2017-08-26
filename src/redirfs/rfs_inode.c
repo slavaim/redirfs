@@ -28,10 +28,10 @@
 #include "rfs.h"
 #include "rfs_address_space.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 static rfs_kmem_cache_t *rfs_inode_cache = NULL;
 
@@ -68,7 +68,7 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
     //
 	rinode->op_new.rename = rfs_rename;
 
-#ifdef DBG
+#ifdef RFS_DBG
     rinode->signature = RFS_INODE_SIGNATURE;
 #endif
 
@@ -80,7 +80,7 @@ struct rfs_inode *rfs_inode_get(struct rfs_inode *rinode)
 	if (!rinode || IS_ERR(rinode))
 		return NULL;
 
-#ifdef DBG
+#ifdef RFS_DBG
     BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
 #endif
 	BUG_ON(!atomic_read(&rinode->count));
@@ -98,7 +98,7 @@ void rfs_inode_put(struct rfs_inode *rinode)
 	if (!atomic_dec_and_test(&rinode->count))
 		return;
 
-#ifdef DBG
+#ifdef RFS_DBG
     BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
 #endif
 	rfs_info_put(rinode->rinfo);
@@ -1304,6 +1304,6 @@ void rfs_inode_set_ops(struct rfs_inode *rinode)
 	spin_unlock(&rinode->lock);
 }
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG

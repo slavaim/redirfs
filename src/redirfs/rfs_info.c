@@ -26,10 +26,10 @@
 
 #include "rfs.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 static int rfs_info_add_ops(struct rfs_info *rinfo, struct rfs_chain *rchain)
 {
@@ -431,6 +431,6 @@ exit:
 	return rv;
 }
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG

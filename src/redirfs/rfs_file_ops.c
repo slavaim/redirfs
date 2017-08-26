@@ -20,10 +20,10 @@
 
 #include "rfs.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 loff_t rfs_llseek(struct file *file, loff_t offset, int origin)
 {
@@ -967,6 +967,6 @@ ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
 	return rargs.rv.rv_ssize;
 }
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG

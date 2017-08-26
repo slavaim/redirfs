@@ -26,10 +26,10 @@
 
 #include "rfs.h"
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
-#endif // DBG
+#endif // RFS_DBG
 
 struct rfs_info *rfs_info_none;
 
@@ -193,6 +193,6 @@ MODULE_AUTHOR("Frantisek Hrbata <frantisek.hrbata@redirfs.org>");
 MODULE_DESCRIPTION("Redirecting File System Framework Version "
 		REDIRFS_VERSION " <www.redirfs.org>");
 
-#ifdef DBG
+#ifdef RFS_DBG
     #pragma GCC pop_options
-#endif // DBG
+#endif // RFS_DBG
