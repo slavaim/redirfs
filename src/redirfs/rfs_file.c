@@ -3,7 +3,7 @@
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - changing for the latest kernels by Slava Imameev
+ * 2017 - modified by by Slava Imameev
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -50,7 +50,7 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 	INIT_LIST_HEAD(&rfile->data);
 	rfile->file = file;
 	spin_lock_init(&rfile->lock);
-	atomic_set(&rfile->count, 1);
+    rfs_object_init(&rfile->rfs_object, RFS_TYPE_RFILE, file);
 	rfile->op_old = fops_get(file->f_op);
 
 	if (rfile->op_old)
@@ -79,11 +79,8 @@ struct rfs_file *rfs_file_get(struct rfs_file *rfile)
 	if (!rfile || IS_ERR(rfile))
 		return NULL;
 
-#ifdef RFS_DBG
-    BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
-#endif // RFS_DBG
-	BUG_ON(!atomic_read(&rfile->count));
-	atomic_inc(&rfile->count);
+    DBG_BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
+    rfs_object_get(&rfile->rfs_object);
 
 	return rfile;
 }
@@ -93,12 +90,15 @@ void rfs_file_put(struct rfs_file *rfile)
 	if (!rfile || IS_ERR(rfile))
 		return;
 
-#ifdef RFS_DBG
-    BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
-#endif // RFS_DBG
-	BUG_ON(!atomic_read(&rfile->count));
-	if (!atomic_dec_and_test(&rfile->count))
-		return;
+    DBG_BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
+	rfs_object_put(&rfile->rfs_object);
+}
+
+void rfs_file_free(struct rfs_object *rfs_object)
+{
+    struct rfs_file *rfile = container_of(rfs_object, struct rfs_file, rfs_object);
+
+    DBG_BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
 
 	rfs_dentry_put(rfile->rdentry);
 	fops_put(rfile->op_old);
@@ -117,11 +117,18 @@ static struct rfs_file *rfs_file_add(struct file *file)
 
 	rfile->rdentry = rfs_dentry_find(file->f_dentry);
 	rfs_dentry_add_rfile(rfile->rdentry, rfile);
+
 	fops_put(file->f_op);
 	file->f_op = &rfile->op_new;
+
 	rfs_file_get(rfile);
+    
+    rfs_insert_object(&rfile->rfs_object, false);
+
 	spin_lock(&rfile->rdentry->lock);
-	rfs_file_set_ops(rfile);
+    {
+	    rfs_file_set_ops(rfile);
+    }
 	spin_unlock(&rfile->rdentry->lock);
 
 	return rfile;
@@ -131,6 +138,8 @@ static void rfs_file_del(struct rfs_file *rfile)
 {
 	rfs_dentry_rem_rfile(rfile);
 	rfile->file->f_op = fops_get(rfile->op_old);
+
+    rfs_remove_object(&rfile->rfs_object, false);
 	rfs_file_put(rfile);
 }
 

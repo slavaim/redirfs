@@ -80,9 +80,7 @@ struct rfs_inode *rfs_inode_get(struct rfs_inode *rinode)
 	if (!rinode || IS_ERR(rinode))
 		return NULL;
 
-#ifdef RFS_DBG
-    BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
-#endif
+    DBG_BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
 	BUG_ON(!atomic_read(&rinode->count));
 	atomic_inc(&rinode->count);
 
@@ -98,9 +96,7 @@ void rfs_inode_put(struct rfs_inode *rinode)
 	if (!atomic_dec_and_test(&rinode->count))
 		return;
 
-#ifdef RFS_DBG
-    BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
-#endif
+    DBG_BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
 	rfs_info_put(rinode->rinfo);
 	rfs_data_remove(&rinode->data);
 	kmem_cache_free(rfs_inode_cache, rinode);

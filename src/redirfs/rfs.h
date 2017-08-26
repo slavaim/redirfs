@@ -36,6 +36,7 @@
 #include <linux/quotaops.h>
 #include <linux/slab.h>
 #include "redirfs.h"
+#include "rfs_object.h"
 
 #ifndef f_dentry
     #define f_dentry	f_path.dentry
@@ -43,12 +44,6 @@
 
 #ifndef f_vfsmnt
     #define f_vfsmnt	f_path.mnt
-#endif
-
-#ifdef RFS_DBG
-    #define BUG_ON_DBG(cond, str) (void)(cond)
-#else
-    #define BUG_ON_DBG(cond, str) BUG_ON(cond)
 #endif
 
 //
@@ -417,6 +412,7 @@ struct rfs_file {
     #define RFS_FILE_SIGNATURE  0xABCD0001
     long  signature;
 #endif
+    struct rfs_object rfs_object;
 	struct list_head rdentry_list;
 	struct list_head data;
 	struct file *file;
@@ -428,7 +424,6 @@ struct rfs_file {
 #endif
 	struct file_operations op_new;
 	spinlock_t lock;
-	atomic_t count;
 };
 
 #define rfs_file_find(file) \

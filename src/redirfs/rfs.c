@@ -150,6 +150,8 @@ static int __init rfs_init(void)
 {
 	int rv;
 
+    rfs_objects_table_init();
+    
 	rfs_info_none = rfs_info_alloc(NULL, NULL);
 	if (IS_ERR(rfs_info_none))
 		return PTR_ERR(rfs_info_none);
