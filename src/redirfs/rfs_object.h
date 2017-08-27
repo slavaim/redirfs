@@ -39,57 +39,74 @@ enum rfs_type {
     RFS_TYPE_MAX
 };
 
+struct rfs_object_type;
+
 struct rfs_object {
 
 #ifdef RFS_DBG
     #define RFS_OBJECT_SIGNATURE 0xABCD0003
-    long                signature;
+    long                    signature;
 #endif //RFS_DBG
 
-    refcount_t          refcount;
+    refcount_t              refcount;
 
     /*
     * hash_list_entry and rcu_head usages are
     * mutually exclusive so they share space
     */
     union {
-        struct list_head    hash_list_entry; /* hast table entry list */
+        struct list_head    hash_list_entry; /* hast table entry list, RCU */
         struct rcu_head     rcu_head; /* rcu callback list */
     } u;
-
-    /* a containing object type */
-    enum rfs_type       type;
 
     /*
     * a pointer to a related system object
     * like inode, dentry, file etc
     */
-    void                *system_object;
+    void                    *system_object;
+
+    /* a containing object type */
+    struct rfs_object_type  *type;
+
+#ifdef RFS_DBG  
+    struct list_head        objects_list;
+#endif // RFS_DBG
+};
+
+struct rfs_object_type {
+
+    enum rfs_type type;
+
+    /*
+     * free is called when the object refernce count
+     * drops to zero
+     */
+    void (*free)(struct rfs_object*);
 };
 
 void rfs_objects_table_init(void);
 
 void rfs_object_init(
-    struct rfs_object *rfs_object,
-    enum rfs_type rfs_type,
-    void *system_object);
+    struct rfs_object       *rfs_object,
+    struct rfs_object_type  *type,
+    void                    *system_object);
 
 void rfs_object_get(
-    struct rfs_object*  rfs_object);
+    struct rfs_object   *rfs_object);
 
 void rfs_object_put(
-    struct rfs_object*  rfs_object);
+    struct rfs_object   *rfs_object);
 
 int rfs_insert_object(
-    struct rfs_object*  rfs_object,
+    struct rfs_object   *rfs_object,
     bool check_for_duplicate);
 
 void rfs_remove_object(
-    struct rfs_object*  rfs_object,
+    struct rfs_object   *rfs_object,
     bool check_for_duplicate);
 
 struct rfs_object* rfs_get_object_by_system_object(
-    void* system_object,
-    enum rfs_type rfs_type);
+    void            *system_object,
+    enum rfs_type   rfs_type);
 
 #endif // _RFS_OBJECT_H

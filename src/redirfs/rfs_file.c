@@ -32,11 +32,18 @@
     #pragma GCC optimize ("O0")
 #endif // RFS_DBG
 
+static void rfs_file_free(struct rfs_object *rfs_object);
+
 static rfs_kmem_cache_t *rfs_file_cache = NULL;
 
 struct file_operations rfs_file_ops = {
 	.open = rfs_open
 };
+
+static struct rfs_object_type frs_file_type = {
+    .type = RFS_TYPE_RFILE,
+    .free = rfs_file_free,
+    };
 
 static struct rfs_file *rfs_file_alloc(struct file *file)
 {
@@ -50,7 +57,7 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 	INIT_LIST_HEAD(&rfile->data);
 	rfile->file = file;
 	spin_lock_init(&rfile->lock);
-    rfs_object_init(&rfile->rfs_object, RFS_TYPE_RFILE, file);
+    rfs_object_init(&rfile->rfs_object, &frs_file_type, file);
 	rfile->op_old = fops_get(file->f_op);
 
 	if (rfile->op_old)
@@ -94,7 +101,7 @@ void rfs_file_put(struct rfs_file *rfile)
 	rfs_object_put(&rfile->rfs_object);
 }
 
-void rfs_file_free(struct rfs_object *rfs_object)
+static void rfs_file_free(struct rfs_object *rfs_object)
 {
     struct rfs_file *rfile = container_of(rfs_object, struct rfs_file, rfs_object);
 
