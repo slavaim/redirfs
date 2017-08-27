@@ -1,7 +1,7 @@
 /*
  * RedirFS: Redirecting File System
  *
- * Copyright 2017 SLava Imameev
+ * Copyright 2017 Slava Imameev
  * All rights reserved.
  *
  * This file is part of RedirFS.
@@ -28,6 +28,7 @@
 #ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
+    /*compiletime_assert_atomic_type failes w/o optimization*/
     #undef compiletime_assert_atomic_type
     #define compiletime_assert_atomic_type(t)
 #endif // RFS_DBG
@@ -230,11 +231,14 @@ void rfs_object_init(
         rfs_object->signature = RFS_OBJECT_SIGNATURE;
         atomic_inc(&di->objects_count);
 
-        spin_lock(&di->lock);
+        /*
+         * we need to synchronize with RCU callback which is called from softirq
+         */
+        spin_lock_bh(&di->lock);
         {
             list_add(&rfs_object->objects_list, &di->objects_list_head);
         }
-        spin_unlock(&di->lock);
+        spin_unlock_bh(&di->lock);
     }
 #endif //RFS_DBG
 }
@@ -287,11 +291,12 @@ static void rfs_object_free_rcu(
         DBG_BUG_ON(!atomic_read(&di->objects_count));
         atomic_dec(&di->objects_count);
 
-        spin_lock(&di->lock);
+        /* we are in a softirq context */
+        spin_lock_bh(&di->lock);
         {
             list_del(&rfs_object->objects_list);
         }
-        spin_unlock(&di->lock);
+        spin_unlock_bh(&di->lock);
     }
 #endif //RFS_DBG
 
@@ -317,13 +322,14 @@ void rfs_object_put(
 
     if (refcount_dec_and_test(&rfs_object->refcount)){
         /*
-         * the object must not be in the list, i.e. never inserted
+         * the object must not be in the list, i.e. either never inserted
          * or removed by list_del_rcu
          */
         DBG_BUG_ON(!list_empty(&rfs_object->hash_list_entry) && 
                    LIST_POISON2 != rfs_object->hash_list_entry.prev);
 
-        DBG_BUG_ON(rfs_object->system_object);
+        /* the object should be non discoverable */
+        DBG_BUG_ON(rfs_object->system_object && !list_empty(&rfs_object->hash_list_entry));
 
         call_rcu(&rfs_object->rcu_head, rfs_object_free_rcu);
     }

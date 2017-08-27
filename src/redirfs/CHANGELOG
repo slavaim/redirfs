@@ -8,6 +8,10 @@ version 0.12 experimental 2017
     - redesign for the operation ID to divide it to an object type and operation type
       with introduction of RFS_OP_IDC to generate IDs
     - some debugging facilities
+    - redesign of kernel object mapping to RFS objects ( file, dentry etc). A hash table
+      is employed to search for RFS objects by kernel object. This makes RFS hooking
+      compatible with third party hooks as mapping doesn't depend on an assumption that 
+      operation structures(inode_operations etc) are immutable.
 
 version 0.11 experimental 2011-09-05
 	* Frantisek Hrbata <frantisek.hrbata@redirfs.org>
