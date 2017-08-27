@@ -88,7 +88,7 @@ enum redirfs_rv dummyflt_open(redirfs_context context,
 	char *path;
 	char *call;
 	int   rv;
-    char* imode = imode_to_str(args->args.f_open.file->f_inode->i_mode);
+    const char* imode = imode_to_str(args->args.f_open.file->f_inode->i_mode);
 
 	path = dummyflt_alloc(sizeof(char) * PAGE_SIZE);
 	if (!path)

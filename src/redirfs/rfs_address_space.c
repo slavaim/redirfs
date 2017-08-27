@@ -376,7 +376,7 @@ int rfs_releasepage(struct page *page,
 
     WARN_ON(!mapping);
 	if (unlikely(!mapping))
-        return;
+        return -EINVAL;
 
 	rinode = rfs_inode_find(mapping->host);
 	rinfo = rfs_inode_get_rinfo(rinode);
