@@ -159,7 +159,7 @@ static void rfs_file_del(struct rfs_file *rfile)
 	rfs_dentry_rem_rfile(rfile);
 	rfile->file->f_op = fops_get(rfile->op_old);
 
-    rfs_remove_object(&rfile->rfs_object, false);
+    rfs_remove_object(&rfile->rfs_object);
 	rfs_file_put(rfile);
 }
 

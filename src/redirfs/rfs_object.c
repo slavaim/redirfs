@@ -169,6 +169,9 @@ int rfs_insert_object(
     /* bump the reference count */
     rfs_object_get(rfs_object);
 
+    /* spin_lock can't synchronize user context with softirq */
+    DBG_BUG_ON(in_softirq());
+
     spin_lock(&table_entry->lock);
     { /* start of the lock */
 
@@ -246,8 +249,7 @@ void rfs_object_init(
 /*---------------------------------------------------------------------------*/
 
 void rfs_remove_object(
-    struct rfs_object   *rfs_object,
-    bool                check_for_duplicate)
+    struct rfs_object   *rfs_object)
 {
     struct rfs_object_table_entry   *table_entry;
 
@@ -264,6 +266,9 @@ void rfs_remove_object(
      * the pointer is never dereferenced
      */
     rcu_assign_pointer(rfs_object->system_object, NULL);
+
+    /* spin_lock can't synchronize user context with softirq */
+    DBG_BUG_ON(in_softirq());
 
     spin_lock(&table_entry->lock);
     { /* start of the lock */

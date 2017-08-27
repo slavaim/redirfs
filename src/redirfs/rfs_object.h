@@ -102,8 +102,7 @@ int rfs_insert_object(
     bool check_for_duplicate);
 
 void rfs_remove_object(
-    struct rfs_object   *rfs_object,
-    bool check_for_duplicate);
+    struct rfs_object   *rfs_object);
 
 struct rfs_object* rfs_get_object_by_system_object(
     void            *system_object,
