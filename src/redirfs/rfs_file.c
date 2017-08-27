@@ -45,6 +45,19 @@ static struct rfs_object_type frs_file_type = {
     .free = rfs_file_free,
     };
 
+struct rfs_file* rfs_file_find(struct file *file)
+{
+    struct rfs_object   *rfs_object;
+    struct rfs_file     *rfs_file;
+
+    rfs_object = rfs_get_object_by_system_object(file, RFS_TYPE_RFILE);
+    if (!rfs_object)
+        return NULL;
+
+    rfs_file = container_of(rfs_object, struct rfs_file, rfs_object);
+    return rfs_file;
+}
+
 static struct rfs_file *rfs_file_alloc(struct file *file)
 {
 	struct rfs_file *rfile;

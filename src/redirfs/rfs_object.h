@@ -50,18 +50,18 @@ struct rfs_object {
 
     refcount_t              refcount;
 
-    /*
-    * hash_list_entry and rcu_head usages are
-    * mutually exclusive so they share space
-    */
-    union {
-        struct list_head    hash_list_entry; /* hast table entry list, RCU */
-        struct rcu_head     rcu_head; /* rcu callback list */
-    } u;
+    /* hast table entry list, RCU */
+    struct list_head        hash_list_entry;
+
+    /* rcu callback list */
+    struct rcu_head         rcu_head;
 
     /*
     * a pointer to a related system object
-    * like inode, dentry, file etc
+    * like inode, dentry, file etc, set to NULL
+    * when the related object is removed from
+    * the system as rfs_object might outlive
+    * the related system object because of RCU
     */
     void                    *system_object;
 

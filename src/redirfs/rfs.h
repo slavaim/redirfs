@@ -426,10 +426,13 @@ struct rfs_file {
 	spinlock_t lock;
 };
 
+/*
 #define rfs_file_find(file) \
 	(file && file->f_op && file->f_op->open == rfs_open ? \
 	 rfs_file_get(container_of(file->f_op, struct rfs_file, op_new)) : \
 	 NULL)
+*/
+struct rfs_file* rfs_file_find(struct file *file);
 	 
 extern struct file_operations rfs_file_ops;
 

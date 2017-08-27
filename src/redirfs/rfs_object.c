@@ -28,6 +28,8 @@
 #ifdef RFS_DBG
     #pragma GCC push_options
     #pragma GCC optimize ("O0")
+    #undef compiletime_assert_atomic_type
+    #define compiletime_assert_atomic_type(t)
 #endif // RFS_DBG
 
 /*---------------------------------------------------------------------------*/
@@ -103,21 +105,32 @@ struct rfs_object* rfs_get_object_by_system_object(
 {
     struct rfs_object_table_entry   *table_entry;
 
+    DBG_BUG_ON(!system_object);
+
     table_entry = rfs_object_hash_entry(system_object, rfs_type);
 
     rcu_read_lock();
     { /* start of the RCU lock */
         struct rfs_object *rfs_object;
 
-        list_for_each_entry_rcu(rfs_object, &table_entry->hash_list_head, u.hash_list_entry) {
+        list_for_each_entry_rcu(rfs_object, &table_entry->hash_list_head, hash_list_entry) {
 
-            DBG_BUG_ON(!refcount_read(&rfs_object->refcount));
+            /*
+             * it is possible to hit an object with zero reference count, 
+             * this is an object waiting RCU grace period expiration
+             * to be removed, such objects have system_object set to NULL
+             * and hash_list_head.prev set to invalid value
+             */
+            DBG_BUG_ON(!refcount_read(&rfs_object->refcount) &&
+                       rcu_access_pointer(rfs_object->system_object));
             DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
 
-            if (rfs_object->system_object == system_object){
+            if (rcu_access_pointer(rfs_object->system_object) == system_object){
+
+                DBG_BUG_ON(rfs_object->type->type != rfs_type);
 
                 /* bump the reference count */
-                refcount_inc(&rfs_object->refcount);
+                rfs_object_get(rfs_object);
                 rcu_read_unlock();
                 return rfs_object;
             }
@@ -140,14 +153,16 @@ int rfs_insert_object(
 {
     int error = 0;
     struct rfs_object_table_entry   *table_entry;
+    void *system_object;
 
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
     DBG_BUG_ON(!refcount_read(&rfs_object->refcount));
-    DBG_BUG_ON(!rfs_object->system_object);
+    DBG_BUG_ON(!rcu_access_pointer(rfs_object->system_object));
     DBG_BUG_ON(rfs_object->type->type >= RFS_TYPE_MAX);
-    DBG_BUG_ON(!list_empty(&rfs_object->u.hash_list_entry));
+    DBG_BUG_ON(!list_empty(&rfs_object->hash_list_entry));
 
-    table_entry = rfs_object_hash_entry(rfs_object->system_object,
+    system_object = rcu_access_pointer(rfs_object->system_object);
+    table_entry = rfs_object_hash_entry(system_object,
                                         rfs_object->type->type);
 
     /* bump the reference count */
@@ -162,12 +177,12 @@ int rfs_insert_object(
         if (check_for_duplicate) {
 #endif
             struct rfs_object *found_rfs_object;
-            list_for_each_entry_rcu(found_rfs_object, &table_entry->hash_list_head, u.hash_list_entry) {
+            list_for_each_entry_rcu(found_rfs_object, &table_entry->hash_list_head, hash_list_entry) {
 
                 DBG_BUG_ON(RFS_OBJECT_SIGNATURE != found_rfs_object->signature);
                 DBG_BUG_ON(!refcount_read(&found_rfs_object->refcount));
 
-                if (rfs_object->system_object == found_rfs_object->system_object) {
+                if (system_object == rcu_access_pointer(found_rfs_object->system_object)) {
                     DBG_BUG_ON(!check_for_duplicate);
                     error = -EEXIST;
                     break;
@@ -176,7 +191,7 @@ int rfs_insert_object(
         } /* end if (check_for_duplicate) */
 
         if (!error) {
-            list_add_rcu(&rfs_object->u.hash_list_entry, &table_entry->hash_list_head);
+            list_add_rcu(&rfs_object->hash_list_entry, &table_entry->hash_list_head);
         }
 
     } /* end of the lock */
@@ -203,10 +218,10 @@ void rfs_object_init(
     DBG_BUG_ON(!type->free);
     DBG_BUG_ON(!system_object);
 
-    INIT_LIST_HEAD_RCU(&rfs_object->u.hash_list_entry);
+    INIT_LIST_HEAD_RCU(&rfs_object->hash_list_entry);
     refcount_set(&rfs_object->refcount, 1);
     rfs_object->type = type;
-    rfs_object->system_object = system_object;
+    rcu_assign_pointer(rfs_object->system_object, system_object);
 
 #ifdef RFS_DBG
     {
@@ -234,14 +249,21 @@ void rfs_remove_object(
 
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
 
-    table_entry = rfs_object_hash_entry(rfs_object->system_object,
+    table_entry = rfs_object_hash_entry(rcu_access_pointer(rfs_object->system_object),
                                         rfs_object->type->type);
 
-    DBG_BUG_ON(LIST_POISON2 == rfs_object->u.hash_list_entry.prev);
+    DBG_BUG_ON(LIST_POISON2 == rfs_object->hash_list_entry.prev);
+
+    /*
+     * make the object non discoverable, 
+     * synchronize_rcu() call is not required as
+     * the pointer is never dereferenced
+     */
+    rcu_assign_pointer(rfs_object->system_object, NULL);
 
     spin_lock(&table_entry->lock);
     { /* start of the lock */
-        list_del_rcu(&rfs_object->u.hash_list_entry);
+        list_del_rcu(&rfs_object->hash_list_entry);
     } /* end of the lock */
     spin_unlock(&table_entry->lock);
 
@@ -250,12 +272,12 @@ void rfs_remove_object(
 
 /*---------------------------------------------------------------------------*/
 
-void rfs_object_free_rcu(
+static void rfs_object_free_rcu(
     struct rcu_head *rcu_head)
 {
     struct rfs_object *rfs_object;
 
-    rfs_object = container_of(rcu_head, struct rfs_object, u.rcu_head);
+    rfs_object = container_of(rcu_head, struct rfs_object, rcu_head);
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
 
 #ifdef RFS_DBG
@@ -293,8 +315,18 @@ void rfs_object_put(
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
     DBG_BUG_ON(!refcount_read(&rfs_object->refcount));
 
-    if (refcount_dec_and_test(&rfs_object->refcount))
-        call_rcu(&rfs_object->u.rcu_head, rfs_object_free_rcu);
+    if (refcount_dec_and_test(&rfs_object->refcount)){
+        /*
+         * the object must not be in the list, i.e. never inserted
+         * or removed by list_del_rcu
+         */
+        DBG_BUG_ON(!list_empty(&rfs_object->hash_list_entry) && 
+                   LIST_POISON2 != rfs_object->hash_list_entry.prev);
+
+        DBG_BUG_ON(rfs_object->system_object);
+
+        call_rcu(&rfs_object->rcu_head, rfs_object_free_rcu);
+    }
 }
 
 /*---------------------------------------------------------------------------*/
