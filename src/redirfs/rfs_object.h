@@ -1,7 +1,7 @@
 /*
  * RedirFS: Redirecting File System
  *
- * Copyright 2017 SLava Imameev
+ * Copyright 2017 Slava Imameev
  * All rights reserved.
  *
  * This file is part of RedirFS.
@@ -24,7 +24,10 @@
 #define _RFS_OBJECT_H
 
 #include <linux/types.h>
+#include <linux/list.h>
 #include <linux/refcount.h>
+#include <linux/spinlock.h>
+#include <linux/rcupdate.h>
 #include "redirfs.h"
 
 enum rfs_type {
@@ -33,10 +36,23 @@ enum rfs_type {
     RFS_TYPE_RDENTRY,
     RFS_TYPE_RFILE,
     RFS_TYPE_INODE_OPS,
-    RFS_TYPE_RDENTRY_OPS,
-    RFS_TYPE_RFILE_OPS,
+    RFS_TYPE_DENTRY_OPS,
+    RFS_TYPE_FILE_OPS,
+    RFS_TYPE_AS_OPS,
 
     RFS_TYPE_MAX
+};
+
+struct rfs_object_table_entry {
+    struct list_head   hash_list_head;
+    spinlock_t         lock;
+};
+
+struct rfs_object_table {
+    unsigned long (*index)(unsigned long key); /* returns index in the array for key */
+    enum rfs_type                  rfs_type;   /* objects type in the table, might be RFS_TYPE_UNKNOWN*/
+    unsigned long                  array_size; /* size of table_entries array */
+    struct rfs_object_table_entry  *array; /* pointer to an array */
 };
 
 struct rfs_object_type;
@@ -84,7 +100,10 @@ struct rfs_object_type {
     void (*free)(struct rfs_object*);
 };
 
-void rfs_objects_table_init(void);
+void rfs_object_susbsystem_init(void);
+
+void rfs_object_table_init(
+    struct rfs_object_table *rfs_object_table);
 
 void rfs_object_init(
     struct rfs_object       *rfs_object,
@@ -98,14 +117,16 @@ void rfs_object_put(
     struct rfs_object   *rfs_object);
 
 int rfs_insert_object(
-    struct rfs_object   *rfs_object,
-    bool check_for_duplicate);
+    struct rfs_object_table *rfs_object_table,
+    struct rfs_object       *rfs_object,
+    bool                    check_for_duplicate);
 
 void rfs_remove_object(
-    struct rfs_object   *rfs_object);
+    struct rfs_object_table *rfs_object_table,
+    struct rfs_object       *rfs_object);
 
 struct rfs_object* rfs_get_object_by_system_object(
-    void            *system_object,
-    enum rfs_type   rfs_type);
+    struct rfs_object_table *rfs_object_table,
+    void                    *system_object);
 
 #endif // _RFS_OBJECT_H

@@ -20,9 +20,6 @@
  * along with RedirFS. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/list.h>
-#include <linux/spinlock.h>
-#include <linux/rcupdate.h>
 #include "rfs_object.h"
 
 #ifdef RFS_DBG
@@ -32,26 +29,6 @@
     #undef compiletime_assert_atomic_type
     #define compiletime_assert_atomic_type(t)
 #endif // RFS_DBG
-
-/*---------------------------------------------------------------------------*/
-
-struct rfs_object_table_entry {
-    struct list_head   hash_list_head;
-    spinlock_t         lock;
-};
-
-#define OBJ_TABLE_SIZE 257
-
-#define HASH_TABLE_INDEX(system_object) ((((unsigned long)system_object) >> 5) % OBJ_TABLE_SIZE)
-
-/*---------------------------------------------------------------------------*/
-
-struct rfs_objects_table {
-    struct rfs_object_table_entry  entries[OBJ_TABLE_SIZE];
-};
-
-/* common table not divided by object types, i.e. hosts any object */
-static struct rfs_objects_table rfs_objects_table_common;
 
 /*---------------------------------------------------------------------------*/
 
@@ -70,18 +47,10 @@ struct rfs_objects_debug_info {
 static struct rfs_objects_debug_info   rfs_objects_debug_info[RFS_TYPE_MAX];
 #endif // RFS_DBG
 
-/*---------------------------------------------------------------------------*/
-
-void rfs_objects_table_init(void)
+void rfs_object_susbsystem_init(void)
 {
-    int i;
-
-    for (i=0; i < ARRAY_SIZE(rfs_objects_table_common.entries); ++i) {
-        INIT_LIST_HEAD_RCU(&rfs_objects_table_common.entries[i].hash_list_head);
-        spin_lock_init(&rfs_objects_table_common.entries[i].lock);
-    }
-
 #ifdef RFS_DBG
+    int i;
     for (i = 0; i < ARRAY_SIZE(rfs_objects_debug_info); ++i) {
         INIT_LIST_HEAD(&rfs_objects_debug_info[i].objects_list_head);
         spin_lock_init(&rfs_objects_debug_info[i].lock);
@@ -91,24 +60,40 @@ void rfs_objects_table_init(void)
 
 /*---------------------------------------------------------------------------*/
 
-static struct rfs_object_table_entry* rfs_object_hash_entry(
-    void* system_object,
-    enum rfs_type rfs_type)
+void rfs_object_table_init(
+    struct rfs_object_table *table)
 {
-    return &rfs_objects_table_common.entries[HASH_TABLE_INDEX(system_object)];
+    int i;
+
+    DBG_BUG_ON(table->rfs_type >= RFS_TYPE_MAX);
+    DBG_BUG_ON(!table->array_size);
+
+    for (i=0; i < table->array_size; ++i) {
+        INIT_LIST_HEAD_RCU(&table->array[i].hash_list_head);
+        spin_lock_init(&table->array[i].lock);
+    }
+}
+
+/*---------------------------------------------------------------------------*/
+
+static struct rfs_object_table_entry* rfs_object_hash_entry(
+    struct rfs_object_table *table,
+    void* system_object)
+{
+    return &table->array[table->index((unsigned long)system_object)];
 }
 
 /*---------------------------------------------------------------------------*/
 
 struct rfs_object* rfs_get_object_by_system_object(
-    void          * system_object,
-    enum rfs_type rfs_type)
+    struct rfs_object_table *rfs_object_table,
+    void                    *system_object)
 {
     struct rfs_object_table_entry   *table_entry;
 
     DBG_BUG_ON(!system_object);
 
-    table_entry = rfs_object_hash_entry(system_object, rfs_type);
+    table_entry = rfs_object_hash_entry(rfs_object_table, system_object);
 
     rcu_read_lock();
     { /* start of the RCU lock */
@@ -125,10 +110,10 @@ struct rfs_object* rfs_get_object_by_system_object(
             DBG_BUG_ON(!refcount_read(&rfs_object->refcount) &&
                        rcu_access_pointer(rfs_object->system_object));
             DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
+            DBG_BUG_ON(rfs_object->type->type != rfs_object_table->rfs_type &&
+                       rfs_object_table->rfs_type != RFS_TYPE_UNKNOWN);
 
             if (rcu_access_pointer(rfs_object->system_object) == system_object){
-
-                DBG_BUG_ON(rfs_object->type->type != rfs_type);
 
                 /* bump the reference count */
                 rfs_object_get(rfs_object);
@@ -146,8 +131,9 @@ struct rfs_object* rfs_get_object_by_system_object(
 /*---------------------------------------------------------------------------*/
 
 int rfs_insert_object(
-    struct rfs_object   *rfs_object,
-    bool                check_for_duplicate)
+    struct rfs_object_table *rfs_object_table,
+    struct rfs_object       *rfs_object,
+    bool                    check_for_duplicate)
 /*
 * -EEXIST is returned in case of a duplicate
 */
@@ -163,8 +149,7 @@ int rfs_insert_object(
     DBG_BUG_ON(!list_empty(&rfs_object->hash_list_entry));
 
     system_object = rcu_access_pointer(rfs_object->system_object);
-    table_entry = rfs_object_hash_entry(system_object,
-                                        rfs_object->type->type);
+    table_entry = rfs_object_hash_entry(rfs_object_table, system_object);
 
     /* bump the reference count */
     rfs_object_get(rfs_object);
@@ -184,7 +169,8 @@ int rfs_insert_object(
             list_for_each_entry_rcu(found_rfs_object, &table_entry->hash_list_head, hash_list_entry) {
 
                 DBG_BUG_ON(RFS_OBJECT_SIGNATURE != found_rfs_object->signature);
-                DBG_BUG_ON(!refcount_read(&found_rfs_object->refcount));
+                DBG_BUG_ON(!refcount_read(&found_rfs_object->refcount) &&
+                           rcu_access_pointer(rfs_object->system_object));
 
                 if (system_object == rcu_access_pointer(found_rfs_object->system_object)) {
                     DBG_BUG_ON(!check_for_duplicate);
@@ -249,14 +235,15 @@ void rfs_object_init(
 /*---------------------------------------------------------------------------*/
 
 void rfs_remove_object(
-    struct rfs_object   *rfs_object)
+    struct rfs_object_table *rfs_object_table,
+    struct rfs_object       *rfs_object)
 {
     struct rfs_object_table_entry   *table_entry;
 
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
 
-    table_entry = rfs_object_hash_entry(rcu_access_pointer(rfs_object->system_object),
-                                        rfs_object->type->type);
+    table_entry = rfs_object_hash_entry(rfs_object_table,
+                                        rcu_access_pointer(rfs_object->system_object));
 
     DBG_BUG_ON(LIST_POISON2 == rfs_object->hash_list_entry.prev);
 

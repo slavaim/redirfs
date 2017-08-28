@@ -40,17 +40,40 @@ struct file_operations rfs_file_ops = {
 	.open = rfs_open
 };
 
-static struct rfs_object_type frs_file_type = {
+static struct rfs_object_type rfs_file_type = {
     .type = RFS_TYPE_RFILE,
     .free = rfs_file_free,
     };
+
+/*---------------------------------------------------------------------------*/
+
+#define OBJ_TABLE_SIZE 257
+
+#define HASH_TABLE_INDEX(system_object) ((((unsigned long)system_object) >> 5) % OBJ_TABLE_SIZE)
+
+static struct rfs_object_table_entry  file_entries[OBJ_TABLE_SIZE];
+
+unsigned long rfs_file_index(unsigned long file)
+{
+    return ((((unsigned long)file) >> 5) % OBJ_TABLE_SIZE);
+}
+
+/* common table not divided by object types, i.e. hosts any object */
+static struct rfs_object_table rfs_file_table = {
+    .index = rfs_file_index,
+    .rfs_type = RFS_TYPE_RFILE,
+    .array_size = OBJ_TABLE_SIZE,
+    .array = file_entries,
+    };
+
+/*---------------------------------------------------------------------------*/
 
 struct rfs_file* rfs_file_find(struct file *file)
 {
     struct rfs_object   *rfs_object;
     struct rfs_file     *rfs_file;
 
-    rfs_object = rfs_get_object_by_system_object(file, RFS_TYPE_RFILE);
+    rfs_object = rfs_get_object_by_system_object(&rfs_file_table, file);
     if (!rfs_object)
         return NULL;
 
@@ -70,7 +93,7 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 	INIT_LIST_HEAD(&rfile->data);
 	rfile->file = file;
 	spin_lock_init(&rfile->lock);
-    rfs_object_init(&rfile->rfs_object, &frs_file_type, file);
+    rfs_object_init(&rfile->rfs_object, &rfs_file_type, file);
 	rfile->op_old = fops_get(file->f_op);
 
 	if (rfile->op_old)
@@ -143,7 +166,7 @@ static struct rfs_file *rfs_file_add(struct file *file)
 
 	rfs_file_get(rfile);
     
-    rfs_insert_object(&rfile->rfs_object, false);
+    rfs_insert_object(&rfs_file_table, &rfile->rfs_object, false);
 
 	spin_lock(&rfile->rdentry->lock);
     {
@@ -159,7 +182,7 @@ static void rfs_file_del(struct rfs_file *rfile)
 	rfs_dentry_rem_rfile(rfile);
 	rfile->file->f_op = fops_get(rfile->op_old);
 
-    rfs_remove_object(&rfile->rfs_object);
+    rfs_remove_object(&rfs_file_table, &rfile->rfs_object);
 	rfs_file_put(rfile);
 }
 
@@ -170,6 +193,8 @@ int rfs_file_cache_create(void)
 
 	if (!rfs_file_cache)
 		return -ENOMEM;
+
+    rfs_object_table_init(&rfs_file_table);
 
 	return 0;
 }
