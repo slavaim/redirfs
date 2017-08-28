@@ -198,41 +198,16 @@ int rfs_insert_object(
 
 /*---------------------------------------------------------------------------*/
 
-/* the object is initialized with a refcount set to 1 */
-void rfs_object_init(
-    struct rfs_object       *rfs_object,
-    struct rfs_object_type  *type,
-    void                    *system_object)
+static void rfs_object_put_rcu(
+    struct rcu_head *rcu_head)
 {
-    DBG_BUG_ON(type->type >= RFS_TYPE_MAX);
-    DBG_BUG_ON(!type->free);
-    DBG_BUG_ON(!system_object);
+    struct rfs_object *rfs_object;
 
-    INIT_LIST_HEAD_RCU(&rfs_object->hash_list_entry);
-    refcount_set(&rfs_object->refcount, 1);
-    rfs_object->type = type;
-    rcu_assign_pointer(rfs_object->system_object, system_object);
+    rfs_object = container_of(rcu_head, struct rfs_object, rcu_head);
+    DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
 
-#ifdef RFS_DBG
-    {
-        struct rfs_objects_debug_info  *di = &rfs_objects_debug_info[rfs_object->type->type];
-
-        rfs_object->signature = RFS_OBJECT_SIGNATURE;
-        atomic_inc(&di->objects_count);
-
-        /*
-         * we need to synchronize with RCU callback which is called from softirq
-         */
-        spin_lock_bh(&di->lock);
-        {
-            list_add(&rfs_object->objects_list, &di->objects_list_head);
-        }
-        spin_unlock_bh(&di->lock);
-    }
-#endif //RFS_DBG
+    rfs_object_put(rfs_object);
 }
-
-/*---------------------------------------------------------------------------*/
 
 void rfs_remove_object(
     struct rfs_object_table *rfs_object_table,
@@ -263,7 +238,50 @@ void rfs_remove_object(
     } /* end of the lock */
     spin_unlock(&table_entry->lock);
 
-    rfs_object_put(rfs_object);
+    /*
+     * call the rfs_object_put after all current readers completed with
+     * rfs_object_get to prevent reference counter dropping to zero before
+     * being bumped again
+     */
+    call_rcu(&rfs_object->rcu_head, rfs_object_put_rcu);
+}
+
+/*---------------------------------------------------------------------------*/
+
+/* the object is initialized with a refcount set to 1 */
+void rfs_object_init(
+    struct rfs_object       *rfs_object,
+    struct rfs_object_type  *type,
+    void                    *system_object)
+{
+    DBG_BUG_ON(type->type >= RFS_TYPE_MAX);
+    DBG_BUG_ON(!type->free);
+    DBG_BUG_ON(!system_object);
+
+    INIT_LIST_HEAD_RCU(&rfs_object->hash_list_entry);
+    refcount_set(&rfs_object->refcount, 1);
+    rfs_object->type = type;
+    rcu_assign_pointer(rfs_object->system_object, system_object);
+
+#ifdef RFS_DBG
+    {
+        struct rfs_objects_debug_info  *di = &rfs_objects_debug_info[rfs_object->type->type];
+
+        rfs_object->signature = RFS_OBJECT_SIGNATURE;
+        atomic_inc(&di->objects_count);
+
+        /*
+         * acquire the spin lcok with disabled softirqs as
+         * we need to synchronize with RCU callback which
+         * is called from softirq
+         */
+        spin_lock_bh(&di->lock);
+        {
+            list_add(&rfs_object->objects_list, &di->objects_list_head);
+        }
+        spin_unlock_bh(&di->lock);
+    }
+#endif //RFS_DBG
 }
 
 /*---------------------------------------------------------------------------*/
@@ -312,7 +330,7 @@ void rfs_object_put(
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
     DBG_BUG_ON(!refcount_read(&rfs_object->refcount));
 
-    if (refcount_dec_and_test(&rfs_object->refcount)){
+    if (refcount_dec_and_test(&rfs_object->refcount)) {
         /*
          * the object must not be in the list, i.e. either never inserted
          * or removed by list_del_rcu
