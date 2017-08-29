@@ -154,6 +154,9 @@ int rfs_insert_object(
     /* bump the reference count */
     rfs_object_get(rfs_object);
 
+    DBG_BUG_ON(rfs_object->object_table);
+    rfs_object->object_table = rfs_object_table;
+
     /* spin_lock can't synchronize user context with softirq */
     DBG_BUG_ON(in_softirq());
 
@@ -210,15 +213,14 @@ static void rfs_object_put_rcu(
 }
 
 void rfs_remove_object(
-    struct rfs_object_table *rfs_object_table,
     struct rfs_object       *rfs_object)
 {
     struct rfs_object_table_entry   *table_entry;
 
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
 
-    table_entry = rfs_object_hash_entry(rfs_object_table,
-                                        rcu_access_pointer(rfs_object->system_object));
+    table_entry = rfs_object_hash_entry( rfs_object->object_table,
+                        rcu_access_pointer(rfs_object->system_object));
 
     DBG_BUG_ON(LIST_POISON2 == rfs_object->hash_list_entry.prev);
 
@@ -237,6 +239,8 @@ void rfs_remove_object(
         list_del_rcu(&rfs_object->hash_list_entry);
     } /* end of the lock */
     spin_unlock(&table_entry->lock);
+
+    rfs_object->object_table = NULL;
 
     /*
      * call the rfs_object_put after all current readers completed with
@@ -310,6 +314,8 @@ static void rfs_object_free_rcu(
     }
 #endif //RFS_DBG
 
+    DBG_BUG_ON(rfs_object->object_table);
+
     rfs_object->type->free(rfs_object);
 }
 
@@ -324,6 +330,10 @@ void rfs_object_get(
     refcount_inc(&rfs_object->refcount);
 }
 
+/*
+ * rfs_object_put can be called in softirq context
+ * so do not add any code that might block
+ */
 void rfs_object_put(
     struct rfs_object   *rfs_object)
 {
@@ -337,6 +347,7 @@ void rfs_object_put(
          */
         DBG_BUG_ON(!list_empty(&rfs_object->hash_list_entry) && 
                    LIST_POISON2 != rfs_object->hash_list_entry.prev);
+        DBG_BUG_ON(rfs_object->object_table);
 
         /* the object should be non discoverable */
         DBG_BUG_ON(rfs_object->system_object && !list_empty(&rfs_object->hash_list_entry));

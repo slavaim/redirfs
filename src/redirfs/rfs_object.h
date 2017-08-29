@@ -84,6 +84,8 @@ struct rfs_object {
     /* a containing object type */
     struct rfs_object_type  *type;
 
+    struct rfs_object_table *object_table;
+
 #ifdef RFS_DBG  
     struct list_head        objects_list;
 #endif // RFS_DBG
@@ -110,21 +112,25 @@ void rfs_object_init(
     struct rfs_object_type  *type,
     void                    *system_object);
 
+/* refernces an object */
 void rfs_object_get(
     struct rfs_object   *rfs_object);
 
+/* releases a reference to an object */
 void rfs_object_put(
     struct rfs_object   *rfs_object);
 
+/* inserts an object in a table, the object is retained by the table */
 int rfs_insert_object(
     struct rfs_object_table *rfs_object_table,
     struct rfs_object       *rfs_object,
     bool                    check_for_duplicate);
 
+/* removes object from a table and releases a reference */
 void rfs_remove_object(
-    struct rfs_object_table *rfs_object_table,
     struct rfs_object       *rfs_object);
 
+/* looks up for an object in a table*/
 struct rfs_object* rfs_get_object_by_system_object(
     struct rfs_object_table *rfs_object_table,
     void                    *system_object);
