@@ -48,12 +48,6 @@
 #define REDIRFS_FILTER_ATTRIBUTE(__name, __mode, __show, __store) \
 	__ATTR(__name, __mode, __show, __store)
 
-#ifdef RFS_DBG
-    #define DBG_BUG_ON(cond) BUG_ON(cond)
-#else
-    #define DBG_BUG_ON(cond) do {} while(0)
-#endif
-
 enum rfs_inode_type{
 
     // dentry

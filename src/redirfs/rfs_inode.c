@@ -118,7 +118,7 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
     {
 	    ri = rfs_inode_find(inode);
 	    if (!ri) {
-		    ri_new->rinfo = rfs_info_get_unsafe(rinfo);
+		    ri_new->rinfo = rfs_info_get(rinfo);
             //
             // unconditionally register open operation to be notified
             // of open requests, some devices do not register open
@@ -188,7 +188,7 @@ static struct rfs_chain *rfs_inode_join_rchains(struct rfs_inode *rinode)
 
 	list_for_each_entry(rdentry, &rinode->rdentries, rinode_list) {
 		spin_lock(&rdentry->lock);
-		rinfo = rfs_info_get_unsafe(rdentry->rinfo);
+		rinfo = rfs_info_get(rdentry->rinfo);
 		spin_unlock(&rdentry->lock);
 
 		rchain = rfs_chain_join(rinfo->rchain, rchain_old);
@@ -222,7 +222,7 @@ static int rfs_inode_set_rinfo_fast(struct rfs_inode *rinode)
 	spin_lock(&rinode->lock);
     {
 	    rinfo_old = rinode->rinfo;
-	    rinode->rinfo = rfs_info_get_unsafe(rdentry->rinfo);
+	    rinode->rinfo = rfs_info_get(rdentry->rinfo);
     }
 	spin_unlock(&rinode->lock);
 	spin_unlock(&rdentry->lock);
@@ -238,7 +238,7 @@ struct rfs_info *rfs_inode_get_rinfo(struct rfs_inode *rinode)
 
 	spin_lock(&rinode->lock);
     {
-	    rinfo = rfs_info_get_unsafe(rinode->rinfo);
+	    rinfo = rfs_info_get(rinode->rinfo);
     }
 	spin_unlock(&rinode->lock);
 
@@ -294,7 +294,7 @@ int rfs_inode_set_rinfo(struct rfs_inode *rinode)
 
 	    if (!rinfo->rchain) {
 		    rfs_info_put(rinfo);
-		    rinfo = rfs_info_get_unsafe(rfs_info_none);
+		    rinfo = rfs_info_get(rfs_info_none);
 	    }
 
 	    rfs_chain_ops(rinfo->rchain, rinfo->rops);

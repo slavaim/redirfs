@@ -73,7 +73,7 @@ struct rfs_info *rfs_info_alloc(struct rfs_root *rroot,
 	return rinfo;
 }
 
-struct rfs_info *rfs_info_get_unsafe(struct rfs_info *rinfo)
+struct rfs_info *rfs_info_get(struct rfs_info *rinfo)
 {
 	if (!rinfo || IS_ERR(rinfo))
 		return NULL;
@@ -108,7 +108,7 @@ static struct rfs_info *rfs_info_dentry(struct dentry *dentry)
 	if (!rdentry)
 		return NULL;
 
-	rinfo = rfs_info_get_unsafe(rdentry->rinfo);
+	rinfo = rfs_info_get(rdentry->rinfo);
 
 	rfs_dentry_put(rdentry);
 
@@ -153,7 +153,7 @@ static void rfs_info_rdentry_rem(struct dentry *dentry)
 	spin_lock(&rdentry->lock);
     {
         rinfo_old = rdentry->rinfo;
-	    rdentry->rinfo = rfs_info_get_unsafe(rfs_info_none);
+	    rdentry->rinfo = rfs_info_get(rfs_info_none);
     }
 	spin_unlock(&rdentry->lock);
 
@@ -247,7 +247,7 @@ int rfs_info_add_include(struct rfs_root *rroot, struct rfs_flt *rflt)
 	if (rroot->rinfo && rfs_chain_find(rroot->rinfo->rchain, rflt) != -1)
 		return 0;
 
-	rinfo_old = rfs_info_get_unsafe(rroot->rinfo);
+	rinfo_old = rfs_info_get(rroot->rinfo);
 	if (!rinfo_old)
 		rinfo_old = rfs_info_dentry(rroot->dentry);
 
@@ -292,7 +292,7 @@ int rfs_info_add_exclude(struct rfs_root *rroot, struct rfs_flt *rflt)
 	if (rroot->rinfo && rfs_chain_find(rroot->rinfo->rchain, rflt) == -1)
 		return 0;
 
-	rinfo_old = rfs_info_get_unsafe(rroot->rinfo);
+	rinfo_old = rfs_info_get(rroot->rinfo);
 	if (!rinfo_old)
 		rinfo_old = rfs_info_dentry(rroot->dentry);
 

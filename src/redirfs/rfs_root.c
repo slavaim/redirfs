@@ -422,7 +422,7 @@ static struct rfs_root *rfs_get_root_flt(struct rfs_flt *rflt,
 	struct rfs_root *rroot = NULL;
 	struct rfs_info *rinfo;
 
-	rinfo = rfs_info_get_unsafe(rinfo_start);
+	rinfo = rfs_info_get(rinfo_start);
 
 	while (rinfo) {
 		if (rfs_chain_find(rinfo->rchain, rflt) == -1)
@@ -543,7 +543,7 @@ void redirfs_put_root(redirfs_root root)
 void rfs_root_set_rinfo(struct rfs_root *rroot, struct rfs_info *rinfo)
 {
 	rfs_info_put(rroot->rinfo);
-	rroot->rinfo = rfs_info_get_unsafe(rinfo);
+	rroot->rinfo = rfs_info_get(rinfo);
 }
 
 EXPORT_SYMBOL(redirfs_get_root_file);

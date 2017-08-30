@@ -28,7 +28,6 @@
 #include <linux/refcount.h>
 #include <linux/spinlock.h>
 #include <linux/rcupdate.h>
-#include "redirfs.h"
 
 enum rfs_type {
     RFS_TYPE_UNKNOWN,
@@ -61,7 +60,7 @@ struct rfs_object {
 
 #ifdef RFS_DBG
     #define RFS_OBJECT_SIGNATURE 0xABCD0003
-    long                    signature;
+    uint32_t               signature;
 #endif //RFS_DBG
 
     refcount_t              refcount;

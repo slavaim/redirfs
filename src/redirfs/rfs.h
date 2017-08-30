@@ -37,6 +37,7 @@
 #include <linux/slab.h>
 #include "redirfs.h"
 #include "rfs_object.h"
+#include "rfs_dbg.h"
 
 #ifndef f_dentry
     #define f_dentry	f_path.dentry
@@ -295,7 +296,7 @@ extern struct rfs_info *rfs_info_none;
 
 struct rfs_info *rfs_info_alloc(struct rfs_root *rroot,
 		struct rfs_chain *rchain);
-struct rfs_info *rfs_info_get_unsafe(struct rfs_info *rinfo);
+struct rfs_info *rfs_info_get(struct rfs_info *rinfo);
 void rfs_info_put(struct rfs_info *rinfo);
 struct rfs_info *rfs_info_parent(struct dentry *dentry);
 int rfs_info_add_include(struct rfs_root *rroot, struct rfs_flt *rflt);
@@ -355,7 +356,7 @@ int rfs_dentry_move(struct dentry *dentry, struct rfs_flt *rflt,
 struct rfs_inode {
 #ifdef RFS_DBG
     #define RFS_INODE_SIGNATURE  0xABCD0002
-    long   signature;
+    uint32_t   signature;
 #endif // RFS_DBG
 	struct list_head rdentries; /* mutex */
 	struct list_head data;
@@ -410,7 +411,7 @@ void rfs_inode_cache_destroy(void);
 struct rfs_file {
 #ifdef RFS_DBG
     #define RFS_FILE_SIGNATURE  0xABCD0001
-    long  signature;
+    uint32_t  signature;
 #endif
     struct rfs_object rfs_object;
 	struct list_head rdentry_list;
@@ -426,12 +427,12 @@ struct rfs_file {
 	spinlock_t lock;
 };
 
-/*
-#define rfs_file_find(file) \
+
+#define rfs_cast_to_rfile(file) \
 	(file && file->f_op && file->f_op->open == rfs_open ? \
-	 rfs_file_get(container_of(file->f_op, struct rfs_file, op_new)) : \
+	 container_of(file->f_op, struct rfs_file, op_new): \
 	 NULL)
-*/
+
 struct rfs_file* rfs_file_find(struct file *file);
 	 
 extern struct file_operations rfs_file_ops;

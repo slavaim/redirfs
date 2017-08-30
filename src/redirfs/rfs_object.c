@@ -20,7 +20,9 @@
  * along with RedirFS. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/rculist.h>
 #include "rfs_object.h"
+#include "rfs_dbg.h"
 
 #ifdef RFS_DBG
     #pragma GCC push_options

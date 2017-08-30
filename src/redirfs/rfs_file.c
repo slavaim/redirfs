@@ -49,20 +49,18 @@ static struct rfs_object_type rfs_file_type = {
 
 #define OBJ_TABLE_SIZE 257
 
-#define HASH_TABLE_INDEX(system_object) ((((unsigned long)system_object) >> 5) % OBJ_TABLE_SIZE)
-
 static struct rfs_object_table_entry  file_entries[OBJ_TABLE_SIZE];
 
 unsigned long rfs_file_index(unsigned long file)
 {
-    return ((((unsigned long)file) >> 5) % OBJ_TABLE_SIZE);
+    return ((((unsigned long)file) >> 5) % ARRAY_SIZE(file_entries));
 }
 
 /* common table not divided by object types, i.e. hosts any object */
 static struct rfs_object_table rfs_file_table = {
     .index = rfs_file_index,
     .rfs_type = RFS_TYPE_RFILE,
-    .array_size = OBJ_TABLE_SIZE,
+    .array_size = ARRAY_SIZE(file_entries),
     .array = file_entries,
     };
 
@@ -73,11 +71,22 @@ struct rfs_file* rfs_file_find(struct file *file)
     struct rfs_object   *rfs_object;
     struct rfs_file     *rfs_file;
 
+#ifndef RFS_DBG
+    rfs_file = rfs_file_get(rfs_cast_to_rfile(file));
+    if (rfs_file)
+        return rfs_file;
+#endif // RFS_DBG
+
+    /*
+     * fallback to a slow path in presence of third party hookers
+     */
+
     rfs_object = rfs_get_object_by_system_object(&rfs_file_table, file);
     if (!rfs_object)
         return NULL;
 
     rfs_file = container_of(rfs_object, struct rfs_file, rfs_object);
+    DBG_BUG_ON(rfs_file != rfs_cast_to_rfile(file));
     return rfs_file;
 }
 
@@ -136,6 +145,8 @@ void rfs_file_put(struct rfs_file *rfile)
     DBG_BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
 	rfs_object_put(&rfile->rfs_object);
 }
+
+/*---------------------------------------------------------------------------*/
 
 static void rfs_file_free(struct rfs_object *rfs_object)
 {
