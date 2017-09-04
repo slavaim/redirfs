@@ -28,6 +28,7 @@
 #include <linux/refcount.h>
 #include <linux/spinlock.h>
 #include <linux/rcupdate.h>
+#include <linux/radix-tree.h>
 
 enum rfs_type {
     RFS_TYPE_UNKNOWN,
@@ -42,6 +43,8 @@ enum rfs_type {
     RFS_TYPE_MAX
 };
 
+#ifdef RFS_USE_HASHTABLE
+
 struct rfs_object_table_entry {
     struct list_head   hash_list_head;
     spinlock_t         lock;
@@ -54,6 +57,16 @@ struct rfs_object_table {
     struct rfs_object_table_entry  *array; /* pointer to an array */
 };
 
+#else
+
+struct rfs_radix_tree {
+    struct radix_tree_root    root;
+    spinlock_t                lock;
+    enum rfs_type             rfs_type; /* objects type in the table, might be RFS_TYPE_UNKNOWN*/
+};
+
+#endif /* RFS_USE_HASHTABLE */
+
 struct rfs_object_type;
 
 struct rfs_object {
@@ -64,9 +77,6 @@ struct rfs_object {
 #endif //RFS_DBG
 
     refcount_t              refcount;
-
-    /* hast table entry list, RCU */
-    struct list_head        hash_list_entry;
 
     /* rcu callback list */
     struct rcu_head         rcu_head;
@@ -83,7 +93,13 @@ struct rfs_object {
     /* a containing object type */
     struct rfs_object_type  *type;
 
-    struct rfs_object_table *object_table;
+#ifdef RFS_USE_HASHTABLE
+    /* hast table entry list, RCU */
+    struct list_head          hash_list_entry;
+    struct rfs_object_table   *object_table;
+#else
+    struct rfs_radix_tree     *radix_tree;
+#endif
 
 #ifdef RFS_DBG  
     struct list_head        objects_list;
@@ -103,9 +119,6 @@ struct rfs_object_type {
 
 void rfs_object_susbsystem_init(void);
 
-void rfs_object_table_init(
-    struct rfs_object_table *rfs_object_table);
-
 void rfs_object_init(
     struct rfs_object       *rfs_object,
     struct rfs_object_type  *type,
@@ -119,19 +132,39 @@ void rfs_object_get(
 void rfs_object_put(
     struct rfs_object   *rfs_object);
 
+#ifdef RFS_USE_HASHTABLE
+
+void rfs_object_table_init(
+    struct rfs_object_table *rfs_object_table);
+
 /* inserts an object in a table, the object is retained by the table */
 int rfs_insert_object(
     struct rfs_object_table *rfs_object_table,
     struct rfs_object       *rfs_object,
     bool                    check_for_duplicate);
 
-/* removes object from a table and releases a reference */
-void rfs_remove_object(
-    struct rfs_object       *rfs_object);
-
 /* looks up for an object in a table*/
 struct rfs_object* rfs_get_object_by_system_object(
     struct rfs_object_table *rfs_object_table,
     void                    *system_object);
+
+#else
+
+/* inserts an object in a tree, the object is retained by the tree */
+int rfs_insert_object(
+    struct rfs_radix_tree   *radix_tree,
+    struct rfs_object       *rfs_object,
+    bool                    check_for_duplicate);
+
+/* looks up for an object in a tree*/
+struct rfs_object* rfs_get_object_by_system_object(
+    struct rfs_radix_tree   *radix_tree,
+    void                    *system_object);
+
+#endif
+
+/* removes object from a table and releases a reference */
+void rfs_remove_object(
+    struct rfs_object       *rfs_object);
 
 #endif // _RFS_OBJECT_H

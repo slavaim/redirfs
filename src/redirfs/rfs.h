@@ -427,7 +427,10 @@ struct rfs_file {
 	spinlock_t lock;
 };
 
-
+/*
+ * the macro is unreliable if f_op is replaced but f_op->open
+ * value has been preserved
+ */
 #define rfs_cast_to_rfile(file) \
 	(file && file->f_op && file->f_op->open == rfs_open ? \
 	 container_of(file->f_op, struct rfs_file, op_new): \

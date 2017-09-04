@@ -47,6 +47,8 @@ static struct rfs_object_type rfs_file_type = {
 
 /*---------------------------------------------------------------------------*/
 
+#ifdef RFS_USE_HASHTABLE
+
 #define OBJ_TABLE_SIZE 257
 
 static struct rfs_object_table_entry  file_entries[OBJ_TABLE_SIZE];
@@ -64,6 +66,15 @@ static struct rfs_object_table rfs_file_table = {
     .array = file_entries,
     };
 
+#else
+
+struct rfs_radix_tree   rfs_file_radix_tree = {
+    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .lock = __SPIN_LOCK_INITIALIZER(rfs_file_radix_tree.lock),
+    .rfs_type = RFS_TYPE_RFILE,
+    };
+#endif
+
 /*---------------------------------------------------------------------------*/
 
 struct rfs_file* rfs_file_find(struct file *file)
@@ -80,8 +91,11 @@ struct rfs_file* rfs_file_find(struct file *file)
     /*
      * fallback to a slow path in presence of third party hookers
      */
-
+#ifdef RFS_USE_HASHTABLE
     rfs_object = rfs_get_object_by_system_object(&rfs_file_table, file);
+#else
+    rfs_object = rfs_get_object_by_system_object(&rfs_file_radix_tree, file);
+#endif
     if (!rfs_object)
         return NULL;
 
@@ -177,7 +191,11 @@ static struct rfs_file *rfs_file_add(struct file *file)
 
 	rfs_file_get(rfile);
     
+#ifdef RFS_USE_HASHTABLE
     rfs_insert_object(&rfs_file_table, &rfile->rfs_object, false);
+#else
+    rfs_insert_object(&rfs_file_radix_tree, &rfile->rfs_object, false);
+#endif
 
 	spin_lock(&rfile->rdentry->lock);
     {
@@ -205,7 +223,9 @@ int rfs_file_cache_create(void)
 	if (!rfs_file_cache)
 		return -ENOMEM;
 
+#ifdef RFS_USE_HASHTABLE
     rfs_object_table_init(&rfs_file_table);
+#endif
 
 	return 0;
 }

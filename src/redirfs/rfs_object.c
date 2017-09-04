@@ -62,7 +62,17 @@ void rfs_object_susbsystem_init(void)
 
 /*---------------------------------------------------------------------------*/
 
-void rfs_object_table_init(
+/* forward definitions */
+static void
+rfs_object_put_rcu(
+    struct rcu_head *rcu_head);
+
+/*---------------------------------------------------------------------------*/
+
+#ifdef RFS_USE_HASHTABLE
+
+void
+rfs_object_table_init(
     struct rfs_object_table *table)
 {
     int i;
@@ -87,7 +97,8 @@ static struct rfs_object_table_entry* rfs_object_hash_entry(
 
 /*---------------------------------------------------------------------------*/
 
-struct rfs_object* rfs_get_object_by_system_object(
+struct rfs_object*
+rfs_get_object_by_system_object(
     struct rfs_object_table *rfs_object_table,
     void                    *system_object)
 {
@@ -201,20 +212,8 @@ int rfs_insert_object(
     return error;
 }
 
-/*---------------------------------------------------------------------------*/
-
-static void rfs_object_put_rcu(
-    struct rcu_head *rcu_head)
-{
-    struct rfs_object *rfs_object;
-
-    rfs_object = container_of(rcu_head, struct rfs_object, rcu_head);
-    DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
-
-    rfs_object_put(rfs_object);
-}
-
-void rfs_remove_object(
+void
+rfs_remove_object(
     struct rfs_object       *rfs_object)
 {
     struct rfs_object_table_entry   *table_entry;
@@ -252,10 +251,121 @@ void rfs_remove_object(
     call_rcu(&rfs_object->rcu_head, rfs_object_put_rcu);
 }
 
+#else
+
+struct rfs_object*
+rfs_get_object_by_system_object(
+    struct rfs_radix_tree   *radix_tree,
+    void                    *system_object)
+{
+    struct rfs_object*  object;
+
+    DBG_BUG_ON(!system_object);
+
+    rcu_read_lock();
+    { /* start of the RCU lock */
+        object = radix_tree_lookup(&radix_tree->root, (long)system_object);
+        if (object)
+            rfs_object_get(object);
+    } /* end of the RCU lock */
+    rcu_read_unlock();
+
+    return object;
+}
+
+int rfs_insert_object(
+    struct rfs_radix_tree   *radix_tree,
+    struct rfs_object       *rfs_object,
+    bool                    check_for_duplicate)
+/*
+* -EEXIST is returned in case of a duplicate
+*/
+{
+    int    err;
+
+    rcu_read_lock();
+    { /* start of the RCU lock */
+
+        rfs_object_get(rfs_object);
+        rfs_object->radix_tree = radix_tree;
+
+        spin_lock(&radix_tree->lock);
+        {
+            err = radix_tree_insert(&radix_tree->root,
+                                    (long)rfs_object->system_object,
+                                    rfs_object);
+        }
+        spin_unlock(&radix_tree->lock);
+
+        if (err) {
+            rfs_object->radix_tree = NULL;
+            rfs_object_put(rfs_object);
+        }
+
+    } /* end of the RCU lock */
+    rcu_read_unlock();
+
+    DBG_BUG_ON(err && check_for_duplicate);
+
+    return err;
+}
+
+void
+rfs_remove_object(
+    struct rfs_object       *rfs_object)
+{
+    struct rfs_radix_tree   *radix_tree;
+
+    radix_tree = rfs_object->radix_tree;
+    if (radix_tree){
+
+        bool removed;
+
+        spin_lock(&radix_tree->lock);
+        {
+            removed = (rfs_object == radix_tree_delete(&radix_tree->root,
+                                                       (long)rfs_object->system_object));
+        }
+        spin_unlock(&radix_tree->lock);
+
+        DBG_BUG_ON(!removed);
+
+        if (removed) {
+
+            rfs_object->radix_tree = NULL;
+
+            /*
+             * call the rfs_object_put after all current readers completed with
+             * rfs_object_get to prevent reference counter dropping to zero before
+             * being bumped again
+             */
+            call_rcu(&rfs_object->rcu_head, rfs_object_put_rcu);
+        }
+    }
+    
+}
+
+#endif
+
+/*---------------------------------------------------------------------------*/
+
+static void
+rfs_object_put_rcu(
+    struct rcu_head *rcu_head)
+{
+    struct rfs_object *rfs_object;
+
+    rfs_object = container_of(rcu_head, struct rfs_object, rcu_head);
+    DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
+
+    rfs_object_put(rfs_object);
+}
+
 /*---------------------------------------------------------------------------*/
 
 /* the object is initialized with a refcount set to 1 */
-void rfs_object_init(
+void
+rfs_object_init(
     struct rfs_object       *rfs_object,
     struct rfs_object_type  *type,
     void                    *system_object)
@@ -264,7 +374,9 @@ void rfs_object_init(
     DBG_BUG_ON(!type->free);
     DBG_BUG_ON(!system_object);
 
+#ifdef RFS_USE_HASHTABLE
     INIT_LIST_HEAD_RCU(&rfs_object->hash_list_entry);
+#endif
     refcount_set(&rfs_object->refcount, 1);
     rfs_object->type = type;
     rcu_assign_pointer(rfs_object->system_object, system_object);
@@ -292,7 +404,8 @@ void rfs_object_init(
 
 /*---------------------------------------------------------------------------*/
 
-static void rfs_object_free_rcu(
+static void
+rfs_object_free_rcu(
     struct rcu_head *rcu_head)
 {
     struct rfs_object *rfs_object;
@@ -316,14 +429,19 @@ static void rfs_object_free_rcu(
     }
 #endif //RFS_DBG
 
+#ifdef RFS_USE_HASHTABLE
     DBG_BUG_ON(rfs_object->object_table);
+#else
+    DBG_BUG_ON(rfs_object->radix_tree);
+#endif
 
     rfs_object->type->free(rfs_object);
 }
 
 /*---------------------------------------------------------------------------*/
 
-void rfs_object_get(
+void
+rfs_object_get(
     struct rfs_object   *rfs_object)
 {
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
@@ -343,6 +461,7 @@ void rfs_object_put(
     DBG_BUG_ON(!refcount_read(&rfs_object->refcount));
 
     if (refcount_dec_and_test(&rfs_object->refcount)) {
+#ifdef RFS_USE_HASHTABLE
         /*
          * the object must not be in the list, i.e. either never inserted
          * or removed by list_del_rcu
@@ -353,6 +472,7 @@ void rfs_object_put(
 
         /* the object should be non discoverable */
         DBG_BUG_ON(rfs_object->system_object && !list_empty(&rfs_object->hash_list_entry));
+#endif // RFS_USE_HASHTABLE
 
         call_rcu(&rfs_object->rcu_head, rfs_object_free_rcu);
     }
