@@ -449,7 +449,13 @@ static void rfs_file_set_ops_reg(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_UNLOCKED_IOCTL, unlocked_ioctl, rfs_unlocked_ioctl);
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_COMPAT_IOCTL, compat_ioctl, rfs_compat_ioctl);
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_MMAP, mmap, rfs_mmap);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_OPEN, open, rfs_open); // should not be called as called through rfile->op_new.open registered on inode lookup
+    /*
+     * the open opeartion is called through rfile->op_new.open registered on inode lookup
+     * then unconditionally set for file_operations and should not be removed as used as
+     * a watermark for rfs_cast_to_rfile
+     *
+     * RFS_SET_FOP(rfile, REDIRFS_REG_FOP_OPEN, open, rfs_open);
+     */
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FLUSH, flush, rfs_flush);
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FSYNC, fsync, rfs_fsync);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_fasync), fasync, rfs_fasync);
@@ -494,7 +500,13 @@ static void rfs_file_set_ops_chr(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_unlocked_ioctl), unlocked_ioctl, rfs_unlocked_ioctl);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_compat_ioctl), compat_ioctl, rfs_compat_ioctl);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_mmap), mmap, rfs_mmap);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_open), open, rfs_open); // should not be called as called through rfile->op_new.open registered on inode lookup
+    /*
+     * the open opeartion is called through rfile->op_new.open registered on inode lookup
+     * then unconditionally set for file_operations and should not be removed as used as
+     * a watermark for rfs_cast_to_rfile
+     *
+     * RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_open), open, rfs_open);
+     */
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_flush), flush, rfs_flush);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fsync), fsync, rfs_fsync);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fasync), fasync, rfs_fasync);
