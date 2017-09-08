@@ -76,6 +76,7 @@ enum rfs_inode_type{
 enum rfs_op_id {
 
     // dentry
+    RFS_OP_d_start, /* start of the range */
     RFS_OP_d_revalidate,
     RFS_OP_d_weak_revalidate,
     RFS_OP_d_hash,
@@ -89,8 +90,10 @@ enum rfs_op_id {
     RFS_OP_d_automount,
     RFS_OP_d_manage,
     RFS_OP_d_real,
+    RFS_OP_d_end, /* end of the range */
 
     // inode
+    RFS_OP_i_start, /* start of the range */
     RFS_OP_i_lookup,
     RFS_OP_i_get_link,
     RFS_OP_i_permission,
@@ -112,8 +115,10 @@ enum rfs_op_id {
     RFS_OP_i_atomic_open,
     RFS_OP_i_tmpfile,
     RFS_OP_i_set_acl,
+    RFS_OP_i_end, /* end of the range */
 
     // file
+    RFS_OP_f_start, /* start of the range */
     RFS_OP_f_llseek,
     RFS_OP_f_read,
     RFS_OP_f_write,
@@ -144,8 +149,10 @@ enum rfs_op_id {
     RFS_OP_f_copy_file_range,
     RFS_OP_f_clone_file_range,
     RFS_OP_f_dedupe_file_range,
+    RFS_OP_f_end, /* end of the range */
 
     // address_space
+    RFS_OP_a_start, /* start of the range */
     RFS_OP_a_writepage,
     RFS_OP_a_readpage,
     RFS_OP_a_writepages,
@@ -173,6 +180,7 @@ enum rfs_op_id {
     RFS_OP_a_error_remove_page,
     RFS_OP_a_swap_activate,
     RFS_OP_a_swap_deactivate,
+    RFS_OP_a_end, /* end of the range */
 
     // the last entry
     RFS_OP_MAX

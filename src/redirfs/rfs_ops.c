@@ -31,6 +31,9 @@
     #pragma GCC optimize ("O0")
 #endif // RFS_DBG
 
+/* the number of allocations for the debug purposses */
+static atomic_t ops_allocations_count = ATOMIC_INIT(0);
+
 struct rfs_ops *rfs_ops_alloc(void)
 {
 	struct rfs_ops *rops;
@@ -41,8 +44,10 @@ struct rfs_ops *rfs_ops_alloc(void)
 		return ERR_PTR(-ENOMEM);
 	}
 
+    atomic_inc(&ops_allocations_count);
+
 	memset(rops->arr, 0, sizeof(rops->arr)) ;
-	atomic_set(&rops->count, 1);
+    atomic_set(&rops->count, 1);
 
 	return rops;
 }
@@ -66,7 +71,8 @@ void rfs_ops_put(struct rfs_ops *rops)
 	if (!atomic_dec_and_test(&rops->count))
 		return;
 
-	kfree(rops);
+    kfree(rops);
+    atomic_dec(&ops_allocations_count);
 }
 
 #ifdef RFS_DBG

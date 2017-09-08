@@ -47,7 +47,8 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 	INIT_LIST_HEAD(&rinode->data);
 	rinode->inode = inode;
 	rinode->op_old = inode->i_op;
-	rinode->fop_old = inode->i_fop;
+    rinode->fop_old = inode->i_fop;
+    DBG_BUG_ON(rinode->fop_old->open == rfs_open);
     rinode->a_ops_old = inode->i_mapping ? inode->i_mapping->a_ops : NULL;
 	spin_lock_init(&rinode->lock);
 	rfs_mutex_init(&rinode->mutex);
@@ -119,12 +120,12 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 	    ri = rfs_inode_find(inode);
 	    if (!ri) {
 		    ri_new->rinfo = rfs_info_get(rinfo);
-            //
-            // unconditionally register open operation to be notified
-            // of open requests, some devices do not register open
-            // operation, e.g. null_fops, but RedirFS requires
-            // open operation to be called through file_operations
-            //
+            /*
+             * unconditionally register open operation to be notified
+             * of open requests, some devices do not register open
+             * operation, e.g. null_fops, but RedirFS requires
+             * open operation to be called through file_operations
+             */
             if (!S_ISSOCK(inode->i_mode))
                 inode->i_fop = &rfs_file_ops;
 

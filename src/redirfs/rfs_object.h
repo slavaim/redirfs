@@ -111,7 +111,7 @@ struct rfs_object_type {
     enum rfs_type type;
 
     /*
-     * free is called when the object refernce count
+     * free is called when the object reference count
      * drops to zero
      */
     void (*free)(struct rfs_object*);
@@ -122,7 +122,7 @@ void rfs_object_susbsystem_init(void);
 void rfs_object_init(
     struct rfs_object       *rfs_object,
     struct rfs_object_type  *type,
-    void                    *system_object);
+    const void              *system_object);
 
 /* refernces an object */
 void rfs_object_get(
@@ -146,7 +146,7 @@ int rfs_insert_object(
 /* looks up for an object in a table*/
 struct rfs_object* rfs_get_object_by_system_object(
     struct rfs_object_table *rfs_object_table,
-    void                    *system_object);
+    const void              *system_object);
 
 #else
 
@@ -159,7 +159,7 @@ int rfs_insert_object(
 /* looks up for an object in a tree*/
 struct rfs_object* rfs_get_object_by_system_object(
     struct rfs_radix_tree   *radix_tree,
-    void                    *system_object);
+    const void              *system_object);
 
 #endif
 

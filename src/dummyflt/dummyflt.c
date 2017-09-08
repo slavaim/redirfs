@@ -104,7 +104,8 @@ enum redirfs_rv dummyflt_open(redirfs_context context,
 
 	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
 
-	printk(KERN_ALERT "dummyflt: open: %s [%s], call: %s\n", path, imode, call);
+    printk(KERN_ALERT "dummyflt: open: %s [%s][%lx], call: %s\n", 
+           path, imode, args->args.f_open.file,call);
 
 exit:
 	kfree(path);
@@ -132,7 +133,8 @@ enum redirfs_rv dummyflt_release(redirfs_context context,
 
 	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
 
-	printk(KERN_ALERT "dummyflt: release: %s, call: %s\n", path, call);
+    printk(KERN_ALERT "dummyflt: release: %s [%lx], call: %s\n", 
+           path, args->args.f_release.file, call);
 
 exit:
 	kfree(path);
@@ -342,9 +344,10 @@ exit:
 static struct redirfs_op_info dummyflt_op_info[] = {
 	{REDIRFS_REG_FOP_OPEN, dummyflt_open, dummyflt_open},
     {REDIRFS_CHR_FOP_OPEN, dummyflt_open, dummyflt_open},
+    {REDIRFS_DIR_FOP_OPEN, dummyflt_open, dummyflt_open},
 	{REDIRFS_REG_FOP_RELEASE, dummyflt_release, dummyflt_release},
-	{REDIRFS_DIR_FOP_OPEN, dummyflt_open, dummyflt_open},
-	{REDIRFS_DIR_FOP_RELEASE, dummyflt_release, dummyflt_release},
+    {REDIRFS_DIR_FOP_RELEASE, dummyflt_release, dummyflt_release},
+    {REDIRFS_CHR_FOP_RELEASE, dummyflt_release, dummyflt_release},
     {REDIRFS_REG_FOP_READ, dummyflt_read, dummyflt_read},
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
     {REDIRFS_REG_FOP_READ_ITER, dummyflt_read_iter, dummyflt_read_iter},

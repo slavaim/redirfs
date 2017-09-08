@@ -26,6 +26,7 @@
 
 #include "rfs.h"
 #include "rfs_file_ops.h"
+#include "rfs_hooked_ops.h"
 
 #ifdef RFS_DBG
     #pragma GCC push_options
@@ -33,11 +34,13 @@
 #endif // RFS_DBG
 
 static void rfs_file_free(struct rfs_object *rfs_object);
+static int rfs_release(struct inode *inode, struct file *file);
 
 static rfs_kmem_cache_t *rfs_file_cache = NULL;
 
 struct file_operations rfs_file_ops = {
-	.open = rfs_open
+    .open = rfs_open,
+    .release = rfs_release,
 };
 
 static struct rfs_object_type rfs_file_type = {
@@ -82,11 +85,11 @@ struct rfs_file* rfs_file_find(struct file *file)
     struct rfs_object   *rfs_object;
     struct rfs_file     *rfs_file;
 
-#ifndef RFS_DBG
+#ifdef RFS_PER_OBJECT_OPS
     rfs_file = rfs_file_get(rfs_cast_to_rfile(file));
     if (rfs_file)
         return rfs_file;
-#endif // RFS_DBG
+#endif /* RFS_PER_OBJECT_OPS */
 
     /*
      * fallback to a slow path in presence of third party hookers
@@ -100,7 +103,6 @@ struct rfs_file* rfs_file_find(struct file *file)
         return NULL;
 
     rfs_file = container_of(rfs_object, struct rfs_file, rfs_object);
-    DBG_BUG_ON(rfs_file != rfs_cast_to_rfile(file));
     return rfs_file;
 }
 
@@ -110,19 +112,33 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 
 	rfile = kmem_cache_zalloc(rfs_file_cache, GFP_KERNEL);
 	if (!rfile)
-		return ERR_PTR(-ENOMEM);
+        return ERR_PTR(-ENOMEM);
+        
+#ifdef RFS_DBG
+    rfile->signature = RFS_FILE_SIGNATURE;
+#endif // RFS_DBG
 
 	INIT_LIST_HEAD(&rfile->rdentry_list);
 	INIT_LIST_HEAD(&rfile->data);
 	rfile->file = file;
 	spin_lock_init(&rfile->lock);
     rfs_object_init(&rfile->rfs_object, &rfs_file_type, file);
-	rfile->op_old = fops_get(file->f_op);
 
+    rfile->op_old = fops_get(file->f_op);
+#ifdef RFS_PER_OBJECT_OPS
 	if (rfile->op_old)
 		memcpy(&rfile->op_new, rfile->op_old,
-				sizeof(struct file_operations));
+                sizeof(struct file_operations));
+#endif /* RFS_PER_OBJECT_OPS  */
 
+    rfile->rhops = rfs_create_file_ops(rfile);
+    DBG_BUG_ON(!rfile->rhops);
+    if (!rfile->rhops) {
+        rfs_object_put(&rfile->rfs_object);
+        return ERR_PTR(-ENOMEM);
+    }
+
+#ifdef RFS_PER_OBJECT_OPS 
     //
     // unconditionally register open operation to be notified
     // of open requests, some devices do not register open
@@ -132,10 +148,7 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
     // of rfs_file_find macro.
     //
     rfile->op_new.open = rfs_open;
-
-#ifdef RFS_DBG
-    rfile->signature = RFS_FILE_SIGNATURE;
-#endif // RFS_DBG
+#endif /* RFS_PER_OBJECT_OPS */
 
 	return rfile;
 }
@@ -168,10 +181,15 @@ static void rfs_file_free(struct rfs_object *rfs_object)
 
     DBG_BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
 
-	rfs_dentry_put(rfile->rdentry);
-	fops_put(rfile->op_old);
+    rfs_dentry_put(rfile->rdentry);
+    
+    fops_put(rfile->op_old);
 
-	rfs_data_remove(&rfile->data);
+    rfs_data_remove(&rfile->data);
+
+    if (rfile->rhops)
+        rfs_object_put(&rfile->rhops->rfs_object);
+        
 	kmem_cache_free(rfs_file_cache, rfile);
 }
 
@@ -181,15 +199,19 @@ static struct rfs_file *rfs_file_add(struct file *file)
 
 	rfile = rfs_file_alloc(file);
 	if (IS_ERR(rfile))
-		return rfile;
+        return rfile;
+        
+    rfs_file_get(rfile);
 
 	rfile->rdentry = rfs_dentry_find(file->f_dentry);
 	rfs_dentry_add_rfile(rfile->rdentry, rfile);
 
-	fops_put(file->f_op);
-	file->f_op = &rfile->op_new;
-
-	rfs_file_get(rfile);
+    fops_put(file->f_op);
+#ifdef RFS_PER_OBJECT_OPS 
+    file->f_op = &rfile->op_new;
+#else
+    file->f_op = rfile->rhops->new.f_op;
+#endif /* RFS_PER_OBJECT_OPS */
     
 #ifdef RFS_USE_HASHTABLE
     rfs_insert_object(&rfs_file_table, &rfile->rfs_object, false);
@@ -201,15 +223,25 @@ static struct rfs_file *rfs_file_add(struct file *file)
     {
 	    rfs_file_set_ops(rfile);
     }
-	spin_unlock(&rfile->rdentry->lock);
+    spin_unlock(&rfile->rdentry->lock);
+    
+    rfs_keep_operations(rfile->rhops);
 
 	return rfile;
 }
 
 static void rfs_file_del(struct rfs_file *rfile)
 {
-	rfs_dentry_rem_rfile(rfile);
-	rfile->file->f_op = fops_get(rfile->op_old);
+    rfs_dentry_rem_rfile(rfile);
+
+#ifdef RFS_PER_OBJECT_OPS 
+    rfile->file->f_op = fops_get(rfile->op_old);
+#else
+    if (rfile->rhops) {
+        rfile->file->f_op = fops_get(rfile->rhops->old.f_op);
+        rfs_unkeep_operations(rfile->rhops);
+    }
+#endif /* !RFS_PER_OBJECT_OPS */
 
     rfs_remove_object(&rfile->rfs_object);
 	rfs_file_put(rfile);
@@ -280,6 +312,7 @@ int rfs_open(struct inode *inode, struct file *file)
 	rargs.args.f_open.file = file;
 
 	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        DBG_BUG_ON(rinode->fop_old && rinode->fop_old->open == rfs_open);
 		if (rinode->fop_old && rinode->fop_old->open)
 			rargs.rv.rv_int = rinode->fop_old->open(
 					rargs.args.f_open.inode,
@@ -475,12 +508,28 @@ static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 
 static void rfs_file_set_ops_dir(struct rfs_file *rfile)
 {
+#ifdef RFS_PER_OBJECT_OPS
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 	rfile->op_new.readdir = rfs_readdir;
 #else
     rfile->op_new.iterate = rfs_iterate;
     rfile->op_new.iterate_shared = rfs_iterate_shared;
 #endif
+
+#else /* RFS_PER_OBJECT_OPS  */
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+    if (rfile->rhops->new.f_op->readdir != rfs_readdir)
+        rfile->rhops->new.f_op->readdir = rfs_readdir;
+#else
+    if (rfile->rhops->new.f_op->iterate != rfs_iterate)
+        rfile->rhops->new.f_op->iterate = rfs_iterate;
+    if (rfile->rhops->new.f_op->iterate_shared != rfs_iterate_shared)
+        rfile->rhops->new.f_op->iterate_shared = rfs_iterate_shared;
+#endif
+
+#endif /* !RFS_PER_OBJECT_OPS  */
 }
 
 static void rfs_file_set_ops_lnk(struct rfs_file *rfile)
@@ -536,8 +585,9 @@ void rfs_file_set_ops(struct rfs_file *rfile)
 {
 	umode_t mode;
 
+    DBG_BUG_ON(!rfile->rdentry->rinode);
 	if (!rfile->rdentry->rinode)
-		return;
+        return;
 
 	mode = rfile->rdentry->rinode->inode->i_mode;
 
@@ -559,10 +609,13 @@ void rfs_file_set_ops(struct rfs_file *rfile)
 	else if (S_ISFIFO(mode))
 		rfs_file_set_ops_fifo(rfile);
 
-    //
-    // unconditionally set release hook to match open hooks
-    //
+    /* unconditionally set release hook to match open hooks */
+#ifdef RFS_PER_OBJECT_OPS
     rfile->op_new.release = rfs_release;
+#else
+    if (rfile->rhops->new.f_op->release != rfs_release)
+        rfile->rhops->new.f_op->release = rfs_release;
+#endif /* !RFS_PER_OBJECT_OPS */
 }
 
 #ifdef RFS_DBG

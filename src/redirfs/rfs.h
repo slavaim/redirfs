@@ -47,30 +47,43 @@
     #define f_vfsmnt	f_path.mnt
 #endif
 
-//
-// do not replace NULL operations to preserve file system driver semantics
-//
+/*
+ * do not replace NULL operations to preserve file system driver semantics
+ */
 #define RFS_ADD_OP(ops_new, ops_old, op, f) \
 	((ops_old->op && ops_new.op != f) ? (ops_new.op = f) : (void)0)
 
 #define RFS_REM_OP(ops_new, ops_old, op) \
 	(ops_new.op = (ops_old ? ops_old->op : NULL))
 
-//
-// if there is a filter registered for this operation then hook it
-//
+/*
+ * if there is a filter registered for this operation then hook it
+ */
 #define RFS_SET_OP(arr, idc, ops_new, ops_old, op, f) \
 	((arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) ? \
 	 	RFS_ADD_OP(ops_new, ops_old, op, f) : \
 	 	RFS_REM_OP(ops_new, ops_old, op) \
-	)
+    )
 
+#ifdef RFS_PER_OBJECT_OPS 
 #define RFS_SET_FOP(rf, idc, op, f) \
 	(rf->rdentry->rinfo->rops ? \
 		RFS_SET_OP(rf->rdentry->rinfo->rops->arr, idc, rf->op_new, \
 			rf->op_old, op, f) : \
 	 	RFS_REM_OP(rf->op_new, rf->op_old, op) \
-	)
+    )
+#else
+/*
+ * for a shared operations structure we can only add new operations 
+*/
+#define RFS_SET_FOP(rf, idc, op, f) \
+    do { \
+        if (rf->rdentry->rinfo->rops && \
+            rf->rdentry->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
+                RFS_ADD_OP((*rf->rhops->new.f_op), rf->rhops->old.f_op, op, f); \
+            } \
+    } while(0);
+#endif /* !RFS_PEROBJECT_OPS */
 
 #define RFS_SET_DOP(rd, idc, op, f) \
 	(rd->rinfo->rops ? \
@@ -417,16 +430,20 @@ struct rfs_file {
 	struct list_head rdentry_list;
 	struct list_head data;
 	struct file *file;
-	struct rfs_dentry *rdentry;
+    struct rfs_dentry *rdentry;
+    struct rfs_hoperations* rhops;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17))
 	const struct file_operations *op_old;
 #else
 	struct file_operations *op_old;
 #endif
-	struct file_operations op_new;
+#ifdef RFS_PER_OBJECT_OPS 
+    struct file_operations op_new;
+#endif /* RFS_PER_OBJECT_OPS */
 	spinlock_t lock;
 };
 
+#ifdef RFS_PER_OBJECT_OPS
 /*
  * the macro is unreliable if f_op is replaced but f_op->open
  * value has been preserved
@@ -434,7 +451,8 @@ struct rfs_file {
 #define rfs_cast_to_rfile(file) \
 	(file && file->f_op && file->f_op->open == rfs_open ? \
 	 container_of(file->f_op, struct rfs_file, op_new): \
-	 NULL)
+     NULL)
+#endif
 
 struct rfs_file* rfs_file_find(struct file *file);
 	 

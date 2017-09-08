@@ -100,7 +100,7 @@ static struct rfs_object_table_entry* rfs_object_hash_entry(
 struct rfs_object*
 rfs_get_object_by_system_object(
     struct rfs_object_table *rfs_object_table,
-    void                    *system_object)
+    const void              *system_object)
 {
     struct rfs_object_table_entry   *table_entry;
 
@@ -251,16 +251,19 @@ rfs_remove_object(
     call_rcu(&rfs_object->rcu_head, rfs_object_put_rcu);
 }
 
-#else
+#else /* RFS_USE_HASHTABLE */
 
 struct rfs_object*
 rfs_get_object_by_system_object(
     struct rfs_radix_tree   *radix_tree,
-    void                    *system_object)
+    const void              *system_object)
 {
     struct rfs_object*  object;
 
     DBG_BUG_ON(!system_object);
+
+    /* spin_lock can't synchronize user context with softirq */
+    DBG_BUG_ON(in_softirq());
 
     rcu_read_lock();
     { /* start of the RCU lock */
@@ -289,6 +292,9 @@ int rfs_insert_object(
         rfs_object_get(rfs_object);
         rfs_object->radix_tree = radix_tree;
 
+        /* spin_lock can't synchronize user context with softirq */
+        DBG_BUG_ON(in_softirq());
+
         spin_lock(&radix_tree->lock);
         {
             err = radix_tree_insert(&radix_tree->root,
@@ -305,7 +311,7 @@ int rfs_insert_object(
     } /* end of the RCU lock */
     rcu_read_unlock();
 
-    DBG_BUG_ON(err && check_for_duplicate);
+    DBG_BUG_ON((-EEXIST == err) && !check_for_duplicate);
 
     return err;
 }
@@ -320,6 +326,9 @@ rfs_remove_object(
     if (radix_tree){
 
         bool removed;
+
+        /* spin_lock can't synchronize user context with softirq */
+        DBG_BUG_ON(in_softirq());
 
         spin_lock(&radix_tree->lock);
         {
@@ -345,7 +354,7 @@ rfs_remove_object(
     
 }
 
-#endif
+#endif /* RFS_USE_HASHTABLE */
 
 /*---------------------------------------------------------------------------*/
 
@@ -368,7 +377,7 @@ void
 rfs_object_init(
     struct rfs_object       *rfs_object,
     struct rfs_object_type  *type,
-    void                    *system_object)
+    const void              *system_object)
 {
     DBG_BUG_ON(type->type >= RFS_TYPE_MAX);
     DBG_BUG_ON(!type->free);
