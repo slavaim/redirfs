@@ -7,6 +7,8 @@
  *        - modification for 4.x kernels
  *        - extended functionality
  *        - new operation IDs model
+ *        - new hooks model with a shared hook vector
+ *        - new objects model
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
  * All rights reserved.
@@ -65,24 +67,55 @@
 	 	RFS_REM_OP(ops_new, ops_old, op) \
     )
 
-#ifdef RFS_PER_OBJECT_OPS 
+#ifdef RFS_PER_OBJECT_OPS
+
+#define RFS_IS_OP_SET(rf, idc) (true)
+
 #define RFS_SET_FOP(rf, idc, op, f) \
 	(rf->rdentry->rinfo->rops ? \
 		RFS_SET_OP(rf->rdentry->rinfo->rops->arr, idc, rf->op_new, \
 			rf->op_old, op, f) : \
 	 	RFS_REM_OP(rf->op_new, rf->op_old, op) \
     )
-#else
+
+#else /* RFS_PER_OBJECT_OPS */
+
 /*
- * for a shared operations structure we can only add new operations 
+ * for a shared operations structure we can only add new operations
+ * as the shared vector is a union of all vectors, instead of removal 
+ * operation the per-file op_bitfield is used
 */
+
+#define RFS_OP_BIT(idc) (RFS_IDC_TO_OP_ID(idc) - RFS_OP_f_start)
+
+#define RFS_IS_OP_SET(rf, idc) (test_bit(RFS_OP_BIT(idc), rf->op_bitfield))
+
 #define RFS_SET_FOP(rf, idc, op, f) \
     do { \
+        int nr = RFS_OP_BIT(idc); \
         if (rf->rdentry->rinfo->rops && \
             rf->rdentry->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
+            if (!test_bit(nr, rf->rhops->op_bitfield) && \
+                !test_and_set_bit(nr, rf->rhops->op_bitfield)) { \
                 RFS_ADD_OP((*rf->rhops->new.f_op), rf->rhops->old.f_op, op, f); \
             } \
+            set_bit(nr, rf->op_bitfield); \
+        } else if (test_bit(nr, rf->op_bitfield)) { \
+            clear_bit(nr, rf->op_bitfield); \
+        } \
     } while(0);
+
+#define RFS_SET_FOP_FORCED(rf, idc, op, f) \
+    do { \
+        int nr = RFS_OP_BIT(idc); \
+        if (!test_bit(nr, rf->rhops->op_bitfield) && \
+            !test_and_set_bit(nr, rf->rhops->op_bitfield)) { \
+            RFS_ADD_OP((*rf->rhops->new.f_op), rf->rhops->old.f_op, op, f); \
+        } \
+        if (!test_bit(nr, rf->op_bitfield)) \
+            set_bit(nr, rf->op_bitfield); \
+    } while(0);
+
 #endif /* !RFS_PEROBJECT_OPS */
 
 #define RFS_SET_DOP(rd, idc, op, f) \
@@ -422,16 +455,24 @@ int rfs_inode_cache_create(void);
 void rfs_inode_cache_destroy(void);
 
 struct rfs_file {
+
 #ifdef RFS_DBG
     #define RFS_FILE_SIGNATURE  0xABCD0001
     uint32_t  signature;
 #endif
+
     struct rfs_object rfs_object;
 	struct list_head rdentry_list;
 	struct list_head data;
 	struct file *file;
     struct rfs_dentry *rdentry;
     struct rfs_hoperations* rhops;
+
+    /*
+     * a mask of hooked operations for a file
+     */
+    unsigned long   op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17))
 	const struct file_operations *op_old;
 #else

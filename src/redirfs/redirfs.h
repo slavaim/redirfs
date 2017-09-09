@@ -50,17 +50,17 @@
 
 enum rfs_inode_type{
 
-    // dentry
-    RFS_INODE_DNONE, // negative dentry
-    RFS_INODE_DSOCK, // dentry for sock
-    RFS_INODE_DLINK, // dentry for link
-    RFS_INODE_DREG,  // dentry for dreg
+    /* dentry */
+    RFS_INODE_DNONE, /* negative dentry */
+    RFS_INODE_DSOCK, /* dentry for sock */
+    RFS_INODE_DLINK, /* dentry for link */
+    RFS_INODE_DREG,  /* dentry for dreg */
     RFS_INODE_DBULK,
     RFS_INODE_DDIR,
     RFS_INODE_DCHAR,
     RFS_INODE_DFIFO,
 
-    // inode
+    /* inode */
     RFS_INODE_SOCK,
     RFS_INODE_LINK,
     RFS_INODE_REG,
@@ -69,7 +69,7 @@ enum rfs_inode_type{
     RFS_INODE_CHAR,
     RFS_INODE_FIFO,
 
-    // the last enum value
+    /* the last enum value, also stands for *any* */
     RFS_INODE_MAX
 };
 

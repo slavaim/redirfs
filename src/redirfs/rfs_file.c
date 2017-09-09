@@ -1,11 +1,12 @@
 /*
  * RedirFS: Redirecting File System
- * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - modified by by Slava Imameev
+ * 2008 - 2010 Frantisek Hrbata <frantisek.hrbata@redirfs.org>
+ * 2017 - Slava Imameev, a new hooks model and a new objects model
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
+ * Copyright 2017 - Slava Imameev
  * All rights reserved.
  *
  * This file is part of RedirFS.
@@ -69,14 +70,15 @@ static struct rfs_object_table rfs_file_table = {
     .array = file_entries,
     };
 
-#else
+#else /* RFS_USE_HASHTABLE */
 
 struct rfs_radix_tree   rfs_file_radix_tree = {
     .root = RADIX_TREE_INIT(GFP_KERNEL),
     .lock = __SPIN_LOCK_INITIALIZER(rfs_file_radix_tree.lock),
     .rfs_type = RFS_TYPE_RFILE,
     };
-#endif
+
+#endif /* !RFS_USE_HASHTABLE */
 
 /*---------------------------------------------------------------------------*/
 
@@ -105,6 +107,8 @@ struct rfs_file* rfs_file_find(struct file *file)
     rfs_file = container_of(rfs_object, struct rfs_file, rfs_object);
     return rfs_file;
 }
+
+/*---------------------------------------------------------------------------*/
 
 static struct rfs_file *rfs_file_alloc(struct file *file)
 {
@@ -153,6 +157,8 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 	return rfile;
 }
 
+/*---------------------------------------------------------------------------*/
+
 struct rfs_file *rfs_file_get(struct rfs_file *rfile)
 {
 	if (!rfile || IS_ERR(rfile))
@@ -163,6 +169,8 @@ struct rfs_file *rfs_file_get(struct rfs_file *rfile)
 
 	return rfile;
 }
+
+/*---------------------------------------------------------------------------*/
 
 void rfs_file_put(struct rfs_file *rfile)
 {
@@ -192,6 +200,8 @@ static void rfs_file_free(struct rfs_object *rfs_object)
         
 	kmem_cache_free(rfs_file_cache, rfile);
 }
+
+/*---------------------------------------------------------------------------*/
 
 static struct rfs_file *rfs_file_add(struct file *file)
 {
@@ -230,6 +240,8 @@ static struct rfs_file *rfs_file_add(struct file *file)
 	return rfile;
 }
 
+/*---------------------------------------------------------------------------*/
+
 static void rfs_file_del(struct rfs_file *rfile)
 {
     rfs_dentry_rem_rfile(rfile);
@@ -247,6 +259,8 @@ static void rfs_file_del(struct rfs_file *rfile)
 	rfs_file_put(rfile);
 }
 
+/*---------------------------------------------------------------------------*/
+
 int rfs_file_cache_create(void)
 {
 	rfs_file_cache = rfs_kmem_cache_create("rfs_file_cache",
@@ -262,10 +276,14 @@ int rfs_file_cache_create(void)
 	return 0;
 }
 
+/*---------------------------------------------------------------------------*/
+
 void rfs_file_cache_destory(void)
 {
 	kmem_cache_destroy(rfs_file_cache);
 }
+
+/*---------------------------------------------------------------------------*/
 
 int rfs_open(struct inode *inode, struct file *file)
 {
@@ -311,7 +329,7 @@ int rfs_open(struct inode *inode, struct file *file)
 	rargs.args.f_open.inode = inode;
 	rargs.args.f_open.file = file;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
         DBG_BUG_ON(rinode->fop_old && rinode->fop_old->open == rfs_open);
 		if (rinode->fop_old && rinode->fop_old->open)
 			rargs.rv.rv_int = rinode->fop_old->open(
@@ -328,13 +346,17 @@ int rfs_open(struct inode *inode, struct file *file)
 		rfs_file_put(rfile);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    
 	rfs_context_deinit(&rcont);
 
 	rfs_inode_put(rinode);
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
+
+/*---------------------------------------------------------------------------*/
 
 static int rfs_release(struct inode *inode, struct file *file)
 {
@@ -363,7 +385,8 @@ static int rfs_release(struct inode *inode, struct file *file)
 	rargs.args.f_release.inode = inode;
 	rargs.args.f_release.file = file;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->release)
 			rargs.rv.rv_int = rfile->op_old->release(
 					rargs.args.f_release.inode,
@@ -372,7 +395,9 @@ static int rfs_release(struct inode *inode, struct file *file)
 			rargs.rv.rv_int = 0;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+        
 	rfs_context_deinit(&rcont);
 
 	rfs_file_del(rfile);
@@ -380,6 +405,8 @@ static int rfs_release(struct inode *inode, struct file *file)
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
+
+/*---------------------------------------------------------------------------*/
 
 void rfs_add_dir_subs(struct rfs_file *rfile)
 {
@@ -421,6 +448,8 @@ exit:
     rfs_info_put(rinfo);
 }
 
+/*---------------------------------------------------------------------------*/
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 {
@@ -440,7 +469,8 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	    rargs.args.f_readdir.dirent = dirent;
 	    rargs.args.f_readdir.filldir = filldir;
 
-	    if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+            !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		    if (rfile->op_old && rfile->op_old->readdir) 
 			    rargs.rv.rv_int = rfile->op_old->readdir(
 					    rargs.args.f_readdir.file,
@@ -450,7 +480,9 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 			    rargs.rv.rv_int = -ENOTDIR;
 	    }
 
-	    rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+        if (RFS_IS_OP_SET(rfile, rargs.type.id))
+            rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+            
 	    rfs_context_deinit(&rcont);
 
     } else {
@@ -469,6 +501,15 @@ exit:
 }
 #endif
 
+/*---------------------------------------------------------------------------*/
+
+/* 
+ * switch on the agressive optimization to reduce the frame size 
+ * bloating by multiple inline functions and local variables in
+ * RFS_SET_FOP macro
+ */
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
 static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 {
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_LLSEEK, llseek, rfs_llseek);
@@ -506,6 +547,8 @@ static void rfs_file_set_ops_reg(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
 }
 
+/*---------------------------------------------------------------------------*/
+
 static void rfs_file_set_ops_dir(struct rfs_file *rfile)
 {
 #ifdef RFS_PER_OBJECT_OPS
@@ -520,21 +563,29 @@ static void rfs_file_set_ops_dir(struct rfs_file *rfile)
 #else /* RFS_PER_OBJECT_OPS  */
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
-    if (rfile->rhops->new.f_op->readdir != rfs_readdir)
-        rfile->rhops->new.f_op->readdir = rfs_readdir;
+    RFS_SET_FOP_FORCED(rfile,
+                       RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_readdir),
+                       readdir, rfs_readdir);
 #else
-    if (rfile->rhops->new.f_op->iterate != rfs_iterate)
-        rfile->rhops->new.f_op->iterate = rfs_iterate;
-    if (rfile->rhops->new.f_op->iterate_shared != rfs_iterate_shared)
-        rfile->rhops->new.f_op->iterate_shared = rfs_iterate_shared;
+    RFS_SET_FOP_FORCED(rfile,
+                       RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate),
+                       iterate, rfs_iterate);
+
+    RFS_SET_FOP_FORCED(rfile,
+                       RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate_shared),
+                       iterate_shared, rfs_iterate_shared);
 #endif
 
 #endif /* !RFS_PER_OBJECT_OPS  */
 }
 
+/*---------------------------------------------------------------------------*/
+
 static void rfs_file_set_ops_lnk(struct rfs_file *rfile)
 {
 }
+
+/*---------------------------------------------------------------------------*/
 
 static void rfs_file_set_ops_chr(struct rfs_file *rfile)
 {
@@ -573,13 +624,19 @@ static void rfs_file_set_ops_chr(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
 }
 
+/*---------------------------------------------------------------------------*/
+
 static void rfs_file_set_ops_blk(struct rfs_file *rfile)
 {
 }
 
+/*---------------------------------------------------------------------------*/
+
 static void rfs_file_set_ops_fifo(struct rfs_file *rfile)
 {
 }
+
+/*---------------------------------------------------------------------------*/
 
 void rfs_file_set_ops(struct rfs_file *rfile)
 {
@@ -613,10 +670,14 @@ void rfs_file_set_ops(struct rfs_file *rfile)
 #ifdef RFS_PER_OBJECT_OPS
     rfile->op_new.release = rfs_release;
 #else
-    if (rfile->rhops->new.f_op->release != rfs_release)
-        rfile->rhops->new.f_op->release = rfs_release;
+    RFS_SET_FOP_FORCED(rfile,
+                       RFS_OP_IDC(RFS_INODE_MAX, RFS_OP_f_release),
+                       release, rfs_release);
 #endif /* !RFS_PER_OBJECT_OPS */
 }
+#pragma GCC pop_options
+
+/*---------------------------------------------------------------------------*/
 
 #ifdef RFS_DBG
     #pragma GCC pop_options

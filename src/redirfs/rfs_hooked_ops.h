@@ -24,6 +24,7 @@
 #define _RFS_HOOKED_OPS_H
 
 #include "rfs_object.h"
+#include "redirfs.h"
 
 struct rfs_file;
   
@@ -50,6 +51,9 @@ struct rfs_hoperations {
     * RFS_OPS_* flags
     */
     unsigned int        flags;
+
+    /* a bitfield of hooked operations */
+    unsigned long  op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
 
     /* a pointer to the old operations */
     union {
