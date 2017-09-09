@@ -8,3 +8,5 @@
 Slava
 * add a fallback for rfs_file_find and rfs_inode_find to support
   third party hooks, e.g. add a hash table
+* hung_up_tty_fops and similar cases of f_op replacement for an initialized file
+  and disabling hooks

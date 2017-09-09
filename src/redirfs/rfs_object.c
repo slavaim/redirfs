@@ -286,32 +286,65 @@ int rfs_insert_object(
 {
     int    err;
 
-    rcu_read_lock();
-    { /* start of the RCU lock */
+    do {
+        rcu_read_lock();
+        { /* start of the RCU lock */
 
-        rfs_object_get(rfs_object);
-        rfs_object->radix_tree = radix_tree;
+            rfs_object_get(rfs_object);
+            rfs_object->radix_tree = radix_tree;
 
-        /* spin_lock can't synchronize user context with softirq */
-        DBG_BUG_ON(in_softirq());
+            /* spin_lock can't synchronize user context with softirq */
+            DBG_BUG_ON(in_softirq());
 
-        spin_lock(&radix_tree->lock);
-        {
-            err = radix_tree_insert(&radix_tree->root,
-                                    (long)rfs_object->system_object,
-                                    rfs_object);
+            spin_lock(&radix_tree->lock);
+            {
+                err = radix_tree_insert(&radix_tree->root,
+                                        (long)rfs_object->system_object,
+                                        rfs_object);
+            }
+            spin_unlock(&radix_tree->lock);
+
+            if (err)
+            {
+                rfs_object->radix_tree = NULL;
+                rfs_object_put(rfs_object);
+            }
+
+        } /* end of the RCU lock */
+        rcu_read_unlock();
+
+        /*
+         * this error can happen when f_op was replaced
+         * so release hook was not called, this scenario
+         * happens with char devices when __tty_hangup
+         * replaces f_op with hung_up_tty_fops
+         */
+        if (-EEXIST == err) {
+
+            struct rfs_object*  robj_to_remove;
+
+            printk(KERN_CRIT"EEXIST error in rfs_insert_object\n");
+
+            /* remove the stalled object */
+            robj_to_remove = rfs_get_object_by_system_object(
+                                        radix_tree,
+                                        rfs_object->system_object);
+            if (robj_to_remove) {
+
+                DBG_BUG_ON(robj_to_remove == rfs_object);
+
+                if (robj_to_remove != rfs_object) {
+                    rfs_remove_object(robj_to_remove);
+                } else {
+                    err = 0; /* carry on */
+                }
+
+                rfs_object_put(robj_to_remove);
+            }
         }
-        spin_unlock(&radix_tree->lock);
+    } while (-EEXIST == err);
 
-        if (err) {
-            rfs_object->radix_tree = NULL;
-            rfs_object_put(rfs_object);
-        }
-
-    } /* end of the RCU lock */
-    rcu_read_unlock();
-
-    DBG_BUG_ON((-EEXIST == err) && !check_for_duplicate);
+    /*DBG_BUG_ON((-EEXIST == err) && !check_for_duplicate);*/
 
     return err;
 }
