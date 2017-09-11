@@ -3,7 +3,8 @@
  * Original version was written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
- * 2017 - development continued by Slava Imameev
+ * 2008 - 2010 Frantisek Hrbata
+ * 2017 - Slava Imameev
  *      - adress_space_operations hooks
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
@@ -48,7 +49,6 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 	rinode->inode = inode;
 	rinode->op_old = inode->i_op;
     rinode->fop_old = inode->i_fop;
-    DBG_BUG_ON(rinode->fop_old->open == rfs_open);
     rinode->a_ops_old = inode->i_mapping ? inode->i_mapping->a_ops : NULL;
 	spin_lock_init(&rinode->lock);
 	rfs_mutex_init(&rinode->mutex);
@@ -119,7 +119,11 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
     {
 	    ri = rfs_inode_find(inode);
 	    if (!ri) {
-		    ri_new->rinfo = rfs_info_get(rinfo);
+
+            DBG_BUG_ON(ri_new->fop_old->open == rfs_open);
+
+            ri_new->rinfo = rfs_info_get(rinfo);
+
             /*
              * unconditionally register open operation to be notified
              * of open requests, some devices do not register open

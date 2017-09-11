@@ -37,12 +37,17 @@ int rfs_readpage(struct file *file,
 	struct rfs_context rcont;
     struct redirfs_args rargs;
 
-	rfile = rfs_file_find(file);
-	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
-	rfs_context_init(&rcont, 0);
-
-    rinode = rfile->rdentry->rinode;
-    BUG_ON(!rinode);
+    rfs_context_init(&rcont, 0);
+    
+    rfile = rfs_file_find(file);
+    if (rfile) {
+        rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+        rinode = rfs_inode_get(rfile->rdentry->rinode);
+    } else {
+        rinode = rfs_inode_find(file->f_inode);
+        rinfo = rfs_inode_get_rinfo(rinode);
+    }
+    BUG_ON(!rinfo || !rinode);
 
     rargs.type.id = REDIRFS_REG_AOP_READPAGE;
 	rargs.args.a_readpage.file = file;
@@ -60,7 +65,8 @@ int rfs_readpage(struct file *file,
 	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 	rfs_context_deinit(&rcont);
 
-	rfs_file_put(rfile);
+    rfs_file_put(rfile);
+    rfs_inode_put(rinode);
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
@@ -76,12 +82,17 @@ int rfs_readpages(struct file *file,
 	struct rfs_context rcont;
     struct redirfs_args rargs;
 
-	rfile = rfs_file_find(file);
-	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
-	rfs_context_init(&rcont, 0);
+    rfs_context_init(&rcont, 0);
 
-    rinode = rfile->rdentry->rinode;
-    BUG_ON(!rinode);
+    rfile = rfs_file_find(file);
+    if (rfile) {
+        rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+        rinode = rfs_inode_get(rfile->rdentry->rinode);
+    } else {
+        rinode = rfs_inode_find(file->f_inode);
+        rinfo = rfs_inode_get_rinfo(rinode);
+    }
+    BUG_ON(!rinfo || !rinode);
 
     rargs.type.id = REDIRFS_REG_AOP_READPAGES;
 	rargs.args.a_readpages.file = file;
@@ -103,7 +114,8 @@ int rfs_readpages(struct file *file,
 	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 	rfs_context_deinit(&rcont);
 
-	rfs_file_put(rfile);
+    rfs_file_put(rfile);
+    rfs_inode_put(rinode);
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
@@ -196,12 +208,17 @@ int rfs_write_begin(struct file *file,
 	struct rfs_context rcont;
     struct redirfs_args rargs;
 
-	rfile = rfs_file_find(file);
-	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
-	rfs_context_init(&rcont, 0);
+    rfs_context_init(&rcont, 0);
 
-    rinode = rfile->rdentry->rinode;
-    BUG_ON(!rinode);
+    rfile = rfs_file_find(file);
+    if (rfile) {
+        rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+        rinode = rfs_inode_get(rfile->rdentry->rinode);
+    } else {
+        rinode = rfs_inode_find(file->f_inode);
+        rinfo = rfs_inode_get_rinfo(rinode);
+    }
+    BUG_ON(!rinfo || !rinode);
 
     rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_a_write_begin);
 	rargs.args.a_write_begin.file = file;
@@ -229,7 +246,8 @@ int rfs_write_begin(struct file *file,
 	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 	rfs_context_deinit(&rcont);
 
-	rfs_file_put(rfile);
+    rfs_file_put(rfile);
+    rfs_inode_put(rinode);
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
@@ -248,12 +266,17 @@ int rfs_write_end(struct file *file,
 	struct rfs_context rcont;
     struct redirfs_args rargs;
 
-	rfile = rfs_file_find(file);
-	rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
-	rfs_context_init(&rcont, 0);
+    rfs_context_init(&rcont, 0);
 
-    rinode = rfile->rdentry->rinode;
-    BUG_ON(!rinode);
+    rfile = rfs_file_find(file);
+    if (rfile) {
+        rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+        rinode = rfs_inode_get(rfile->rdentry->rinode);
+    } else {
+        rinode = rfs_inode_find(file->f_inode);
+        rinfo = rfs_inode_get_rinfo(rinode);
+    }
+    BUG_ON(!rinfo || !rinode);
 
     rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_a_write_end);
 	rargs.args.a_write_end.file = file;
@@ -281,7 +304,8 @@ int rfs_write_end(struct file *file,
 	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 	rfs_context_deinit(&rcont);
 
-	rfs_file_put(rfile);
+    rfs_file_put(rfile);
+    rfs_inode_put(rinode);
 	rfs_info_put(rinfo);
 	return rargs.rv.rv_int;
 }
