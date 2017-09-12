@@ -34,6 +34,16 @@
     #pragma GCC optimize ("O0")
 #endif // RFS_DBG
 
+/*---------------------------------------------------------------------------*/
+
+struct rfs_radix_tree   rfs_inode_radix_tree = {
+    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .lock = __SPIN_LOCK_INITIALIZER(rfs_inode_radix_tree.lock),
+    .rfs_type = RFS_TYPE_RINODE,
+    };
+
+/*---------------------------------------------------------------------------*/
+
 static rfs_kmem_cache_t *rfs_inode_cache = NULL;
 
 static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
@@ -58,7 +68,16 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 
 	if (inode->i_op)
 		memcpy(&rinode->op_new, inode->i_op,
-				sizeof(struct inode_operations));
+                sizeof(struct inode_operations));
+                
+    /*rinode->rhops = rfs_create_inode_ops(rinode);
+    DBG_BUG_ON(IS_ERR(rinode->rhops));
+    if (IS_ERR(rinode->rhops)) {
+        void *err_ptr = rinode->rhops;
+        rinode->rhops = NULL;
+        rfs_object_put(&rfile->robject);
+        return err_ptr;
+    }*/
 
     if (inode->i_mapping && inode->i_mapping->a_ops)
         memcpy(&rinode->a_ops_new, inode->i_mapping->a_ops,

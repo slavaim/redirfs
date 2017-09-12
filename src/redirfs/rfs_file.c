@@ -34,7 +34,7 @@
     #pragma GCC optimize ("O0")
 #endif // RFS_DBG
 
-static void rfs_file_free(struct rfs_object *rfs_object);
+static void rfs_file_free(struct rfs_object *robject);
 static int rfs_release(struct inode *inode, struct file *file);
 
 static rfs_kmem_cache_t *rfs_file_cache = NULL;
@@ -84,28 +84,28 @@ struct rfs_radix_tree   rfs_file_radix_tree = {
 
 struct rfs_file* rfs_file_find(struct file *file)
 {
-    struct rfs_object   *rfs_object;
-    struct rfs_file     *rfs_file;
+    struct rfs_object   *robject;
+    struct rfs_file     *rfile;
 
 #ifdef RFS_PER_OBJECT_OPS
-    rfs_file = rfs_file_get(rfs_cast_to_rfile(file));
-    if (rfs_file)
-        return rfs_file;
+    rfile = rfs_file_get(rfs_cast_to_rfile(file));
+    if (rfile)
+        return rfile;
 #endif /* RFS_PER_OBJECT_OPS */
 
     /*
      * fallback to a slow path in presence of third party hookers
      */
 #ifdef RFS_USE_HASHTABLE
-    rfs_object = rfs_get_object_by_system_object(&rfs_file_table, file);
+    robject = rfs_get_object_by_system_object(&rfs_file_table, file);
 #else
-    rfs_object = rfs_get_object_by_system_object(&rfs_file_radix_tree, file);
+    robject = rfs_get_object_by_system_object(&rfs_file_radix_tree, file);
 #endif
-    if (!rfs_object)
+    if (!robject)
         return NULL;
 
-    rfs_file = container_of(rfs_object, struct rfs_file, rfs_object);
-    return rfs_file;
+    rfile = container_of(robject, struct rfs_file, robject);
+    return rfile;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -126,7 +126,7 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 	INIT_LIST_HEAD(&rfile->data);
 	rfile->file = file;
 	spin_lock_init(&rfile->lock);
-    rfs_object_init(&rfile->rfs_object, &rfs_file_type, file);
+    rfs_object_init(&rfile->robject, &rfs_file_type, file);
 
     rfile->op_old = fops_get(file->f_op);
 #ifdef RFS_PER_OBJECT_OPS
@@ -136,10 +136,12 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 #endif /* RFS_PER_OBJECT_OPS  */
 
     rfile->rhops = rfs_create_file_ops(rfile);
-    DBG_BUG_ON(!rfile->rhops);
-    if (!rfile->rhops) {
-        rfs_object_put(&rfile->rfs_object);
-        return ERR_PTR(-ENOMEM);
+    DBG_BUG_ON(IS_ERR(rfile->rhops));
+    if (IS_ERR(rfile->rhops)) {
+        void* err_ptr = rfile->rhops;
+        rfile->rhops = NULL;
+        rfs_object_put(&rfile->robject);
+        return err_ptr;
     }
 
 #ifdef RFS_PER_OBJECT_OPS 
@@ -165,7 +167,7 @@ struct rfs_file *rfs_file_get(struct rfs_file *rfile)
 		return NULL;
 
     DBG_BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
-    rfs_object_get(&rfile->rfs_object);
+    rfs_object_get(&rfile->robject);
 
 	return rfile;
 }
@@ -178,14 +180,14 @@ void rfs_file_put(struct rfs_file *rfile)
 		return;
 
     DBG_BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
-	rfs_object_put(&rfile->rfs_object);
+	rfs_object_put(&rfile->robject);
 }
 
 /*---------------------------------------------------------------------------*/
 
-static void rfs_file_free(struct rfs_object *rfs_object)
+static void rfs_file_free(struct rfs_object *robject)
 {
-    struct rfs_file *rfile = container_of(rfs_object, struct rfs_file, rfs_object);
+    struct rfs_file *rfile = container_of(robject, struct rfs_file, robject);
 
     DBG_BUG_ON(RFS_FILE_SIGNATURE != rfile->signature);
 
@@ -196,7 +198,7 @@ static void rfs_file_free(struct rfs_object *rfs_object)
     rfs_data_remove(&rfile->data);
 
     if (rfile->rhops)
-        rfs_object_put(&rfile->rhops->rfs_object);
+        rfs_object_put(&rfile->rhops->robject);
         
 	kmem_cache_free(rfs_file_cache, rfile);
 }
@@ -224,9 +226,9 @@ static struct rfs_file *rfs_file_add(struct file *file)
 #endif /* RFS_PER_OBJECT_OPS */
     
 #ifdef RFS_USE_HASHTABLE
-    rfs_insert_object(&rfs_file_table, &rfile->rfs_object, false);
+    rfs_insert_object(&rfs_file_table, &rfile->robject, false);
 #else
-    rfs_insert_object(&rfs_file_radix_tree, &rfile->rfs_object, false);
+    rfs_insert_object(&rfs_file_radix_tree, &rfile->robject, false);
 #endif
 
 	spin_lock(&rfile->rdentry->lock);
@@ -255,7 +257,7 @@ static void rfs_file_del(struct rfs_file *rfile)
     }
 #endif /* !RFS_PER_OBJECT_OPS */
 
-    rfs_remove_object(&rfile->rfs_object);
+    rfs_remove_object(&rfile->robject);
 	rfs_file_put(rfile);
 }
 

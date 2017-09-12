@@ -85,7 +85,7 @@ rfs_keep_operations(
         return;
 
     err = rfs_insert_object(&rfs_hoperations_radix_tree,
-                            &rfs_hoperations->rfs_object,
+                            &rfs_hoperations->robject,
                             true);
     DBG_BUG_ON(err && (-EEXIST != err));
     if (err) {
@@ -117,7 +117,7 @@ rfs_unkeep_operations(
                                          0);
 
     if (RFS_OPS_INSERTED == ((RFS_OPS_INSERTED | RFS_OPS_REMOVED) & old_flags)) {
-        rfs_remove_object(&rfs_hoperations->rfs_object);
+        rfs_remove_object(&rfs_hoperations->robject);
     }
 }
 
@@ -130,17 +130,17 @@ struct rfs_hoperations*
 rfs_find_operations(
     const void  *old_op)
 {
-    struct rfs_object     *rfs_object;
+    struct rfs_object      *robject;
     struct rfs_hoperations *rfs_hoperations;
 
-    rfs_object = rfs_get_object_by_system_object(&rfs_hoperations_radix_tree,
-                                                 old_op);
-    if (!rfs_object)
+    robject = rfs_get_object_by_system_object(&rfs_hoperations_radix_tree,
+                                              old_op);
+    if (!robject)
         return NULL;
 
-    rfs_hoperations = container_of(rfs_object,
-                                  struct rfs_hoperations,
-                                  rfs_object);
+    rfs_hoperations = container_of(robject,
+                                   struct rfs_hoperations,
+                                   robject);
     DBG_BUG_ON(RFS_HOPERATIONS_SIGNATURE != rfs_hoperations->signature);
 
     return rfs_hoperations;
@@ -151,22 +151,22 @@ rfs_find_operations(
 
 static void
 rfs_free_file_operations(
-    struct rfs_object* rfs_object)
+    struct rfs_object* robject)
 {
-    struct rfs_hoperations *rfs_hoperations;
+    struct rfs_hoperations *rhoperations;
 
-    rfs_hoperations = container_of(rfs_object,
+    rhoperations = container_of(robject,
                                    struct rfs_hoperations,
-                                   rfs_object);
+                                   robject);
 
-    DBG_BUG_ON(RFS_HOPERATIONS_SIGNATURE != rfs_hoperations->signature);
-    DBG_BUG_ON(!(RFS_OPS_FILE & rfs_hoperations->flags));
-    DBG_BUG_ON(RFS_OPS_INSERTED == ((RFS_OPS_INSERTED | RFS_OPS_REMOVED) & rfs_hoperations->flags));
+    DBG_BUG_ON(RFS_HOPERATIONS_SIGNATURE != rhoperations->signature);
+    DBG_BUG_ON(!(RFS_OPS_FILE & rhoperations->flags));
+    DBG_BUG_ON(RFS_OPS_INSERTED == ((RFS_OPS_INSERTED | RFS_OPS_REMOVED) & rhoperations->flags));
 
-    if (rfs_hoperations->old.f_op)
-        fops_put(rfs_hoperations->old.f_op);
+    if (rhoperations->old.f_op)
+        fops_put(rhoperations->old.f_op);
 
-	kfree(rfs_hoperations);
+	kfree(rhoperations);
 }
 
 static struct rfs_object_type rfs_file_operations_type = {
@@ -180,23 +180,101 @@ struct rfs_hoperations*
 rfs_create_file_ops(
     struct rfs_file     *rfile)
 {
-    long   err = 0;
-    struct rfs_hoperations  *rfs_hoperations = NULL;
-    struct file             *file = NULL;
+    long                    err = 0;
+    struct rfs_hoperations  *rhoperations = NULL;
     size_t                  size;
 
     DBG_BUG_ON(!rfile->op_old);
-    
-    file = rfile->file;
 
-    rfs_hoperations = rfs_find_operations(rfile->op_old);
+    rhoperations = rfs_find_operations(rfile->op_old);
+    if (rhoperations) {
+        /* found in the table */
+        goto exit;
+    }
+
+    /* allocate space for the object and file operations just right after it */
+    size = sizeof(*rhoperations) + sizeof(*rhoperations->new.f_op);
+    rhoperations = kzalloc(size, GFP_KERNEL);
+    DBG_BUG_ON(!rhoperations);
+    if (!rhoperations) {
+        err = -ENOMEM;
+        goto exit;
+    }
+
+    rfs_object_init(&rhoperations->robject,
+                    &rfs_file_operations_type,
+                    rfile->op_old);
+
+#if RFS_DBG
+    rhoperations->signature = RFS_HOPERATIONS_SIGNATURE;
+#endif /* RFS_DBG */
+
+    rhoperations->flags = RFS_OPS_FILE;
+
+    rhoperations->old.f_op = fops_get(rfile->op_old);
+    DBG_BUG_ON(!rhoperations->old.f_op);
+    if (!rhoperations->old.f_op) {
+        err = -EINVAL;
+        goto exit;
+    }
+
+    /* the space for new file operations is located after the object */
+    rhoperations->new.f_op = (struct file_operations *)(rhoperations + 1);
+    /* copy the old operations to the new ones */
+    *rhoperations->new.f_op = *rfile->op_old;
+
+exit:
+
+    if (err && rhoperations)
+        rfs_object_put(&rhoperations->robject);
+
+    return err ? ERR_PTR(err) : rhoperations;
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void
+rfs_free_inode_operations(
+    struct rfs_object* robject)
+{
+    struct rfs_hoperations *rhoperations;
+
+    rhoperations = container_of(robject,
+                                struct rfs_hoperations,
+                                robject);
+
+    DBG_BUG_ON(RFS_HOPERATIONS_SIGNATURE != rhoperations->signature);
+    DBG_BUG_ON(!(RFS_OPS_INODE & rhoperations->flags));
+    DBG_BUG_ON(RFS_OPS_INSERTED == ((RFS_OPS_INSERTED | RFS_OPS_REMOVED) & rhoperations->flags));
+
+	kfree(rhoperations);
+}
+
+static struct rfs_object_type rfs_inode_operations_type = {
+    .type = RFS_TYPE_INODE_OPS,
+    .free = rfs_free_inode_operations,
+    };
+
+/*---------------------------------------------------------------------------*/
+
+struct rfs_hoperations*
+rfs_create_inode_ops(
+    struct rfs_inode     *rinode)
+{
+    long                    err = 0;
+    struct rfs_hoperations  *rfs_hoperations = NULL;
+    size_t                  size;
+
+    DBG_BUG_ON(!rinode->op_old);
+
+    rfs_hoperations = rfs_find_operations(rinode->op_old);
     if (rfs_hoperations) {
         /* found in the table */
         goto exit;
     }
 
     /* allocate space for the object and file operations just right after it */
-    size = sizeof(*rfs_hoperations) + sizeof(*rfs_hoperations->new.f_op);
+    size = sizeof(*rfs_hoperations) + sizeof(*rfs_hoperations->new.i_op);
     rfs_hoperations = kzalloc(size, GFP_KERNEL);
     DBG_BUG_ON(!rfs_hoperations);
     if (!rfs_hoperations) {
@@ -204,32 +282,25 @@ rfs_create_file_ops(
         goto exit;
     }
 
-    rfs_object_init(&rfs_hoperations->rfs_object,
-                    &rfs_file_operations_type,
-                    rfile->op_old);
+    rfs_object_init(&rfs_hoperations->robject,
+                    &rfs_inode_operations_type,
+                    rinode->op_old);
 
 #if RFS_DBG
     rfs_hoperations->signature = RFS_HOPERATIONS_SIGNATURE;
 #endif /* RFS_DBG */
 
-    rfs_hoperations->flags = RFS_OPS_FILE;
-
-    rfs_hoperations->old.f_op = fops_get(rfile->op_old);
-    DBG_BUG_ON(!rfs_hoperations->old.f_op);
-    if (!rfs_hoperations->old.f_op) {
-        err = -EINVAL;
-        goto exit;
-    }
+    rfs_hoperations->flags = RFS_OPS_INODE;
 
     /* the space for new file operations is located after the object */
-    rfs_hoperations->new.f_op = (struct file_operations *)(rfs_hoperations + 1);
+    rfs_hoperations->new.i_op = (struct inode_operations *)(rfs_hoperations + 1);
     /* copy the old operations to the new ones */
-    *rfs_hoperations->new.f_op = *rfile->op_old;
+    *rfs_hoperations->new.i_op = *rinode->op_old;
 
 exit:
 
     if (err && rfs_hoperations)
-        rfs_object_put(&rfs_hoperations->rfs_object);
+        rfs_object_put(&rfs_hoperations->robject);
 
     return err ? ERR_PTR(err) : rfs_hoperations;
 }

@@ -461,7 +461,7 @@ struct rfs_file {
     uint32_t  signature;
 #endif
 
-    struct rfs_object rfs_object;
+    struct rfs_object robject;
 	struct list_head rdentry_list;
 	struct list_head data;
 	struct file *file;
@@ -566,7 +566,7 @@ void rfs_data_remove(struct list_head *head);
 #define rfs_rename_lock(sb) down(&sb->s_vfs_rename_sem)
 #define rfs_rename_unlock(sb) up(&sb->s_vfs_rename_sem)
 
-#  if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14))
 typedef unsigned gfp_t;
 
 static inline void *kzalloc(size_t size, gfp_t flags)
@@ -582,7 +582,7 @@ static inline void *kzalloc(size_t size, gfp_t flags)
 	return p;
 }
 
-#  endif
+#endif
 
 static inline void *kmem_cache_zalloc(kmem_cache_t *cache, gfp_t flags)
 {
