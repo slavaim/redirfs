@@ -43,7 +43,7 @@ loff_t rfs_llseek(struct file *file, loff_t offset, int origin)
 	rargs.args.f_llseek.offset = offset;
 	rargs.args.f_llseek.origin = origin;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->llseek) 
 			rargs.rv.rv_loff = rfile->op_old->llseek(
@@ -54,7 +54,7 @@ loff_t rfs_llseek(struct file *file, loff_t offset, int origin)
 			rargs.rv.rv_loff = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -83,7 +83,7 @@ ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 	rargs.args.f_read.count = count;
     rargs.args.f_read.pos = pos;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->read) 
 			rargs.rv.rv_ssize = rfile->op_old->read(
@@ -95,7 +95,7 @@ ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -124,7 +124,7 @@ ssize_t rfs_write(struct file *file, const char __user *buf, size_t count, loff_
 	rargs.args.f_write.count = count;
     rargs.args.f_write.pos = pos;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->write) 
 			rargs.rv.rv_ssize = rfile->op_old->write(
@@ -136,7 +136,7 @@ ssize_t rfs_write(struct file *file, const char __user *buf, size_t count, loff_
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -164,7 +164,7 @@ ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 	rargs.args.f_read_iter.kiocb = kiocb;
 	rargs.args.f_read_iter.iov_iter = iov_iter;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->read_iter) 
 			rargs.rv.rv_ssize = rfile->op_old->read_iter(
@@ -174,7 +174,7 @@ ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -201,7 +201,7 @@ ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 	rargs.args.f_write_iter.kiocb = kiocb;
 	rargs.args.f_write_iter.iov_iter = iov_iter;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->write_iter) 
 			rargs.rv.rv_ssize = rfile->op_old->write_iter(
@@ -211,7 +211,7 @@ ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -244,7 +244,7 @@ int rfs_iterate(struct file *file, struct dir_context *dir_context)
 	rargs.args.f_iterate.file = file;
 	rargs.args.f_iterate.dir_context = dir_context;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->iterate) 
 			rargs.rv.rv_int = rfile->op_old->iterate(
@@ -254,7 +254,7 @@ int rfs_iterate(struct file *file, struct dir_context *dir_context)
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -286,7 +286,7 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
 	rargs.args.f_iterate_shared.file = file;
 	rargs.args.f_iterate_shared.dir_context = dir_context;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->iterate_shared) 
 			rargs.rv.rv_int = rfile->op_old->iterate_shared(
@@ -296,7 +296,7 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -326,7 +326,7 @@ unsigned int rfs_poll(struct file *file, struct poll_table_struct *poll_table_st
 	rargs.args.f_poll.file = file;
 	rargs.args.f_poll.poll_table_struct = poll_table_struct;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->poll) 
 			rargs.rv.rv_int = rfile->op_old->poll(
@@ -336,7 +336,7 @@ unsigned int rfs_poll(struct file *file, struct poll_table_struct *poll_table_st
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -364,7 +364,7 @@ long rfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	rargs.args.f_unlocked_ioctl.cmd = cmd;
     rargs.args.f_unlocked_ioctl.arg = arg;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->unlocked_ioctl) 
 			rargs.rv.rv_long = rfile->op_old->unlocked_ioctl(
@@ -375,7 +375,7 @@ long rfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			rargs.rv.rv_long = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -403,7 +403,7 @@ long rfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	rargs.args.f_compat_ioctl.cmd = cmd;
     rargs.args.f_compat_ioctl.arg = arg;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->compat_ioctl) 
 			rargs.rv.rv_long = rfile->op_old->compat_ioctl(
@@ -414,7 +414,7 @@ long rfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			rargs.rv.rv_long = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -441,7 +441,7 @@ int rfs_mmap(struct file *file, struct vm_area_struct *vma)
 	rargs.args.f_mmap.file = file;
 	rargs.args.f_mmap.vma = vma;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->mmap) 
 			rargs.rv.rv_int = rfile->op_old->mmap(
@@ -451,7 +451,7 @@ int rfs_mmap(struct file *file, struct vm_area_struct *vma)
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -478,7 +478,7 @@ int rfs_flush(struct file *file, fl_owner_t owner)
 	rargs.args.f_flush.file = file;
 	rargs.args.f_flush.owner = owner;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->flush) 
 			rargs.rv.rv_int = rfile->op_old->flush(
@@ -488,7 +488,7 @@ int rfs_flush(struct file *file, fl_owner_t owner)
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -517,7 +517,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     rargs.args.f_fsync.end = end;
     rargs.args.f_fsync.datasync = datasync;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->fsync) 
 			rargs.rv.rv_int = rfile->op_old->fsync(
@@ -529,7 +529,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -557,7 +557,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 	rargs.args.f_fasync.fd = fd;
     rargs.args.f_fasync.on = on;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->fasync) 
 			rargs.rv.rv_int = rfile->op_old->fasync(
@@ -568,7 +568,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -596,7 +596,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 	rargs.args.f_lock.cmd = cmd;
     rargs.args.f_lock.flock = flock;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->lock) 
 			rargs.rv.rv_int = rfile->op_old->lock(
@@ -607,7 +607,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -639,7 +639,7 @@ ssize_t rfs_sendpage(struct file *file, struct page *page, int offset,
     rargs.args.f_sendpage.pos = pos;
     rargs.args.f_sendpage.more = more;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->sendpage) 
 			rargs.rv.rv_ssize = rfile->op_old->sendpage(
@@ -653,7 +653,7 @@ ssize_t rfs_sendpage(struct file *file, struct page *page, int offset,
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -684,7 +684,7 @@ unsigned long rfs_get_unmapped_area(struct file *file, unsigned long addr,
     rargs.args.f_get_unmapped_area.pgoff = pgoff;
     rargs.args.f_get_unmapped_area.flags = flags;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->get_unmapped_area) 
 			rargs.rv.rv_ulong = rfile->op_old->get_unmapped_area(
@@ -697,7 +697,7 @@ unsigned long rfs_get_unmapped_area(struct file *file, unsigned long addr,
 			rargs.rv.rv_ulong = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -725,7 +725,7 @@ int rfs_flock(struct file *file, int cmd, struct file_lock *flock)
 	rargs.args.f_flock.cmd = cmd;
     rargs.args.f_flock.flock = flock;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->flock) 
 			rargs.rv.rv_int = rfile->op_old->flock(
@@ -736,7 +736,7 @@ int rfs_flock(struct file *file, int cmd, struct file_lock *flock)
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
     
 	rfs_context_deinit(&rcont);
@@ -767,7 +767,7 @@ ssize_t rfs_splice_write(struct pipe_inode_info *pipe, struct file *out,
     rargs.args.f_splice_write.len = len;
     rargs.args.f_splice_write.flags = flags;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->splice_write) 
 			rargs.rv.rv_ssize = rfile->op_old->splice_write(
@@ -780,7 +780,7 @@ ssize_t rfs_splice_write(struct pipe_inode_info *pipe, struct file *out,
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -812,7 +812,7 @@ ssize_t rfs_splice_read(struct file *in, loff_t *ppos,
     rargs.args.f_splice_read.len = len;
     rargs.args.f_splice_read.flags = flags;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->splice_read) 
 			rargs.rv.rv_ssize = rfile->op_old->splice_read(
@@ -825,7 +825,7 @@ ssize_t rfs_splice_read(struct file *in, loff_t *ppos,
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -855,7 +855,7 @@ int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
     rargs.args.f_setlease.flock = flock;
     rargs.args.f_setlease.priv = priv;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->setlease) 
 			rargs.rv.rv_int = rfile->op_old->setlease(
@@ -867,7 +867,7 @@ int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
     
 	rfs_context_deinit(&rcont);
@@ -897,7 +897,7 @@ long rfs_fallocate(struct file *file, int mode,
     rargs.args.f_fallocate.offset = offset;
     rargs.args.f_fallocate.len = len;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->fallocate) 
 			rargs.rv.rv_long = rfile->op_old->fallocate(
@@ -909,7 +909,7 @@ long rfs_fallocate(struct file *file, int mode,
 			rargs.rv.rv_long = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
     
 	rfs_context_deinit(&rcont);
@@ -936,7 +936,7 @@ void rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
 	rargs.args.f_show_fdinfo.seq_file = seq_file;
 	rargs.args.f_show_fdinfo.file = file;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->show_fdinfo) 
 			rfile->op_old->show_fdinfo(
@@ -977,7 +977,7 @@ ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
     rargs.args.f_copy_file_range.count = count;
     rargs.args.f_copy_file_range.flags = flags;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->copy_file_range) 
 			rargs.rv.rv_ssize = rfile->op_old->copy_file_range(
@@ -991,7 +991,7 @@ ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -1025,7 +1025,7 @@ int rfs_clone_file_range(struct file *src_file, loff_t src_off,
     rargs.args.f_clone_file_range.dst_off = dst_off;
     rargs.args.f_clone_file_range.count = count;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->clone_file_range) 
 			rargs.rv.rv_int = rfile->op_old->clone_file_range(
@@ -1038,7 +1038,7 @@ int rfs_clone_file_range(struct file *src_file, loff_t src_off,
 			rargs.rv.rv_int = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
     
 	rfs_context_deinit(&rcont);
@@ -1072,7 +1072,7 @@ ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
     rargs.args.f_dedupe_file_range.dst_file = dst_file;
     rargs.args.f_dedupe_file_range.dst_loff = dst_loff;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->dedupe_file_range) 
 			rargs.rv.rv_ssize = rfile->op_old->dedupe_file_range(
@@ -1085,7 +1085,7 @@ ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
 			rargs.rv.rv_ssize = -EIO;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);

@@ -28,6 +28,7 @@
 
 #include "rfs.h"
 #include "rfs_address_space.h"
+#include "rfs_hooked_ops.h"
 
 #ifdef RFS_DBG
     #pragma GCC push_options
@@ -44,7 +45,40 @@ struct rfs_radix_tree   rfs_inode_radix_tree = {
 
 /*---------------------------------------------------------------------------*/
 
+void rfs_inode_free(struct rfs_object *robject);
+
+static struct rfs_object_type rfs_inode_type = {
+    .type = RFS_TYPE_RFILE,
+    .free = rfs_inode_free,
+    };
+    
+/*---------------------------------------------------------------------------*/
+
 static rfs_kmem_cache_t *rfs_inode_cache = NULL;
+
+/*---------------------------------------------------------------------------*/
+
+struct rfs_inode* rfs_inode_find(struct inode *inode) 
+{
+    struct rfs_inode  *rinode;
+    struct rfs_object *robject;
+
+#ifdef RFS_PER_OBJECT_OPS
+    rinode = rfs_inode_get(rfs_cast_to_rinode(inode));
+    if (rinode)
+        return rinode;
+#endif /* RFS_PER_OBJECT_OPS */
+
+    robject = rfs_get_object_by_system_object(&rfs_inode_radix_tree, inode);
+    if (!robject)
+        return NULL;
+
+    rinode = container_of(robject, struct rfs_inode, robject);
+    DBG_BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
+    return rinode;
+}
+
+/*---------------------------------------------------------------------------*/
 
 static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 {
@@ -52,7 +86,13 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 
 	rinode = kmem_cache_zalloc(rfs_inode_cache, GFP_KERNEL);
 	if (IS_ERR(rinode))
-		return ERR_PTR(-ENOMEM);
+        return ERR_PTR(-ENOMEM);
+        
+#ifdef RFS_DBG
+    rinode->signature = RFS_INODE_SIGNATURE;
+#endif
+
+    rfs_object_init(&rinode->robject, &rfs_inode_type, inode);
 
 	INIT_LIST_HEAD(&rinode->rdentries);
 	INIT_LIST_HEAD(&rinode->data);
@@ -62,38 +102,39 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
     rinode->a_ops_old = inode->i_mapping ? inode->i_mapping->a_ops : NULL;
 	spin_lock_init(&rinode->lock);
 	rfs_mutex_init(&rinode->mutex);
-	atomic_set(&rinode->count, 1);
 	atomic_set(&rinode->nlink, 1);
 	rinode->rdentries_nr = 0;
+
+#ifdef RFS_PER_OBJECT_OPS
 
 	if (inode->i_op)
 		memcpy(&rinode->op_new, inode->i_op,
                 sizeof(struct inode_operations));
+
+    /* rename hook is required for correct functioning of rfs_inode_find */
+	rinode->op_new.rename = rfs_rename;
+
+#else /* RFS_PER_OBJECT_OPS */
                 
-    /*rinode->rhops = rfs_create_inode_ops(rinode);
+    rinode->rhops = rfs_create_inode_ops(rinode);
     DBG_BUG_ON(IS_ERR(rinode->rhops));
     if (IS_ERR(rinode->rhops)) {
         void *err_ptr = rinode->rhops;
         rinode->rhops = NULL;
-        rfs_object_put(&rfile->robject);
+        rfs_object_put(&rinode->robject);
         return err_ptr;
-    }*/
+    }
+
+#endif /* !RFS_PER_OBJECT_OPS  */
 
     if (inode->i_mapping && inode->i_mapping->a_ops)
         memcpy(&rinode->a_ops_new, inode->i_mapping->a_ops,
 				sizeof(struct address_space_operations));
 
-    //
-    // rename hook is required for correct functioning of rfs_inode_find
-    //
-	rinode->op_new.rename = rfs_rename;
-
-#ifdef RFS_DBG
-    rinode->signature = RFS_INODE_SIGNATURE;
-#endif
-
 	return rinode;
 }
+
+/*---------------------------------------------------------------------------*/
 
 struct rfs_inode *rfs_inode_get(struct rfs_inode *rinode)
 {
@@ -101,31 +142,47 @@ struct rfs_inode *rfs_inode_get(struct rfs_inode *rinode)
 		return NULL;
 
     DBG_BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
-	BUG_ON(!atomic_read(&rinode->count));
-	atomic_inc(&rinode->count);
+    rfs_object_get(&rinode->robject);
 
 	return rinode;
 }
+
+/*---------------------------------------------------------------------------*/
 
 void rfs_inode_put(struct rfs_inode *rinode)
 {
 	if (!rinode || IS_ERR(rinode))
 		return;
 
-	BUG_ON(!atomic_read(&rinode->count));
-	if (!atomic_dec_and_test(&rinode->count))
-		return;
+    DBG_BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
+	rfs_object_put(&rinode->robject);
+}
+
+/*---------------------------------------------------------------------------*/
+
+void rfs_inode_free(struct rfs_object *robject)
+{
+    struct rfs_inode *rinode = container_of(robject, struct rfs_inode, robject);
 
     DBG_BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
+
+#ifndef RFS_PER_OBJECT_OPS
+    if (rinode->rhops)
+        rfs_object_put(&rinode->rhops->robject);
+#endif /* !RFS_PER_OBJECT_OPS */
+
 	rfs_info_put(rinode->rinfo);
 	rfs_data_remove(&rinode->data);
 	kmem_cache_free(rfs_inode_cache, rinode);
 }
 
+/*---------------------------------------------------------------------------*/
+
 struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 {
 	struct rfs_inode *ri_new;
-	struct rfs_inode *ri;
+    struct rfs_inode *ri;
+    int err = 0;
 
 	if (!inode)
 		return NULL;
@@ -152,10 +209,19 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
             if (!S_ISSOCK(inode->i_mode))
                 inode->i_fop = &rfs_file_ops;
 
-		    inode->i_op = &ri_new->op_new;
+#ifdef RFS_PER_OBJECT_OPS
+            inode->i_op = &ri_new->op_new;
+#else /* RFS_PER_OBJECT_OPS */
+            inode->i_op = ri_new->rhops->new.i_op;
+#endif /* !RFS_PER_OBJECT_OPS */
 
             if (inode->i_mapping && inode->i_mapping->a_ops)
                 inode->i_mapping->a_ops = &ri_new->a_ops_new;
+
+            err = rfs_insert_object(&rfs_inode_radix_tree,
+                                    &ri_new->robject,
+                                    false);
+            DBG_BUG_ON(err);
 
 		    rfs_inode_get(ri_new);
 		    ri = rfs_inode_get(ri_new);
@@ -164,10 +230,22 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
     }
 	spin_unlock(&inode->i_lock);
 
-	rfs_inode_put(ri_new);
+    rfs_inode_put(ri_new);
+    
+    if (err) {
+        if (ri)
+            rfs_inode_put(ri);
+        ri = ERR_PTR(err);
+    } else if (ri == ri_new) {
+#ifndef RFS_PER_OBJECT_OPS
+        rfs_keep_operations(ri_new->rhops);
+#endif /* RFS_PER_OBJECT_OPS */
+    }
 
 	return ri;
 }
+
+/*---------------------------------------------------------------------------*/
 
 void rfs_inode_del(struct rfs_inode *rinode)
 {
@@ -177,9 +255,16 @@ void rfs_inode_del(struct rfs_inode *rinode)
 	if (!S_ISSOCK(rinode->inode->i_mode))
 		rinode->inode->i_fop = rinode->fop_old;
 
-	rinode->inode->i_op = rinode->op_old;
+    rinode->inode->i_op = rinode->op_old;
+    
+    rfs_remove_object(&rinode->robject);
+#ifndef RFS_PER_OBJECT_OPS
+    rfs_unkeep_operations(rinode->rhops);
+#endif /* RFS_PER_OBJECT_OPS */
 	rfs_inode_put(rinode);
 }
+
+/*---------------------------------------------------------------------------*/
 
 void rfs_inode_add_rdentry(struct rfs_inode *rinode, struct rfs_dentry *rdentry)
 {
@@ -1246,17 +1331,17 @@ static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)
 	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_PERMISSION, permission, rfs_permission);
 	RFS_SET_IOP(rinode, REDIRFS_DIR_IOP_SETATTR, setattr, rfs_setattr);
 
-	RFS_SET_IOP_MGT(rinode, create, rfs_create);
-	RFS_SET_IOP_MGT(rinode, link, rfs_link);
-	RFS_SET_IOP_MGT(rinode, mknod, rfs_mknod);
-	RFS_SET_IOP_MGT(rinode, symlink, rfs_symlink);
+	RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_CREATE, create, rfs_create);
+	RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_LINK, link, rfs_link);
+	RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_MKNOD, mknod, rfs_mknod);
+	RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_SYMLINK, symlink, rfs_symlink);
 
     //
     // the following two operations are required to support hooking,
     // their registration do not dependent on registered filters
     //
-	rinode->op_new.lookup = rfs_lookup;
-	rinode->op_new.mkdir = rfs_mkdir;
+	RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_LOOKUP, lookup, rfs_lookup);
+	RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_MKDIR, mkdir, rfs_mkdir);
 }
 
 static void rfs_inode_set_ops_lnk(struct rfs_inode *rinode)
@@ -1297,30 +1382,37 @@ void rfs_inode_set_ops(struct rfs_inode *rinode)
 {
 	umode_t mode = rinode->inode->i_mode;
 
-	spin_lock(&rinode->lock);
+    spin_lock(&rinode->lock);
+    {
+        if (S_ISREG(mode)) {
+            rfs_inode_set_ops_reg(rinode);
+            rfs_inode_set_aops_reg(rinode);
 
-	if (S_ISREG(mode)) {
-		rfs_inode_set_ops_reg(rinode);
-		rfs_inode_set_aops_reg(rinode);
+        } else if (S_ISDIR(mode))
+            rfs_inode_set_ops_dir(rinode);
 
-	} else if (S_ISDIR(mode))
-		rfs_inode_set_ops_dir(rinode);
+        else if (S_ISLNK(mode))
+            rfs_inode_set_ops_lnk(rinode);
 
-	else if (S_ISLNK(mode))
-		rfs_inode_set_ops_lnk(rinode);
+        else if (S_ISCHR(mode))
+            rfs_inode_set_ops_chr(rinode);
 
-	else if (S_ISCHR(mode))
-		rfs_inode_set_ops_chr(rinode);
+        else if (S_ISBLK(mode))
+            rfs_inode_set_ops_blk(rinode);
 
-	else if (S_ISBLK(mode))
-		rfs_inode_set_ops_blk(rinode);
+        else if (S_ISFIFO(mode))
+            rfs_inode_set_ops_fifo(rinode);
 
-	else if (S_ISFIFO(mode))
-		rfs_inode_set_ops_fifo(rinode);
-
-	else if (S_ISSOCK(mode))
-		rfs_inode_set_ops_sock(rinode);
-
+        else if (S_ISSOCK(mode))
+            rfs_inode_set_ops_sock(rinode);
+            
+    #ifndef RFS_PER_OBJECT_OPS
+        RFS_SET_IOP_MGT(rinode,
+                        RFS_OP_IDC(rfs_imode_to_type(mode, false), RFS_OP_i_rename),
+                        rename,
+                        rfs_rename);
+    #endif /* !RFS_PER_OBJECT_OPS */
+    }
 	spin_unlock(&rinode->lock);
 }
 

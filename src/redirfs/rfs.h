@@ -67,56 +67,60 @@
 	 	RFS_REM_OP(ops_new, ops_old, op) \
     )
 
+/*---------------------------------------------------------------------------*/
+
 #ifdef RFS_PER_OBJECT_OPS
 
-#define RFS_IS_OP_SET(rf, idc) (true)
+    #define RFS_IS_FOP_SET(rf, idc) (true)
 
-#define RFS_SET_FOP(rf, idc, op, f) \
-	(rf->rdentry->rinfo->rops ? \
-		RFS_SET_OP(rf->rdentry->rinfo->rops->arr, idc, rf->op_new, \
-			rf->op_old, op, f) : \
-	 	RFS_REM_OP(rf->op_new, rf->op_old, op) \
-    )
+    #define RFS_SET_FOP(rf, idc, op, f) \
+        (rf->rdentry->rinfo->rops ? \
+            RFS_SET_OP(rf->rdentry->rinfo->rops->arr, idc, rf->op_new, \
+                rf->op_old, op, f) : \
+            RFS_REM_OP(rf->op_new, rf->op_old, op) \
+        )
 
 #else /* RFS_PER_OBJECT_OPS */
 
-/*
- * for a shared operations structure we can only add new operations
- * as the shared vector is a union of all vectors, instead of removal 
- * operation the per-file op_bitfield is used
-*/
+    /*
+    * for a shared operations structure we can only add new operations
+    * as the shared vector is a union of all vectors, instead of removal 
+    * operation the per-file op_bitfield is used
+    */
 
-#define RFS_OP_BIT(idc) (RFS_IDC_TO_OP_ID(idc) - RFS_OP_f_start)
+    #define RFS_FOP_BIT(idc) (RFS_IDC_TO_OP_ID(idc) - RFS_OP_f_start)
 
-#define RFS_IS_OP_SET(rf, idc) (test_bit(RFS_OP_BIT(idc), rf->op_bitfield))
+    #define RFS_IS_FOP_SET(rf, idc) (test_bit(RFS_FOP_BIT(idc), rf->op_bitfield))
 
-#define RFS_SET_FOP(rf, idc, op, f) \
-    do { \
-        int nr = RFS_OP_BIT(idc); \
-        if (rf->rdentry->rinfo->rops && \
-            rf->rdentry->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
+    #define RFS_SET_FOP(rf, idc, op, f) \
+        do { \
+            int nr = RFS_FOP_BIT(idc); \
+            if (rf->rdentry->rinfo->rops && \
+                rf->rdentry->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
+                if (!test_bit(nr, rf->rhops->op_bitfield) && \
+                    !test_and_set_bit(nr, rf->rhops->op_bitfield)) { \
+                    RFS_ADD_OP((*rf->rhops->new.f_op), rf->rhops->old.f_op, op, f); \
+                } \
+                set_bit(nr, rf->op_bitfield); \
+            } else if (test_bit(nr, rf->op_bitfield)) { \
+                clear_bit(nr, rf->op_bitfield); \
+            } \
+        } while(0);
+
+    #define RFS_SET_FOP_MGT(rf, idc, op, f) \
+        do { \
+            int nr = RFS_FOP_BIT(idc); \
             if (!test_bit(nr, rf->rhops->op_bitfield) && \
                 !test_and_set_bit(nr, rf->rhops->op_bitfield)) { \
                 RFS_ADD_OP((*rf->rhops->new.f_op), rf->rhops->old.f_op, op, f); \
             } \
-            set_bit(nr, rf->op_bitfield); \
-        } else if (test_bit(nr, rf->op_bitfield)) { \
-            clear_bit(nr, rf->op_bitfield); \
-        } \
-    } while(0);
-
-#define RFS_SET_FOP_FORCED(rf, idc, op, f) \
-    do { \
-        int nr = RFS_OP_BIT(idc); \
-        if (!test_bit(nr, rf->rhops->op_bitfield) && \
-            !test_and_set_bit(nr, rf->rhops->op_bitfield)) { \
-            RFS_ADD_OP((*rf->rhops->new.f_op), rf->rhops->old.f_op, op, f); \
-        } \
-        if (!test_bit(nr, rf->op_bitfield)) \
-            set_bit(nr, rf->op_bitfield); \
-    } while(0);
+            if (!test_bit(nr, rf->op_bitfield)) \
+                set_bit(nr, rf->op_bitfield); \
+        } while(0);
 
 #endif /* !RFS_PEROBJECT_OPS */
+
+/*---------------------------------------------------------------------------*/
 
 #define RFS_SET_DOP(rd, idc, op, f) \
 	(rd->rinfo->rops ? \
@@ -125,18 +129,66 @@
 	 	RFS_REM_OP(rd->op_new, rd->op_old, op) \
 	)
 
-#define RFS_SET_IOP_MGT(ri, op, f) \
-	(ri->rinfo->rops ? \
-	 	RFS_ADD_OP(ri->op_new, ri->op_old, op, f) : \
-	 	RFS_REM_OP(ri->op_new, ri->op_old, op) \
-	)
+/*---------------------------------------------------------------------------*/
 
-#define RFS_SET_IOP(ri, idc, op, f) \
-	(ri->rinfo->rops ? \
-	 	RFS_SET_OP(ri->rinfo->rops->arr, idc, ri->op_new, \
-			ri->op_old, op, f) : \
-	 	RFS_REM_OP(ri->op_new, ri->op_old, op) \
-	)
+#ifdef RFS_PER_OBJECT_OPS
+
+    #define RFS_IS_IOP_SET(rf, idc) (true)
+
+    #define RFS_SET_IOP_MGT(ri, idc, op, f) \
+        (ri->rinfo->rops ? \
+            RFS_ADD_OP(ri->op_new, ri->op_old, op, f) : \
+            RFS_REM_OP(ri->op_new, ri->op_old, op) \
+        )
+
+    #define RFS_SET_IOP(ri, idc, op, f) \
+        (ri->rinfo->rops ? \
+            RFS_SET_OP(ri->rinfo->rops->arr, idc, ri->op_new, \
+                ri->op_old, op, f) : \
+            RFS_REM_OP(ri->op_new, ri->op_old, op) \
+        )
+
+#else /* RFS_PER_OBJECT_OPS */
+
+    /*
+    * for a shared operations structure we can only add new operations
+    * as the shared vector is a union of all vectors, instead of removal 
+    * operation the per-file op_bitfield is used
+    */
+
+    #define RFS_IOP_BIT(idc) (RFS_IDC_TO_OP_ID(idc) - RFS_OP_i_start)
+
+    #define RFS_IS_IOP_SET(ri, idc) (test_bit(RFS_IOP_BIT(idc), ri->op_bitfield))
+
+    #define RFS_SET_IOP(ri, idc, op, f) \
+        do { \
+            int nr = RFS_IOP_BIT(idc); \
+            if (ri->rinfo->rops && \
+                ri->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
+                if (!test_bit(nr, ri->rhops->op_bitfield) && \
+                    !test_and_set_bit(nr, ri->rhops->op_bitfield)) { \
+                    RFS_ADD_OP((*ri->rhops->new.i_op), ri->rhops->old.i_op, op, f); \
+                } \
+                set_bit(nr, ri->op_bitfield); \
+            } else if (test_bit(nr, ri->op_bitfield)) { \
+                clear_bit(nr, ri->op_bitfield); \
+            } \
+        } while(0);
+
+    #define RFS_SET_IOP_MGT(ri, idc, op, f) \
+        do { \
+            int nr = RFS_IOP_BIT(idc); \
+            if (!test_bit(nr, ri->rhops->op_bitfield) && \
+                !test_and_set_bit(nr, ri->rhops->op_bitfield)) { \
+                RFS_ADD_OP((*ri->rhops->new.i_op), ri->rhops->old.i_op, op, f); \
+            } \
+            if (!test_bit(nr, ri->op_bitfield)) \
+                set_bit(nr, ri->op_bitfield); \
+        } while(0);
+
+#endif /* !RFS_PER_OBJECT_OPS */
+
+/*---------------------------------------------------------------------------*/
 
 #define RFS_SET_AOP(ri, idc, op, f) \
 	(ri->rinfo->rops ? \
@@ -404,6 +456,7 @@ struct rfs_inode {
     #define RFS_INODE_SIGNATURE  0xABCD0002
     uint32_t   signature;
 #endif // RFS_DBG
+    struct rfs_object robject;
 	struct list_head rdentries; /* mutex */
 	struct list_head data;
 	struct inode *inode;
@@ -416,20 +469,27 @@ struct rfs_inode {
 	struct file_operations *fop_old;
     struct address_space_operations *a_ops_old;
 #endif
-	struct inode_operations op_new;
+#ifdef RFS_PER_OBJECT_OPS
+    struct inode_operations op_new;
+#else
+    struct rfs_hoperations *rhops;
+    /* a mask of hooked operations for an inode */
+    unsigned long   op_bitfield[BIT_WORD(RFS_OP_i_end-RFS_OP_i_start) + 1];
+#endif
     struct address_space_operations a_ops_new;
 	struct rfs_info *rinfo;
 	struct rfs_mutex_t mutex;
 	spinlock_t lock;
-	atomic_t count;
 	atomic_t nlink;
 	int rdentries_nr; /* mutex */
 };
 
-#define rfs_inode_find(inode) \
+#define rfs_cast_to_rinode(inode) \
 	(inode && inode->i_op && inode->i_op->rename == rfs_rename ? \
-	 rfs_inode_get(container_of(inode->i_op, struct rfs_inode, op_new)) : \
-	 NULL)
+	 container_of(inode->i_op, struct rfs_inode, op_new) : \
+     NULL)
+
+struct rfs_inode* rfs_inode_find(struct inode *inode);
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
 int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
@@ -466,18 +526,18 @@ struct rfs_file {
 	struct list_head data;
 	struct file *file;
     struct rfs_dentry *rdentry;
+#ifndef RFS_PER_OBJECT_OPS 
     struct rfs_hoperations* rhops;
-
-    /*
-     * a mask of hooked operations for a file
-     */
+    /* a mask of hooked operations for a file */
     unsigned long   op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
+#endif /* ! RFS_PER_OBJECT_OPS */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17))
 	const struct file_operations *op_old;
 #else
 	struct file_operations *op_old;
 #endif
+
 #ifdef RFS_PER_OBJECT_OPS 
     struct file_operations op_new;
 #endif /* RFS_PER_OBJECT_OPS */
@@ -493,7 +553,7 @@ struct rfs_file {
 	(file && file->f_op && file->f_op->open == rfs_open ? \
 	 container_of(file->f_op, struct rfs_file, op_new): \
      NULL)
-#endif
+#endif /* RFS_PER_OBJECT_OPS */
 
 struct rfs_file* rfs_file_find(struct file *file);
 	 
@@ -581,8 +641,7 @@ static inline void *kzalloc(size_t size, gfp_t flags)
 
 	return p;
 }
-
-#endif
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14) */
 
 static inline void *kmem_cache_zalloc(kmem_cache_t *cache, gfp_t flags)
 {
@@ -597,12 +656,12 @@ static inline void *kmem_cache_zalloc(kmem_cache_t *cache, gfp_t flags)
 	return obj;
 }       
 
-#else
+#else /* LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)) */
 
 #define rfs_rename_lock(sb) mutex_lock(&sb->s_vfs_rename_mutex)
 #define rfs_rename_unlock(sb) mutex_unlock(&sb->s_vfs_rename_mutex)
 
-#endif
+#endif /* ! LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)) */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23))
 

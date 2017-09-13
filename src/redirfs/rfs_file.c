@@ -34,15 +34,20 @@
     #pragma GCC optimize ("O0")
 #endif // RFS_DBG
 
-static void rfs_file_free(struct rfs_object *robject);
-static int rfs_release(struct inode *inode, struct file *file);
-
 static rfs_kmem_cache_t *rfs_file_cache = NULL;
+
+/*---------------------------------------------------------------------------*/
+
+static int rfs_release(struct inode *inode, struct file *file);
 
 struct file_operations rfs_file_ops = {
     .open = rfs_open,
     .release = rfs_release,
 };
+
+/*---------------------------------------------------------------------------*/
+
+static void rfs_file_free(struct rfs_object *robject);
 
 static struct rfs_object_type rfs_file_type = {
     .type = RFS_TYPE_RFILE,
@@ -93,9 +98,6 @@ struct rfs_file* rfs_file_find(struct file *file)
         return rfile;
 #endif /* RFS_PER_OBJECT_OPS */
 
-    /*
-     * fallback to a slow path in presence of third party hookers
-     */
 #ifdef RFS_USE_HASHTABLE
     robject = rfs_get_object_by_system_object(&rfs_file_table, file);
 #else
@@ -118,6 +120,8 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 	if (!rfile)
         return ERR_PTR(-ENOMEM);
         
+    rfs_object_init(&rfile->robject, &rfs_file_type, file);
+
 #ifdef RFS_DBG
     rfile->signature = RFS_FILE_SIGNATURE;
 #endif // RFS_DBG
@@ -126,14 +130,29 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 	INIT_LIST_HEAD(&rfile->data);
 	rfile->file = file;
 	spin_lock_init(&rfile->lock);
-    rfs_object_init(&rfile->robject, &rfs_file_type, file);
 
     rfile->op_old = fops_get(file->f_op);
+    DBG_BUG_ON(!rfile->op_old);
+    if (!rfile->op_old) {
+        rfs_object_put(&rfile->robject);
+        return ERR_PTR(-EINVAL);
+    }
+
 #ifdef RFS_PER_OBJECT_OPS
-	if (rfile->op_old)
-		memcpy(&rfile->op_new, rfile->op_old,
-                sizeof(struct file_operations));
-#endif /* RFS_PER_OBJECT_OPS  */
+
+    memcpy(&rfile->op_new, rfile->op_old,
+           sizeof(struct file_operations));
+    /*
+     * unconditionally register open operation to be notified
+     * of open requests, some devices do not register open
+     * operation, e.g. null_fops, but RedirFS requires
+     * open operation to be called through file_operations.
+     * Also, rfs_open hook is required for correct operation
+     * of rfs_file_find macro.
+     */
+    rfile->op_new.open = rfs_open;
+
+#else /* RFS_PER_OBJECT_OPS */
 
     rfile->rhops = rfs_create_file_ops(rfile);
     DBG_BUG_ON(IS_ERR(rfile->rhops));
@@ -144,17 +163,7 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
         return err_ptr;
     }
 
-#ifdef RFS_PER_OBJECT_OPS 
-    //
-    // unconditionally register open operation to be notified
-    // of open requests, some devices do not register open
-    // operation, e.g. null_fops, but RedirFS requires
-    // open operation to be called through file_operations.
-    // Also, rfs_open hook is required for correct operation
-    // of rfs_file_find macro.
-    //
-    rfile->op_new.open = rfs_open;
-#endif /* RFS_PER_OBJECT_OPS */
+#endif /* ! RFS_PER_OBJECT_OPS */
 
 	return rfile;
 }
@@ -197,8 +206,10 @@ static void rfs_file_free(struct rfs_object *robject)
 
     rfs_data_remove(&rfile->data);
 
+#ifndef RFS_PER_OBJECT_OPS
     if (rfile->rhops)
         rfs_object_put(&rfile->rhops->robject);
+#endif /* !RFS_PER_OBJECT_OPS */
         
 	kmem_cache_free(rfs_file_cache, rfile);
 }
@@ -207,7 +218,8 @@ static void rfs_file_free(struct rfs_object *robject)
 
 static struct rfs_file *rfs_file_add(struct file *file)
 {
-	struct rfs_file *rfile;
+    struct rfs_file *rfile;
+    int err;
 
 	rfile = rfs_file_alloc(file);
 	if (IS_ERR(rfile))
@@ -226,10 +238,15 @@ static struct rfs_file *rfs_file_add(struct file *file)
 #endif /* RFS_PER_OBJECT_OPS */
     
 #ifdef RFS_USE_HASHTABLE
-    rfs_insert_object(&rfs_file_table, &rfile->robject, false);
+    err = rfs_insert_object(&rfs_file_table, &rfile->robject, false);
 #else
-    rfs_insert_object(&rfs_file_radix_tree, &rfile->robject, false);
+    err = rfs_insert_object(&rfs_file_radix_tree, &rfile->robject, false);
 #endif
+    DBG_BUG_ON(err);
+    if (err) {
+        rfs_file_put(rfile);
+        return ERR_PTR(err);
+    }
 
 	spin_lock(&rfile->rdentry->lock);
     {
@@ -237,7 +254,9 @@ static struct rfs_file *rfs_file_add(struct file *file)
     }
     spin_unlock(&rfile->rdentry->lock);
     
+#ifndef RFS_PER_OBJECT_OPS
     rfs_keep_operations(rfile->rhops);
+#endif /* RFS_PER_OBJECT_OPS */
 
 	return rfile;
 }
@@ -348,7 +367,7 @@ int rfs_open(struct inode *inode, struct file *file)
 		rfs_file_put(rfile);
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
     
 	rfs_context_deinit(&rcont);
@@ -387,7 +406,7 @@ static int rfs_release(struct inode *inode, struct file *file)
 	rargs.args.f_release.inode = inode;
 	rargs.args.f_release.file = file;
 
-    if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rfile->op_old && rfile->op_old->release)
 			rargs.rv.rv_int = rfile->op_old->release(
@@ -397,7 +416,7 @@ static int rfs_release(struct inode *inode, struct file *file)
 			rargs.rv.rv_int = 0;
 	}
 
-    if (RFS_IS_OP_SET(rfile, rargs.type.id))
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
         
 	rfs_context_deinit(&rcont);
@@ -471,7 +490,7 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	    rargs.args.f_readdir.dirent = dirent;
 	    rargs.args.f_readdir.filldir = filldir;
 
-        if (!RFS_IS_OP_SET(rfile, rargs.type.id) ||
+        if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
             !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		    if (rfile->op_old && rfile->op_old->readdir) 
 			    rargs.rv.rv_int = rfile->op_old->readdir(
@@ -482,7 +501,7 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 			    rargs.rv.rv_int = -ENOTDIR;
 	    }
 
-        if (RFS_IS_OP_SET(rfile, rargs.type.id))
+        if (RFS_IS_FOP_SET(rfile, rargs.type.id))
             rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
             
 	    rfs_context_deinit(&rcont);
@@ -525,6 +544,7 @@ static void rfs_file_set_ops_reg(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_UNLOCKED_IOCTL, unlocked_ioctl, rfs_unlocked_ioctl);
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_COMPAT_IOCTL, compat_ioctl, rfs_compat_ioctl);
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_MMAP, mmap, rfs_mmap);
+#ifdef RFS_PER_OBJECT_OPS 
     /*
      * the open opeartion is called through rfile->op_new.open registered on inode lookup
      * then unconditionally set for file_operations and should not be removed as used as
@@ -532,6 +552,7 @@ static void rfs_file_set_ops_reg(struct rfs_file *rfile)
      *
      * RFS_SET_FOP(rfile, REDIRFS_REG_FOP_OPEN, open, rfs_open);
      */
+#endif /* RFS_PER_OBJECT_OPS  */
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FLUSH, flush, rfs_flush);
     RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FSYNC, fsync, rfs_fsync);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_fasync), fasync, rfs_fasync);
@@ -565,17 +586,17 @@ static void rfs_file_set_ops_dir(struct rfs_file *rfile)
 #else /* RFS_PER_OBJECT_OPS  */
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
-    RFS_SET_FOP_FORCED(rfile,
-                       RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_readdir),
-                       readdir, rfs_readdir);
+    RFS_SET_FOP_MGT(rfile,
+                    RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_readdir),
+                    readdir, rfs_readdir);
 #else
-    RFS_SET_FOP_FORCED(rfile,
-                       RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate),
-                       iterate, rfs_iterate);
+    RFS_SET_FOP_MGT(rfile,
+                    RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate),
+                    iterate, rfs_iterate);
 
-    RFS_SET_FOP_FORCED(rfile,
-                       RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate_shared),
-                       iterate_shared, rfs_iterate_shared);
+    RFS_SET_FOP_MGT(rfile,
+                    RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate_shared),
+                    iterate_shared, rfs_iterate_shared);
 #endif
 
 #endif /* !RFS_PER_OBJECT_OPS  */
@@ -602,6 +623,7 @@ static void rfs_file_set_ops_chr(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_unlocked_ioctl), unlocked_ioctl, rfs_unlocked_ioctl);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_compat_ioctl), compat_ioctl, rfs_compat_ioctl);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_mmap), mmap, rfs_mmap);
+#ifdef RFS_PER_OBJECT_OPS 
     /*
      * the open opeartion is called through rfile->op_new.open registered on inode lookup
      * then unconditionally set for file_operations and should not be removed as used as
@@ -609,6 +631,7 @@ static void rfs_file_set_ops_chr(struct rfs_file *rfile)
      *
      * RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_open), open, rfs_open);
      */
+#endif /*RFS_PER_OBJECT_OPS*/
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_flush), flush, rfs_flush);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fsync), fsync, rfs_fsync);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fasync), fasync, rfs_fasync);
@@ -672,9 +695,9 @@ void rfs_file_set_ops(struct rfs_file *rfile)
 #ifdef RFS_PER_OBJECT_OPS
     rfile->op_new.release = rfs_release;
 #else
-    RFS_SET_FOP_FORCED(rfile,
-                       RFS_OP_IDC(RFS_INODE_MAX, RFS_OP_f_release),
-                       release, rfs_release);
+    RFS_SET_FOP_MGT(rfile,
+                    RFS_OP_IDC(RFS_INODE_MAX, RFS_OP_f_release),
+                    release, rfs_release);
 #endif /* !RFS_PER_OBJECT_OPS */
 }
 #pragma GCC pop_options

@@ -280,9 +280,6 @@ int rfs_insert_object(
     struct rfs_radix_tree   *radix_tree,
     struct rfs_object       *rfs_object,
     bool                    check_for_duplicate)
-/*
-* -EEXIST is returned in case of a duplicate
-*/
 {
     int    err;
 
