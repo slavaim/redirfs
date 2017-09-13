@@ -468,7 +468,8 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
     rargs.args.i_lookup.flags = flags;
 #endif
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->lookup) {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 			rargs.rv.rv_dentry = rinode->op_old->lookup(
@@ -528,7 +529,8 @@ static int rfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 	rargs.args.i_mkdir.dentry = dentry;
 	rargs.args.i_mkdir.mode = mode;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->mkdir)
 			rargs.rv.rv_int = rinode->op_old->mkdir(
 					rargs.args.i_mkdir.dir,
@@ -582,7 +584,8 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
     rargs.args.i_create.excl = excl;
 #endif
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->create) {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 			rargs.rv.rv_int = rinode->op_old->create(
@@ -636,7 +639,8 @@ static int rfs_link(struct dentry *old_dentry, struct inode *dir,
 	rargs.args.i_link.dir = dir;
 	rargs.args.i_link.dentry = dentry;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->link)
 			rargs.rv.rv_int = rinode->op_old->link(
 					rargs.args.i_link.old_dentry,
@@ -680,7 +684,8 @@ static int rfs_symlink(struct inode *dir, struct dentry *dentry,
 	rargs.args.i_symlink.dentry = dentry;
 	rargs.args.i_symlink.oldname = oldname;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->symlink)
 			rargs.rv.rv_int = rinode->op_old->symlink(
 					rargs.args.i_symlink.dir,
@@ -730,7 +735,8 @@ static int rfs_mknod(struct inode * dir, struct dentry *dentry, umode_t mode,
 	rargs.args.i_mknod.mode = mode;
 	rargs.args.i_mknod.rdev = rdev;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->mknod)
 			rargs.rv.rv_int = rinode->op_old->mknod(
 					rargs.args.i_mknod.dir,
@@ -773,7 +779,8 @@ static int rfs_unlink(struct inode *inode, struct dentry *dentry)
 	rargs.args.i_unlink.dir = inode;
 	rargs.args.i_unlink.dentry = dentry;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->unlink)
 			rargs.rv.rv_int = rinode->op_old->unlink(
 					rargs.args.i_unlink.dir,
@@ -809,7 +816,8 @@ static int rfs_rmdir(struct inode *inode, struct dentry *dentry)
 	rargs.args.i_unlink.dir = inode;
 	rargs.args.i_unlink.dentry = dentry;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->rmdir)
 			rargs.rv.rv_int = rinode->op_old->rmdir(
 					rargs.args.i_unlink.dir,
@@ -860,7 +868,8 @@ static int rfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 	rargs.args.i_permission.mask = mask;
 	rargs.args.i_permission.nd = nd;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->permission)
 			rargs.rv.rv_int = rinode->op_old->permission(
 					rargs.args.i_permission.inode,
@@ -912,7 +921,8 @@ static int rfs_permission(struct inode *inode, int mask)
 	rargs.args.i_permission.inode = inode;
 	rargs.args.i_permission.mask = mask;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->permission)
 			rargs.rv.rv_int = rinode->op_old->permission(
 					rargs.args.i_permission.inode,
@@ -964,7 +974,8 @@ static int rfs_permission(struct inode *inode, int mask, unsigned int flags)
 	rargs.args.i_permission.mask = mask;
 	rargs.args.i_permission.flags = flags;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->permission)
 			rargs.rv.rv_int = rinode->op_old->permission(
 					rargs.args.i_permission.inode,
@@ -1016,7 +1027,8 @@ static int rfs_permission(struct inode *inode, int mask)
 	rargs.args.i_permission.inode = inode;
 	rargs.args.i_permission.mask = mask;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->permission)
 			rargs.rv.rv_int = rinode->op_old->permission(
 					rargs.args.i_permission.inode,
@@ -1088,7 +1100,8 @@ static int rfs_setattr(struct dentry *dentry, struct iattr *iattr)
 	rargs.args.i_setattr.dentry = dentry;
 	rargs.args.i_setattr.iattr = iattr;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rinode->op_old && rinode->op_old->setattr)
 			rargs.rv.rv_int = rinode->op_old->setattr(
 					rargs.args.i_setattr.dentry,
@@ -1206,10 +1219,12 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	rargs.args.i_rename.new_dir = new_dir;
 	rargs.args.i_rename.new_dentry = new_dentry;
 
-	if (rfs_precall_flts(rinfo_old->rchain, &rcont_old, &rargs))
+    if (RFS_IS_IOP_SET(rinode_old, rargs.type.id) &&
+        rfs_precall_flts(rinfo_old->rchain, &rcont_old, &rargs))
 		goto skip;
 
-	if (rfs_precall_flts_rename(rinfo_new, &rcont_new, &rargs))
+    if (RFS_IS_IOP_SET(rinode_new, rargs.type.id) &&
+        rfs_precall_flts_rename(rinfo_new, &rcont_new, &rargs))
 		goto skip;
 
 	if (rinode_old->op_old && rinode_old->op_old->rename)
@@ -1277,10 +1292,12 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	rargs.args.i_rename.new_dentry = new_dentry;
     rargs.args.i_rename.flags = flags;
 
-	if (rfs_precall_flts(rinfo_old->rchain, &rcont_old, &rargs))
+    if (RFS_IS_IOP_SET(rinode_old, rargs.type.id) &&
+        rfs_precall_flts(rinfo_old->rchain, &rcont_old, &rargs))
 		goto skip;
 
-	if (rfs_precall_flts_rename(rinfo_new, &rcont_new, &rargs))
+    if (RFS_IS_IOP_SET(rinode_new, rargs.type.id) &&
+        rfs_precall_flts_rename(rinfo_new, &rcont_new, &rargs))
 		goto skip;
 
 	if (rinode_old->op_old && rinode_old->op_old->rename)
@@ -1313,6 +1330,16 @@ skip:
 	return rargs.rv.rv_int;
 }
 #endif
+
+/*---------------------------------------------------------------------------*/
+
+/* 
+ * switch on the agressive optimization to reduce the frame size 
+ * bloating by multiple inline functions and local variables in
+ * RFS_SET_IOP macro
+ */
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
 
 static void rfs_inode_set_ops_reg(struct rfs_inode *rinode)
 {
@@ -1415,6 +1442,10 @@ void rfs_inode_set_ops(struct rfs_inode *rinode)
     }
 	spin_unlock(&rinode->lock);
 }
+
+#pragma GCC pop_options
+
+/*---------------------------------------------------------------------------*/
 
 #ifdef RFS_DBG
     #pragma GCC pop_options
