@@ -48,7 +48,7 @@ struct rfs_radix_tree   rfs_inode_radix_tree = {
 void rfs_inode_free(struct rfs_object *robject);
 
 static struct rfs_object_type rfs_inode_type = {
-    .type = RFS_TYPE_RFILE,
+    .type = RFS_TYPE_RINODE,
     .free = rfs_inode_free,
     };
     

@@ -55,12 +55,16 @@ struct rfs_hoperations {
     unsigned int        flags;
 
     /* a bitfield of hooked operations */
-    unsigned long  op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
+    union {
+        unsigned long  f_op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
+        unsigned long  i_op_bitfield[BIT_WORD(RFS_OP_i_end-RFS_OP_i_start) + 1];
+    };
 
     /* a pointer to the old operations */
     union {
-        const struct file_operations    *f_op; /* referenced */
-        const struct inode_operations   *i_op;
+        const struct file_operations            *f_op; /* referenced */
+        const struct inode_operations           *i_op;
+        const struct address_space_operations   *a_op;
     } old;
 
     /*
@@ -68,8 +72,9 @@ struct rfs_hoperations {
      * normally allocated just after the rfs_hoperations
      */
     union {
-        struct file_operations          *f_op;
-        struct inode_operations         *i_op;
+        struct file_operations              *f_op;
+        struct inode_operations             *i_op;
+        struct address_space_operations     *a_op;
     } new;
 };
 
