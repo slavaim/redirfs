@@ -437,6 +437,10 @@ int rfs_info_set(struct dentry *dentry, struct rfs_info *rinfo,
 int rfs_info_reset(struct dentry *dentry, struct rfs_info *rinfo);
 
 struct rfs_dentry {
+#ifdef RFS_DBG
+    #define RFS_DENTRY_SIGNATURE  0xABCD0005
+    uint32_t   signature;
+#endif /* RFS_DBG */
 	struct list_head rinode_list;
 	struct list_head rfiles;
 	struct list_head data;

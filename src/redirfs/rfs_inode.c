@@ -513,7 +513,9 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
         }
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	if (IS_ERR(rargs.rv.rv_dentry))
@@ -565,7 +567,9 @@ static int rfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 			rargs.rv.rv_int = -ENOSYS;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	if (!rargs.rv.rv_int) {
@@ -630,7 +634,9 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
         }
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	if (!rargs.rv.rv_int) {
@@ -675,8 +681,10 @@ static int rfs_link(struct dentry *old_dentry, struct inode *dir,
 			rargs.rv.rv_int = -ENOSYS;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
-	rfs_context_deinit(&rcont);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+	    rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
 
 	if (!rargs.rv.rv_int) {
 		if (rfs_dcache_rdentry_add(dentry, rinfo))
@@ -720,7 +728,9 @@ static int rfs_symlink(struct inode *dir, struct dentry *dentry,
 			rargs.rv.rv_int = -ENOSYS;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	if (!rargs.rv.rv_int) {
@@ -772,7 +782,9 @@ static int rfs_mknod(struct inode * dir, struct dentry *dentry, umode_t mode,
 			rargs.rv.rv_int = -ENOSYS;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	if (!rargs.rv.rv_int) {
@@ -814,7 +826,9 @@ static int rfs_unlink(struct inode *inode, struct dentry *dentry)
 			rargs.rv.rv_int = -ENOSYS;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_inode_put(rinode);
@@ -851,7 +865,9 @@ static int rfs_rmdir(struct inode *inode, struct dentry *dentry)
 			rargs.rv.rv_int = -ENOSYS;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_inode_put(rinode);
@@ -905,7 +921,9 @@ static int rfs_permission(struct inode *inode, int mask, struct nameidata *nd)
 					NULL);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_inode_put(rinode);
@@ -957,7 +975,9 @@ static int rfs_permission(struct inode *inode, int mask)
 					NULL);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_inode_put(rinode);
@@ -1011,7 +1031,9 @@ static int rfs_permission(struct inode *inode, int mask, unsigned int flags)
 					flags, NULL);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_inode_put(rinode);
@@ -1062,7 +1084,9 @@ static int rfs_permission(struct inode *inode, int mask)
 			rargs.rv.rv_int = generic_permission(inode, submask);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_inode_put(rinode);
@@ -1135,7 +1159,9 @@ static int rfs_setattr(struct dentry *dentry, struct iattr *iattr)
 			rargs.rv.rv_int = rfs_setattr_default(dentry, iattr);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_inode_put(rinode);
@@ -1269,8 +1295,10 @@ skip:
 				rargs.args.i_rename.new_dir,
 				rargs.args.i_rename.new_dentry);
 
-	rfs_postcall_flts_rename(rinfo_new, &rcont_new, &rargs);
-	rfs_postcall_flts(rinfo_old->rchain, &rcont_old, &rargs);
+    if (RFS_IS_IOP_SET(rinode_new, rargs.type.id))
+        rfs_postcall_flts_rename(rinfo_new, &rcont_new, &rargs);
+    if (RFS_IS_IOP_SET(rinode_old, rargs.type.id))
+	    rfs_postcall_flts(rinfo_old->rchain, &rcont_old, &rargs);
 
 	rfs_context_deinit(&rcont_old);
 	rfs_context_deinit(&rcont_new);
@@ -1343,8 +1371,10 @@ skip:
 				rargs.args.i_rename.new_dir,
 				rargs.args.i_rename.new_dentry);
 
-	rfs_postcall_flts_rename(rinfo_new, &rcont_new, &rargs);
-	rfs_postcall_flts(rinfo_old->rchain, &rcont_old, &rargs);
+    if (RFS_IS_IOP_SET(rinode_new, rargs.type.id))
+        rfs_postcall_flts_rename(rinfo_new, &rcont_new, &rargs);
+    if (RFS_IS_IOP_SET(rinode_old, rargs.type.id))
+	    rfs_postcall_flts(rinfo_old->rchain, &rcont_old, &rargs);
 
 	rfs_context_deinit(&rcont_old);
 	rfs_context_deinit(&rcont_new);

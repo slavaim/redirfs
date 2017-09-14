@@ -63,7 +63,9 @@ int rfs_readpage(struct file *file,
 			rargs.rv.rv_int = -EIO;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
     rfs_file_put(rfile);
@@ -113,7 +115,9 @@ int rfs_readpages(struct file *file,
 			rargs.rv.rv_int = -EIO;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
     rfs_file_put(rfile);
@@ -150,7 +154,9 @@ int rfs_writepages(struct address_space *mapping,
 			rargs.rv.rv_int = -EIO;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_info_put(rinfo);
@@ -190,7 +196,9 @@ int rfs_set_page_dirty(struct page *page)
 			rargs.rv.rv_int = -EIO;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_info_put(rinfo);
@@ -248,7 +256,9 @@ int rfs_write_begin(struct file *file,
 			rargs.rv.rv_int = -EIO;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
     rfs_file_put(rfile);
@@ -307,7 +317,9 @@ int rfs_write_end(struct file *file,
 			rargs.rv.rv_int = -EIO;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
     rfs_file_put(rfile);
@@ -344,7 +356,9 @@ sector_t rfs_bmap(struct address_space *mapping,
 			rargs.rv.rv_int = -EIO;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_info_put(rinfo);
@@ -388,7 +402,9 @@ void rfs_invalidatepage(struct page *page,
                     rargs.args.a_invalidatepage.length);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_info_put(rinfo);
@@ -430,7 +446,9 @@ int rfs_releasepage(struct page *page,
 			    rargs.rv.rv_int = -EIO;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_info_put(rinfo);
