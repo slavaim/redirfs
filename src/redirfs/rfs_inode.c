@@ -122,21 +122,21 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
                 
 #else /* RFS_PER_OBJECT_OPS */
                 
-    rinode->rhops_i = rfs_create_inode_ops(rinode->op_old);
-    DBG_BUG_ON(IS_ERR(rinode->rhops_i));
-    if (IS_ERR(rinode->rhops_i)) {
-        void *err_ptr = rinode->rhops_i;
-        rinode->rhops_i = NULL;
+    rinode->i_rhops = rfs_create_inode_ops(rinode->op_old);
+    DBG_BUG_ON(IS_ERR(rinode->i_rhops));
+    if (IS_ERR(rinode->i_rhops)) {
+        void *err_ptr = rinode->i_rhops;
+        rinode->i_rhops = NULL;
         rfs_object_put(&rinode->robject);
         return err_ptr;
     }
 
     if (rinode->a_op_old) {
-        rinode->rhops_a = rfs_create_address_space_ops(rinode->a_op_old);
-        DBG_BUG_ON(IS_ERR(rinode->rhops_a));
-        if (IS_ERR(rinode->rhops_a)) {
-            void *err_ptr = rinode->rhops_a;
-            rinode->rhops_a = NULL;
+        rinode->a_rhops = rfs_create_address_space_ops(rinode->a_op_old);
+        DBG_BUG_ON(IS_ERR(rinode->a_rhops));
+        if (IS_ERR(rinode->a_rhops)) {
+            void *err_ptr = rinode->a_rhops;
+            rinode->a_rhops = NULL;
             rfs_object_put(&rinode->robject);
             return err_ptr;
         }
@@ -180,10 +180,10 @@ void rfs_inode_free(struct rfs_object *robject)
     DBG_BUG_ON(RFS_INODE_SIGNATURE != rinode->signature);
 
 #ifndef RFS_PER_OBJECT_OPS
-    if (rinode->rhops_i)
-        rfs_object_put(&rinode->rhops_i->robject);
-    if (rinode->rhops_a)
-        rfs_object_put(&rinode->rhops_a->robject);
+    if (rinode->i_rhops)
+        rfs_object_put(&rinode->i_rhops->robject);
+    if (rinode->a_rhops)
+        rfs_object_put(&rinode->a_rhops->robject);
 #endif /* !RFS_PER_OBJECT_OPS */
 
 	rfs_info_put(rinode->rinfo);
@@ -227,15 +227,15 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 #ifdef RFS_PER_OBJECT_OPS
             inode->i_op = &ri_new->op_new;
 #else /* RFS_PER_OBJECT_OPS */
-            inode->i_op = ri_new->rhops_i->new.i_op;
+            inode->i_op = ri_new->i_rhops->new.i_op;
 #endif /* !RFS_PER_OBJECT_OPS */
 
             if (inode->i_mapping && inode->i_mapping->a_ops) {
 #ifdef RFS_PER_OBJECT_OPS
                 inode->i_mapping->a_ops = &ri_new->a_op_new;
 #else /* RFS_PER_OBJECT_OPS */
-                DBG_BUG_ON(!ri_new->rhops_a);
-                inode->i_mapping->a_ops = ri_new->rhops_a->new.a_op;
+                DBG_BUG_ON(!ri_new->a_rhops);
+                inode->i_mapping->a_ops = ri_new->a_rhops->new.a_op;
 #endif /* !RFS_PER_OBJECT_OPS */
             }
 
@@ -259,9 +259,9 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
         ri = ERR_PTR(err);
     } else if (ri == ri_new) {
 #ifndef RFS_PER_OBJECT_OPS
-        rfs_keep_operations(ri_new->rhops_i);
-        if (ri_new->rhops_a)
-            rfs_keep_operations(ri_new->rhops_a);
+        rfs_keep_operations(ri_new->i_rhops);
+        if (ri_new->a_rhops)
+            rfs_keep_operations(ri_new->a_rhops);
 #endif /* RFS_PER_OBJECT_OPS */
     }
 
@@ -282,9 +282,9 @@ void rfs_inode_del(struct rfs_inode *rinode)
     
     rfs_remove_object(&rinode->robject);
 #ifndef RFS_PER_OBJECT_OPS
-    rfs_unkeep_operations(rinode->rhops_i);
-    if (rinode->rhops_a)
-        rfs_unkeep_operations(rinode->rhops_a);
+    rfs_unkeep_operations(rinode->i_rhops);
+    if (rinode->a_rhops)
+        rfs_unkeep_operations(rinode->a_rhops);
 #endif /* RFS_PER_OBJECT_OPS */
 	rfs_inode_put(rinode);
 }

@@ -31,7 +31,28 @@
     #pragma GCC optimize ("O0")
 #endif // RFS_DBG
 
+/*---------------------------------------------------------------------------*/
+
 static rfs_kmem_cache_t *rfs_dentry_cache = NULL;
+
+/*---------------------------------------------------------------------------*/
+
+static void rfs_dentry_free(struct rfs_object *robject);
+
+static struct rfs_object_type rfs_dentry_type = {
+    .type = RFS_TYPE_RDENTRY,
+    .free = rfs_dentry_free,
+};
+
+/*---------------------------------------------------------------------------*/
+
+struct rfs_radix_tree   rfs_dentry_radix_tree = {
+    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .lock = __SPIN_LOCK_INITIALIZER(rfs_dentry_radix_tree.lock),
+    .rfs_type = RFS_TYPE_RDENTRY,
+    };
+
+/*---------------------------------------------------------------------------*/
 
 static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
 {
@@ -41,13 +62,18 @@ static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
 	if (!rdentry)
 		return ERR_PTR(-ENOMEM);
 
+    rfs_object_init(&rdentry->robject, &rfs_dentry_type, dentry);
+
+#ifdef RFS_DBG
+    rdentry->signature = RFS_DENTRY_SIGNATURE;
+#endif // RFS_DBG
+
 	INIT_LIST_HEAD(&rdentry->rinode_list);
 	INIT_LIST_HEAD(&rdentry->rfiles);
 	INIT_LIST_HEAD(&rdentry->data);
 	rdentry->dentry = dentry;
 	rdentry->op_old = dentry->d_op;
 	spin_lock_init(&rdentry->lock);
-	atomic_set(&rdentry->count, 1);
 
 	if (dentry->d_op)
 		memcpy(&rdentry->op_new, dentry->d_op,
@@ -58,13 +84,14 @@ static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
 	return rdentry;
 }
 
+/*---------------------------------------------------------------------------*/
+
 struct rfs_dentry *rfs_dentry_get(struct rfs_dentry *rdentry)
 {
 	if (!rdentry || IS_ERR(rdentry))
 		return NULL;
 
-	BUG_ON(!atomic_read(&rdentry->count));
-	atomic_inc(&rdentry->count);
+	rfs_object_get(&rdentry->robject);
 
 	return rdentry;
 }
@@ -74,9 +101,18 @@ void rfs_dentry_put(struct rfs_dentry *rdentry)
 	if (!rdentry || IS_ERR(rdentry))
 		return;
 
-	BUG_ON(!atomic_read(&rdentry->count));
-	if (!atomic_dec_and_test(&rdentry->count))
-		return;
+	rfs_object_put(&rdentry->robject);
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void rfs_dentry_free(struct rfs_object *robject)
+{
+    struct rfs_dentry *rdentry = container_of(robject,
+                                              struct rfs_dentry,
+                                              robject);
+
+    DBG_BUG_ON(RFS_DENTRY_SIGNATURE != rdentry->signature);
 
 	rfs_inode_put(rdentry->rinode);
 	rfs_info_put(rdentry->rinfo);
@@ -84,6 +120,8 @@ void rfs_dentry_put(struct rfs_dentry *rdentry)
 	rfs_data_remove(&rdentry->data);
 	kmem_cache_free(rfs_dentry_cache, rdentry);
 }
+
+/*---------------------------------------------------------------------------*/
 
 struct rfs_dentry *rfs_dentry_add(struct dentry *dentry, struct rfs_info *rinfo)
 {

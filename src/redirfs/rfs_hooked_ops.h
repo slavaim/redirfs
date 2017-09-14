@@ -29,11 +29,12 @@
 struct rfs_file;
 struct rfs_inode;
   
-#define RFS_OPS_INSERTED (1)
+#define RFS_OPS_INSERTED (1<<0)
 #define RFS_OPS_REMOVED  (1<<1)
 #define RFS_OPS_FILE     (1<<2)
 #define RFS_OPS_INODE    (1<<3)
 #define RFS_OPS_AS       (1<<4)
+#define RFS_OPS_DENTRY   (1<<5)
 
 struct rfs_hoperations {
 

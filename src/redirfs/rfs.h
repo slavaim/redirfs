@@ -97,9 +97,9 @@
             int nr = RFS_FOP_BIT(idc); \
             if (rf->rdentry->rinfo->rops && \
                 rf->rdentry->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
-                if (!test_bit(nr, rf->rhops_f->f_op_bitfield) && \
-                    !test_and_set_bit(nr, rf->rhops_f->f_op_bitfield)) { \
-                    RFS_ADD_OP((*rf->rhops_f->new.f_op), rf->rhops_f->old.f_op, op, f); \
+                if (!test_bit(nr, rf->f_rhops->f_op_bitfield) && \
+                    !test_and_set_bit(nr, rf->f_rhops->f_op_bitfield)) { \
+                    RFS_ADD_OP((*rf->f_rhops->new.f_op), rf->f_rhops->old.f_op, op, f); \
                 } \
                 set_bit(nr, rf->f_op_bitfield); \
             } else if (test_bit(nr, rf->f_op_bitfield)) { \
@@ -110,9 +110,9 @@
     #define RFS_SET_FOP_MGT(rf, idc, op, f) \
         do { \
             int nr = RFS_FOP_BIT(idc); \
-            if (!test_bit(nr, rf->rhops_f->f_op_bitfield) && \
-                !test_and_set_bit(nr, rf->rhops_f->f_op_bitfield)) { \
-                RFS_ADD_OP((*rf->rhops_f->new.f_op), rf->rhops_f->old.f_op, op, f); \
+            if (!test_bit(nr, rf->f_rhops->f_op_bitfield) && \
+                !test_and_set_bit(nr, rf->f_rhops->f_op_bitfield)) { \
+                RFS_ADD_OP((*rf->f_rhops->new.f_op), rf->f_rhops->old.f_op, op, f); \
             } \
             if (!test_bit(nr, rf->f_op_bitfield)) \
                 set_bit(nr, rf->f_op_bitfield); \
@@ -165,9 +165,9 @@
             int nr = RFS_IOP_BIT(idc); \
             if (ri->rinfo->rops && \
                 ri->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
-                if (!test_bit(nr, ri->rhops_i->i_op_bitfield) && \
-                    !test_and_set_bit(nr, ri->rhops_i->i_op_bitfield)) { \
-                    RFS_ADD_OP((*ri->rhops_i->new.i_op), ri->rhops_i->old.i_op, op, f); \
+                if (!test_bit(nr, ri->i_rhops->i_op_bitfield) && \
+                    !test_and_set_bit(nr, ri->i_rhops->i_op_bitfield)) { \
+                    RFS_ADD_OP((*ri->i_rhops->new.i_op), ri->i_rhops->old.i_op, op, f); \
                 } \
                 set_bit(nr, ri->i_op_bitfield); \
             } else if (test_bit(nr, ri->i_op_bitfield)) { \
@@ -178,9 +178,9 @@
     #define RFS_SET_IOP_MGT(ri, idc, op, f) \
         do { \
             int nr = RFS_IOP_BIT(idc); \
-            if (!test_bit(nr, ri->rhops_i->i_op_bitfield) && \
-                !test_and_set_bit(nr, ri->rhops_i->i_op_bitfield)) { \
-                RFS_ADD_OP((*ri->rhops_i->new.i_op), ri->rhops_i->old.i_op, op, f); \
+            if (!test_bit(nr, ri->i_rhops->i_op_bitfield) && \
+                !test_and_set_bit(nr, ri->i_rhops->i_op_bitfield)) { \
+                RFS_ADD_OP((*ri->i_rhops->new.i_op), ri->i_rhops->old.i_op, op, f); \
             } \
             if (!test_bit(nr, ri->i_op_bitfield)) \
                 set_bit(nr, ri->i_op_bitfield); \
@@ -212,9 +212,9 @@
             int nr = RFS_AOP_BIT(idc); \
             if (ri->rinfo->rops && \
                 ri->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
-                if (!test_bit(nr, ri->rhops_a->a_op_bitfield) && \
-                    !test_and_set_bit(nr, ri->rhops_a->a_op_bitfield)) { \
-                    RFS_ADD_OP((*ri->rhops_a->new.a_op), ri->rhops_a->old.a_op, op, f); \
+                if (!test_bit(nr, ri->a_rhops->a_op_bitfield) && \
+                    !test_and_set_bit(nr, ri->a_rhops->a_op_bitfield)) { \
+                    RFS_ADD_OP((*ri->a_rhops->new.a_op), ri->a_rhops->old.a_op, op, f); \
                 } \
                 set_bit(nr, ri->a_op_bitfield); \
             } else if (test_bit(nr, ri->a_op_bitfield)) { \
@@ -441,6 +441,7 @@ struct rfs_dentry {
     #define RFS_DENTRY_SIGNATURE  0xABCD0005
     uint32_t   signature;
 #endif /* RFS_DBG */
+    struct rfs_object robject;
 	struct list_head rinode_list;
 	struct list_head rfiles;
 	struct list_head data;
@@ -450,11 +451,16 @@ struct rfs_dentry {
 #else
 	struct dentry_operations *op_old;
 #endif
-	struct dentry_operations op_new;
+//#ifdef RFS_PER_OBJECT_OPS
+    struct dentry_operations op_new;
+//#else /* RFS_PER_OBJECT_OPS */
+//    struct rfs_hoperations* rhops_d;
+//    /* a mask of hooked operations for a file */
+//    unsigned long   d_op_bitfield[BIT_WORD(RFS_OP_d_end-RFS_OP_d_start) + 1];
+//#endif /* !RFS_PER_OBJECT_OPS */
 	struct rfs_inode *rinode;
 	struct rfs_info *rinfo;
 	spinlock_t lock;
-	atomic_t count;
 };
 
 #define rfs_dentry_find(dentry) \
@@ -504,8 +510,8 @@ struct rfs_inode {
     struct inode_operations         op_new;
     struct address_space_operations a_op_new;
 #else
-    struct rfs_hoperations *rhops_i;
-    struct rfs_hoperations *rhops_a;
+    struct rfs_hoperations *i_rhops;
+    struct rfs_hoperations *a_rhops;
     /* a mask of hooked operations for an inode */
     unsigned long   i_op_bitfield[BIT_WORD(RFS_OP_i_end-RFS_OP_i_start) + 1];
     unsigned long   a_op_bitfield[BIT_WORD(RFS_OP_a_end-RFS_OP_a_start) + 1];
@@ -560,7 +566,7 @@ struct rfs_file {
 	struct file *file;
     struct rfs_dentry *rdentry;
 #ifndef RFS_PER_OBJECT_OPS 
-    struct rfs_hoperations* rhops_f;
+    struct rfs_hoperations* f_rhops;
     /* a mask of hooked operations for a file */
     unsigned long   f_op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
 #endif /* ! RFS_PER_OBJECT_OPS */
