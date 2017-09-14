@@ -97,9 +97,9 @@
             int nr = RFS_FOP_BIT(idc); \
             if (rf->rdentry->rinfo->rops && \
                 rf->rdentry->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
-                if (!test_bit(nr, rf->rhops->f_op_bitfield) && \
-                    !test_and_set_bit(nr, rf->rhops->f_op_bitfield)) { \
-                    RFS_ADD_OP((*rf->rhops->new.f_op), rf->rhops->old.f_op, op, f); \
+                if (!test_bit(nr, rf->rhops_f->f_op_bitfield) && \
+                    !test_and_set_bit(nr, rf->rhops_f->f_op_bitfield)) { \
+                    RFS_ADD_OP((*rf->rhops_f->new.f_op), rf->rhops_f->old.f_op, op, f); \
                 } \
                 set_bit(nr, rf->f_op_bitfield); \
             } else if (test_bit(nr, rf->f_op_bitfield)) { \
@@ -110,9 +110,9 @@
     #define RFS_SET_FOP_MGT(rf, idc, op, f) \
         do { \
             int nr = RFS_FOP_BIT(idc); \
-            if (!test_bit(nr, rf->rhops->f_op_bitfield) && \
-                !test_and_set_bit(nr, rf->rhops->f_op_bitfield)) { \
-                RFS_ADD_OP((*rf->rhops->new.f_op), rf->rhops->old.f_op, op, f); \
+            if (!test_bit(nr, rf->rhops_f->f_op_bitfield) && \
+                !test_and_set_bit(nr, rf->rhops_f->f_op_bitfield)) { \
+                RFS_ADD_OP((*rf->rhops_f->new.f_op), rf->rhops_f->old.f_op, op, f); \
             } \
             if (!test_bit(nr, rf->f_op_bitfield)) \
                 set_bit(nr, rf->f_op_bitfield); \
@@ -165,9 +165,9 @@
             int nr = RFS_IOP_BIT(idc); \
             if (ri->rinfo->rops && \
                 ri->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
-                if (!test_bit(nr, ri->rhops->i_op_bitfield) && \
-                    !test_and_set_bit(nr, ri->rhops->i_op_bitfield)) { \
-                    RFS_ADD_OP((*ri->rhops->new.i_op), ri->rhops->old.i_op, op, f); \
+                if (!test_bit(nr, ri->rhops_i->i_op_bitfield) && \
+                    !test_and_set_bit(nr, ri->rhops_i->i_op_bitfield)) { \
+                    RFS_ADD_OP((*ri->rhops_i->new.i_op), ri->rhops_i->old.i_op, op, f); \
                 } \
                 set_bit(nr, ri->i_op_bitfield); \
             } else if (test_bit(nr, ri->i_op_bitfield)) { \
@@ -178,9 +178,9 @@
     #define RFS_SET_IOP_MGT(ri, idc, op, f) \
         do { \
             int nr = RFS_IOP_BIT(idc); \
-            if (!test_bit(nr, ri->rhops->i_op_bitfield) && \
-                !test_and_set_bit(nr, ri->rhops->i_op_bitfield)) { \
-                RFS_ADD_OP((*ri->rhops->new.i_op), ri->rhops->old.i_op, op, f); \
+            if (!test_bit(nr, ri->rhops_i->i_op_bitfield) && \
+                !test_and_set_bit(nr, ri->rhops_i->i_op_bitfield)) { \
+                RFS_ADD_OP((*ri->rhops_i->new.i_op), ri->rhops_i->old.i_op, op, f); \
             } \
             if (!test_bit(nr, ri->i_op_bitfield)) \
                 set_bit(nr, ri->i_op_bitfield); \
@@ -472,9 +472,11 @@ struct rfs_inode {
 #ifdef RFS_PER_OBJECT_OPS
     struct inode_operations op_new;
 #else
-    struct rfs_hoperations *rhops;
+    struct rfs_hoperations *rhops_i;
+    struct rfs_hoperations *rhops_a;
     /* a mask of hooked operations for an inode */
     unsigned long   i_op_bitfield[BIT_WORD(RFS_OP_i_end-RFS_OP_i_start) + 1];
+    unsigned long   a_op_bitfield[BIT_WORD(RFS_OP_a_end-RFS_OP_a_start) + 1];
 #endif
     struct address_space_operations a_ops_new;
 	struct rfs_info *rinfo;
@@ -527,7 +529,7 @@ struct rfs_file {
 	struct file *file;
     struct rfs_dentry *rdentry;
 #ifndef RFS_PER_OBJECT_OPS 
-    struct rfs_hoperations* rhops;
+    struct rfs_hoperations* rhops_f;
     /* a mask of hooked operations for a file */
     unsigned long   f_op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
 #endif /* ! RFS_PER_OBJECT_OPS */

@@ -58,6 +58,7 @@ struct rfs_hoperations {
     union {
         unsigned long  f_op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
         unsigned long  i_op_bitfield[BIT_WORD(RFS_OP_i_end-RFS_OP_i_start) + 1];
+        unsigned long  a_op_bitfield[BIT_WORD(RFS_OP_a_end-RFS_OP_a_start) + 1];
     };
 
     /* a pointer to the old operations */

@@ -154,11 +154,11 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 
 #else /* RFS_PER_OBJECT_OPS */
 
-    rfile->rhops = rfs_create_file_ops(rfile);
-    DBG_BUG_ON(IS_ERR(rfile->rhops));
-    if (IS_ERR(rfile->rhops)) {
-        void* err_ptr = rfile->rhops;
-        rfile->rhops = NULL;
+    rfile->rhops_f = rfs_create_file_ops(rfile);
+    DBG_BUG_ON(IS_ERR(rfile->rhops_f));
+    if (IS_ERR(rfile->rhops_f)) {
+        void* err_ptr = rfile->rhops_f;
+        rfile->rhops_f = NULL;
         rfs_object_put(&rfile->robject);
         return err_ptr;
     }
@@ -207,8 +207,8 @@ static void rfs_file_free(struct rfs_object *robject)
     rfs_data_remove(&rfile->data);
 
 #ifndef RFS_PER_OBJECT_OPS
-    if (rfile->rhops)
-        rfs_object_put(&rfile->rhops->robject);
+    if (rfile->rhops_f)
+        rfs_object_put(&rfile->rhops_f->robject);
 #endif /* !RFS_PER_OBJECT_OPS */
         
 	kmem_cache_free(rfs_file_cache, rfile);
@@ -234,7 +234,7 @@ static struct rfs_file *rfs_file_add(struct file *file)
 #ifdef RFS_PER_OBJECT_OPS 
     file->f_op = &rfile->op_new;
 #else
-    file->f_op = rfile->rhops->new.f_op;
+    file->f_op = rfile->rhops_f->new.f_op;
 #endif /* RFS_PER_OBJECT_OPS */
     
 #ifdef RFS_USE_HASHTABLE
@@ -255,7 +255,7 @@ static struct rfs_file *rfs_file_add(struct file *file)
     spin_unlock(&rfile->rdentry->lock);
     
 #ifndef RFS_PER_OBJECT_OPS
-    rfs_keep_operations(rfile->rhops);
+    rfs_keep_operations(rfile->rhops_f);
 #endif /* RFS_PER_OBJECT_OPS */
 
 	return rfile;
@@ -270,9 +270,9 @@ static void rfs_file_del(struct rfs_file *rfile)
 #ifdef RFS_PER_OBJECT_OPS 
     rfile->file->f_op = fops_get(rfile->op_old);
 #else
-    if (rfile->rhops) {
-        rfile->file->f_op = fops_get(rfile->rhops->old.f_op);
-        rfs_unkeep_operations(rfile->rhops);
+    if (rfile->rhops_f) {
+        rfile->file->f_op = fops_get(rfile->rhops_f->old.f_op);
+        rfs_unkeep_operations(rfile->rhops_f);
     }
 #endif /* !RFS_PER_OBJECT_OPS */
 
