@@ -190,12 +190,39 @@
 
 /*---------------------------------------------------------------------------*/
 
-#define RFS_SET_AOP(ri, idc, op, f) \
-	(ri->rinfo->rops ? \
-	 	RFS_SET_OP(ri->rinfo->rops->arr, idc, ri->a_ops_new, \
-			ri->a_ops_old, op, f) : \
-	 	RFS_REM_OP(ri->a_ops_new, ri->a_ops_old, op) \
-	)
+#ifdef RFS_PER_OBJECT_OPS
+
+    #define RFS_IS_AOP_SET(ri, idc) (true)
+
+    #define RFS_SET_AOP(ri, idc, op, f) \
+        (ri->rinfo->rops ? \
+            RFS_SET_OP(ri->rinfo->rops->arr, idc, ri->a_op_new, \
+                ri->a_op_old, op, f) : \
+            RFS_REM_OP(ri->a_op_new, ri->a_op_old, op) \
+        )
+    
+#else
+
+    #define RFS_AOP_BIT(idc) (RFS_IDC_TO_OP_ID(idc) - RFS_OP_a_start)
+
+    #define RFS_IS_AOP_SET(ri, idc) (test_bit(RFS_IOP_BIT(idc), ri->a_op_bitfield))
+
+    #define RFS_SET_AOP(ri, idc, op, f) \
+        do { \
+            int nr = RFS_AOP_BIT(idc); \
+            if (ri->rinfo->rops && \
+                ri->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
+                if (!test_bit(nr, ri->rhops_a->a_op_bitfield) && \
+                    !test_and_set_bit(nr, ri->rhops_a->a_op_bitfield)) { \
+                    RFS_ADD_OP((*ri->rhops_a->new.a_op), ri->rhops_a->old.a_op, op, f); \
+                } \
+                set_bit(nr, ri->a_op_bitfield); \
+            } else if (test_bit(nr, ri->a_op_bitfield)) { \
+                clear_bit(nr, ri->a_op_bitfield); \
+            } \
+        } while(0);
+
+#endif
 
 struct rfs_file;
 
@@ -461,16 +488,17 @@ struct rfs_inode {
 	struct list_head data;
 	struct inode *inode;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17))
-	const struct inode_operations *op_old;
-	const struct file_operations *fop_old;
-    const struct address_space_operations *a_ops_old;
+	const struct inode_operations           *op_old;
+	const struct file_operations            *f_op_old;
+    const struct address_space_operations   *a_op_old;
 #else
-	struct inode_operations *op_old;
-	struct file_operations *fop_old;
-    struct address_space_operations *a_ops_old;
+	struct inode_operations         *op_old;
+	struct file_operations          *f_op_old;
+    struct address_space_operations *a_op_old;
 #endif
 #ifdef RFS_PER_OBJECT_OPS
-    struct inode_operations op_new;
+    struct inode_operations         op_new;
+    struct address_space_operations a_op_new;
 #else
     struct rfs_hoperations *rhops_i;
     struct rfs_hoperations *rhops_a;
@@ -478,7 +506,6 @@ struct rfs_inode {
     unsigned long   i_op_bitfield[BIT_WORD(RFS_OP_i_end-RFS_OP_i_start) + 1];
     unsigned long   a_op_bitfield[BIT_WORD(RFS_OP_a_end-RFS_OP_a_start) + 1];
 #endif
-    struct address_space_operations a_ops_new;
 	struct rfs_info *rinfo;
 	struct rfs_mutex_t mutex;
 	spinlock_t lock;

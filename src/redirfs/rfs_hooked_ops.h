@@ -33,6 +33,7 @@ struct rfs_inode;
 #define RFS_OPS_REMOVED  (1<<1)
 #define RFS_OPS_FILE     (1<<2)
 #define RFS_OPS_INODE    (1<<3)
+#define RFS_OPS_AS       (1<<4)
 
 struct rfs_hoperations {
 
@@ -59,6 +60,7 @@ struct rfs_hoperations {
         unsigned long  f_op_bitfield[BIT_WORD(RFS_OP_f_end-RFS_OP_f_start) + 1];
         unsigned long  i_op_bitfield[BIT_WORD(RFS_OP_i_end-RFS_OP_i_start) + 1];
         unsigned long  a_op_bitfield[BIT_WORD(RFS_OP_a_end-RFS_OP_a_start) + 1];
+        unsigned long  d_op_bitfield[BIT_WORD(RFS_OP_d_end-RFS_OP_d_start) + 1];
     };
 
     /* a pointer to the old operations */
@@ -66,6 +68,7 @@ struct rfs_hoperations {
         const struct file_operations            *f_op; /* referenced */
         const struct inode_operations           *i_op;
         const struct address_space_operations   *a_op;
+        const struct dentry_operations          *d_op;
     } old;
 
     /*
@@ -76,6 +79,7 @@ struct rfs_hoperations {
         struct file_operations              *f_op;
         struct inode_operations             *i_op;
         struct address_space_operations     *a_op;
+        struct dentry_operations            *d_op;
     } new;
 };
 
@@ -93,13 +97,15 @@ rfs_unkeep_operations(
 
 struct rfs_hoperations*
 rfs_create_file_ops(
-    struct rfs_file     *rfile);
-
-/*---------------------------------------------------------------------------*/
+    const struct file_operations *op_old);
 
 struct rfs_hoperations*
 rfs_create_inode_ops(
-    struct rfs_inode     *rinode);
+    const struct inode_operations *op_old);
+
+struct rfs_hoperations*
+rfs_create_address_space_ops(
+    const struct address_space_operations *op_old);
 
 /*---------------------------------------------------------------------------*/
 #endif /* _RFS_HOOKED_OPS_H */

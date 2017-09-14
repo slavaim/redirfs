@@ -154,7 +154,7 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 
 #else /* RFS_PER_OBJECT_OPS */
 
-    rfile->rhops_f = rfs_create_file_ops(rfile);
+    rfile->rhops_f = rfs_create_file_ops(rfile->op_old);
     DBG_BUG_ON(IS_ERR(rfile->rhops_f));
     if (IS_ERR(rfile->rhops_f)) {
         void* err_ptr = rfile->rhops_f;
@@ -317,7 +317,7 @@ int rfs_open(struct inode *inode, struct file *file)
 
 	rinode = rfs_inode_find(inode);
 	fops_put(file->f_op);
-	file->f_op = fops_get(rinode->fop_old);
+	file->f_op = fops_get(rinode->f_op_old);
 
 	rdentry = rfs_dentry_find(file->f_dentry);
 	if (!rdentry) {
@@ -351,9 +351,9 @@ int rfs_open(struct inode *inode, struct file *file)
 	rargs.args.f_open.file = file;
 
     if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-        DBG_BUG_ON(rinode->fop_old && rinode->fop_old->open == rfs_open);
-		if (rinode->fop_old && rinode->fop_old->open)
-			rargs.rv.rv_int = rinode->fop_old->open(
+        DBG_BUG_ON(rinode->f_op_old && rinode->f_op_old->open == rfs_open);
+		if (rinode->f_op_old && rinode->f_op_old->open)
+			rargs.rv.rv_int = rinode->f_op_old->open(
 					rargs.args.f_open.inode,
 					rargs.args.f_open.file);
 		else
@@ -367,8 +367,7 @@ int rfs_open(struct inode *inode, struct file *file)
 		rfs_file_put(rfile);
 	}
 
-    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
-        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
     
 	rfs_context_deinit(&rcont);
 

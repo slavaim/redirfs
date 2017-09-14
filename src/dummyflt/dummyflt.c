@@ -105,7 +105,7 @@ enum redirfs_rv dummyflt_open(redirfs_context context,
 	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
 
     printk(KERN_ALERT "dummyflt: open: %s [%s][%lx], call: %s\n", 
-           path, imode, args->args.f_open.file,call);
+           path, imode, (unsigned long)args->args.f_open.file,call);
 
 exit:
 	kfree(path);
@@ -134,7 +134,7 @@ enum redirfs_rv dummyflt_release(redirfs_context context,
 	call = args->type.call == REDIRFS_PRECALL ? "precall" : "postcall";
 
     printk(KERN_ALERT "dummyflt: release: %s [%lx], call: %s\n", 
-           path, args->args.f_release.file, call);
+           path, (unsigned long)args->args.f_release.file, call);
 
 exit:
 	kfree(path);
