@@ -401,7 +401,8 @@ void rfs_d_iput(struct dentry *dentry, struct inode *inode)
 	rargs.args.d_iput.dentry = dentry;
 	rargs.args.d_iput.inode = inode;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		BUG_ON(rfs_dcache_rinode_del(rdentry, inode));
 
 		if (rdentry->op_old && rdentry->op_old->d_iput)
@@ -411,7 +412,9 @@ void rfs_d_iput(struct dentry *dentry, struct inode *inode)
 			iput(inode);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_dentry_put(rdentry);
@@ -431,12 +434,15 @@ static void rfs_d_release(struct dentry *dentry)
 	rargs.type.id = REDIRFS_NONE_DOP_D_RELEASE;
 	rargs.args.d_release.dentry = dentry;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rdentry->op_old && rdentry->op_old->d_release)
 			rdentry->op_old->d_release(rargs.args.d_release.dentry);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_dentry_del(rdentry);
@@ -491,7 +497,8 @@ static int rfs_d_compare(struct dentry *dentry, struct qstr *name1,
 	rargs.args.d_compare.name1 = name1;
 	rargs.args.d_compare.name2 = name2;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rdentry->op_old && rdentry->op_old->d_compare)
 			rargs.rv.rv_int = rdentry->op_old->d_compare(
 					rargs.args.d_compare.dentry,
@@ -503,7 +510,9 @@ static int rfs_d_compare(struct dentry *dentry, struct qstr *name1,
 					rargs.args.d_compare.name2);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_dentry_put(rdentry);
@@ -554,7 +563,8 @@ static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
 	rargs.args.d_compare.tname = tname;
 	rargs.args.d_compare.name = name;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rdentry->op_old && rdentry->op_old->d_compare)
 			rargs.rv.rv_int = rdentry->op_old->d_compare(
 					rargs.args.d_compare.parent,
@@ -570,7 +580,9 @@ static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
 					rargs.args.d_compare.name);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_dentry_put(rdentry);
@@ -616,7 +628,8 @@ static int rfs_d_compare(const struct dentry *dentry,
 	rargs.args.d_compare.str = str;
 	rargs.args.d_compare.name = name;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rdentry->op_old && rdentry->op_old->d_compare)
 			rargs.rv.rv_int = rdentry->op_old->d_compare(
 					rargs.args.d_compare.dentry,
@@ -629,7 +642,9 @@ static int rfs_d_compare(const struct dentry *dentry,
 					rargs.args.d_compare.name);
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_dentry_put(rdentry);
@@ -674,7 +689,8 @@ static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	rargs.args.d_revalidate.dentry = dentry;
 	rargs.args.d_revalidate.nd = nd;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rdentry->op_old && rdentry->op_old->d_revalidate)
 			rargs.rv.rv_int = rdentry->op_old->d_revalidate(
 					rargs.args.d_revalidate.dentry,
@@ -683,7 +699,9 @@ static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 			rargs.rv.rv_int = 1;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_dentry_put(rdentry);
@@ -726,7 +744,8 @@ static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 	rargs.args.d_revalidate.dentry = dentry;
 	rargs.args.d_revalidate.flags = flags;
 
-	if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+    if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
 		if (rdentry->op_old && rdentry->op_old->d_revalidate)
 			rargs.rv.rv_int = rdentry->op_old->d_revalidate(
 					rargs.args.d_revalidate.dentry,
@@ -735,7 +754,9 @@ static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 			rargs.rv.rv_int = 1;
 	}
 
-	rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
 	rfs_context_deinit(&rcont);
 
 	rfs_dentry_put(rdentry);
