@@ -53,7 +53,10 @@
  * do not replace NULL operations to preserve file system driver semantics
  */
 #define RFS_ADD_OP(ops_new, ops_old, op, f) \
-	((ops_old->op && ops_new.op != f) ? (ops_new.op = f) : (void)0)
+    ((ops_old && ops_old->op && ops_new.op != f) ? (ops_new.op = f) : (void)0)
+    
+#define RFS_ADD_OP_MGT(ops_new, ops_old, op, f) \
+	((ops_new.op != f) ? (ops_new.op = f) : (void)0)
 
 #define RFS_REM_OP(ops_new, ops_old, op) \
 	(ops_new.op = (ops_old ? ops_old->op : NULL))
@@ -112,7 +115,7 @@
             int nr = RFS_FOP_BIT(idc); \
             if (!test_bit(nr, rf->f_rhops->f_op_bitfield) && \
                 !test_and_set_bit(nr, rf->f_rhops->f_op_bitfield)) { \
-                RFS_ADD_OP((*rf->f_rhops->new.f_op), rf->f_rhops->old.f_op, op, f); \
+                RFS_ADD_OP_MGT((*rf->f_rhops->new.f_op), rf->f_rhops->old.f_op, op, f); \
             } \
             if (!test_bit(nr, rf->f_op_bitfield)) \
                 set_bit(nr, rf->f_op_bitfield); \
@@ -122,12 +125,56 @@
 
 /*---------------------------------------------------------------------------*/
 
-#define RFS_SET_DOP(rd, idc, op, f) \
-	(rd->rinfo->rops ? \
-		RFS_SET_OP(rd->rinfo->rops->arr, idc, rd->op_new,\
-			rd->op_old, op, f) : \
-	 	RFS_REM_OP(rd->op_new, rd->op_old, op) \
-	)
+#ifdef RFS_PER_OBJECT_OPS
+
+    #define RFS_IS_DOP_SET(rd, idc) (true)
+
+    #define RFS_SET_DOP(rd, idc, op, f) \
+        (rd->rinfo->rops ? \
+            RFS_SET_OP(rd->rinfo->rops->arr, idc, rd->op_new,\
+                rd->op_old, op, f) : \
+            RFS_REM_OP(rd->op_new, rd->op_old, op) \
+        )
+
+#else /* RFS_PER_OBJECT_OPS */
+
+    /*
+    * for a shared operations structure we can only add new operations
+    * as the shared vector is a union of all vectors, instead of removal 
+    * operation the per-file op_bitfield is used
+    */
+
+    #define RFS_DOP_BIT(idc) (RFS_IDC_TO_OP_ID(idc) - RFS_OP_d_start)
+
+    #define RFS_IS_DOP_SET(rd, idc) (test_bit(RFS_DOP_BIT(idc), rd->d_op_bitfield))
+
+    #define RFS_SET_DOP(rd, idc, op, f) \
+        do { \
+            int nr = RFS_DOP_BIT(idc); \
+            if (rd->rinfo->rops && \
+                rd->rinfo->rops->arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) { \
+                if (!test_bit(nr, rd->d_rhops->d_op_bitfield) && \
+                    !test_and_set_bit(nr, rd->d_rhops->d_op_bitfield)) { \
+                    RFS_ADD_OP((*rd->d_rhops->new.d_op), rd->d_rhops->old.d_op, op, f); \
+                } \
+                set_bit(nr, rd->d_op_bitfield); \
+            } else if (test_bit(nr, rd->d_op_bitfield)) { \
+                clear_bit(nr, rd->d_op_bitfield); \
+            } \
+        } while(0);
+
+    #define RFS_SET_DOP_MGT(rd, idc, op, f) \
+        do { \
+            int nr = RFS_DOP_BIT(idc); \
+            if (!test_bit(nr, rd->d_rhops->d_op_bitfield) && \
+                !test_and_set_bit(nr, rd->d_rhops->d_op_bitfield)) { \
+                RFS_ADD_OP_MGT((*rd->d_rhops->new.d_op), rd->d_rhops->old.d_op, op, f); \
+            } \
+            if (!test_bit(nr, rd->d_op_bitfield)) \
+                set_bit(nr, rd->d_op_bitfield); \
+        } while(0);
+
+#endif /* !RFS_PEROBJECT_OPS */
 
 /*---------------------------------------------------------------------------*/
 
@@ -180,7 +227,7 @@
             int nr = RFS_IOP_BIT(idc); \
             if (!test_bit(nr, ri->i_rhops->i_op_bitfield) && \
                 !test_and_set_bit(nr, ri->i_rhops->i_op_bitfield)) { \
-                RFS_ADD_OP((*ri->i_rhops->new.i_op), ri->i_rhops->old.i_op, op, f); \
+                RFS_ADD_OP_MGT((*ri->i_rhops->new.i_op), ri->i_rhops->old.i_op, op, f); \
             } \
             if (!test_bit(nr, ri->i_op_bitfield)) \
                 set_bit(nr, ri->i_op_bitfield); \
@@ -451,22 +498,19 @@ struct rfs_dentry {
 #else
 	struct dentry_operations *op_old;
 #endif
-//#ifdef RFS_PER_OBJECT_OPS
+#ifdef RFS_PER_OBJECT_OPS
     struct dentry_operations op_new;
-//#else /* RFS_PER_OBJECT_OPS */
-//    struct rfs_hoperations* rhops_d;
-//    /* a mask of hooked operations for a file */
-//    unsigned long   d_op_bitfield[BIT_WORD(RFS_OP_d_end-RFS_OP_d_start) + 1];
-//#endif /* !RFS_PER_OBJECT_OPS */
+#else /* RFS_PER_OBJECT_OPS */
+    struct rfs_hoperations* d_rhops;
+    /* a mask of hooked operations for a file */
+    unsigned long   d_op_bitfield[BIT_WORD(RFS_OP_d_end-RFS_OP_d_start) + 1];
+#endif /* !RFS_PER_OBJECT_OPS */
 	struct rfs_inode *rinode;
 	struct rfs_info *rinfo;
 	spinlock_t lock;
-};
+}; 
 
-#define rfs_dentry_find(dentry) \
-	(dentry && dentry->d_op && dentry->d_op->d_iput == rfs_d_iput ? \
-	 rfs_dentry_get(container_of(dentry->d_op, struct rfs_dentry, op_new)) : \
-	 NULL)
+struct rfs_dentry* rfs_dentry_find(const struct dentry *dentry);
 
 void rfs_d_iput(struct dentry *dentry, struct inode *inode);
 struct rfs_dentry *rfs_dentry_get(struct rfs_dentry *rdentry);
@@ -523,11 +567,6 @@ struct rfs_inode {
 	int rdentries_nr; /* mutex */
 };
 
-#define rfs_cast_to_rinode(inode) \
-	(inode && inode->i_op && inode->i_op->rename == rfs_rename ? \
-	 container_of(inode->i_op, struct rfs_inode, op_new) : \
-     NULL)
-
 struct rfs_inode* rfs_inode_find(struct inode *inode);
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
@@ -582,17 +621,6 @@ struct rfs_file {
 #endif /* RFS_PER_OBJECT_OPS */
 	spinlock_t lock;
 };
-
-#ifdef RFS_PER_OBJECT_OPS
-/*
- * the macro is unreliable if f_op is replaced but f_op->open
- * value has been preserved
- */
-#define rfs_cast_to_rfile(file) \
-	(file && file->f_op && file->f_op->open == rfs_open ? \
-	 container_of(file->f_op, struct rfs_file, op_new): \
-     NULL)
-#endif /* RFS_PER_OBJECT_OPS */
 
 struct rfs_file* rfs_file_find(struct file *file);
 	 
@@ -662,96 +690,96 @@ void rfs_data_remove(struct list_head *head);
 
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16))
 
-#define rfs_rename_lock(sb) down(&sb->s_vfs_rename_sem)
-#define rfs_rename_unlock(sb) up(&sb->s_vfs_rename_sem)
+    #define rfs_rename_lock(sb) down(&sb->s_vfs_rename_sem)
+    #define rfs_rename_unlock(sb) up(&sb->s_vfs_rename_sem)
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14))
-typedef unsigned gfp_t;
+    #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14))
+    typedef unsigned gfp_t;
 
-static inline void *kzalloc(size_t size, gfp_t flags)
-{
-	void *p;
-	
-	p = kmalloc(size, flags);
-	if (!p)
-		return NULL;
+    static inline void *kzalloc(size_t size, gfp_t flags)
+    {
+        void *p;
+        
+        p = kmalloc(size, flags);
+        if (!p)
+            return NULL;
 
-	memset(p, 0, size);
+        memset(p, 0, size);
 
-	return p;
-}
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14) */
+        return p;
+    }
+    #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14) */
 
-static inline void *kmem_cache_zalloc(kmem_cache_t *cache, gfp_t flags)
-{
-	void *obj;
+    static inline void *kmem_cache_zalloc(kmem_cache_t *cache, gfp_t flags)
+    {
+        void *obj;
 
-	obj = kmem_cache_alloc(cache, flags);
-	if (!obj)
-		return NULL;
+        obj = kmem_cache_alloc(cache, flags);
+        if (!obj)
+            return NULL;
 
-	memset(obj, 0, kmem_cache_size(cache));
+        memset(obj, 0, kmem_cache_size(cache));
 
-	return obj;
-}       
+        return obj;
+    }       
 
 #else /* LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)) */
 
-#define rfs_rename_lock(sb) mutex_lock(&sb->s_vfs_rename_mutex)
-#define rfs_rename_unlock(sb) mutex_unlock(&sb->s_vfs_rename_mutex)
+    #define rfs_rename_lock(sb) mutex_lock(&sb->s_vfs_rename_mutex)
+    #define rfs_rename_unlock(sb) mutex_unlock(&sb->s_vfs_rename_mutex)
 
 #endif /* ! LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,16)) */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23))
 
-static inline rfs_kmem_cache_t *rfs_kmem_cache_create(const char *n, size_t s)
-{
-	return kmem_cache_create(n, s, 0, SLAB_RECLAIM_ACCOUNT, NULL);
-}
+    static inline rfs_kmem_cache_t *rfs_kmem_cache_create(const char *n, size_t s)
+    {
+        return kmem_cache_create(n, s, 0, SLAB_RECLAIM_ACCOUNT, NULL);
+    }
 
 #else
 
-static inline rfs_kmem_cache_t *rfs_kmem_cache_create(const char *n, size_t s)
-{
-	return kmem_cache_create(n, s, 0, SLAB_RECLAIM_ACCOUNT, NULL, NULL);
-}
+    static inline rfs_kmem_cache_t *rfs_kmem_cache_create(const char *n, size_t s)
+    {
+        return kmem_cache_create(n, s, 0, SLAB_RECLAIM_ACCOUNT, NULL, NULL);
+    }
 
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,25))
 
-static inline void rfs_nameidata_put(struct nameidata *nd)
-{
-	path_release(nd);
-}
+    static inline void rfs_nameidata_put(struct nameidata *nd)
+    {
+        path_release(nd);
+    }
 
-static inline struct dentry *rfs_nameidata_dentry(struct nameidata *nd)
-{
-	return nd->dentry;
-}
+    static inline struct dentry *rfs_nameidata_dentry(struct nameidata *nd)
+    {
+        return nd->dentry;
+    }
 
-static inline struct vfsmount *rfs_nameidata_mnt(struct nameidata *nd)
-{
-	return nd->mnt;
-}
+    static inline struct vfsmount *rfs_nameidata_mnt(struct nameidata *nd)
+    {
+        return nd->mnt;
+    }
 
 #elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 
 
-static inline void rfs_nameidata_put(struct nameidata *nd)
-{
-	path_put(&nd->path);
-}
+    static inline void rfs_nameidata_put(struct nameidata *nd)
+    {
+        path_put(&nd->path);
+    }
 
-static inline struct dentry *rfs_nameidata_dentry(struct nameidata *nd)
-{
-	return nd->path.dentry;
-}
+    static inline struct dentry *rfs_nameidata_dentry(struct nameidata *nd)
+    {
+        return nd->path.dentry;
+    }
 
-static inline struct vfsmount *rfs_nameidata_mnt(struct nameidata *nd)
-{
-	return nd->path.mnt;
-}
+    static inline struct vfsmount *rfs_nameidata_mnt(struct nameidata *nd)
+    {
+        return nd->path.mnt;
+    }
 
 #else
 
@@ -762,123 +790,123 @@ static inline struct vfsmount *rfs_nameidata_mnt(struct nameidata *nd)
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
-#define rfs_dq_transfer vfs_dq_transfer
+    #define rfs_dq_transfer vfs_dq_transfer
 #else
-#define rfs_dq_transfer DQUOT_TRANSFER
+    #define rfs_dq_transfer DQUOT_TRANSFER
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 
-static inline int rfs_follow_up(struct vfsmount **mnt, struct dentry **dentry)
-{
-	struct path path;
-	int rv;
+    static inline int rfs_follow_up(struct vfsmount **mnt, struct dentry **dentry)
+    {
+        struct path path;
+        int rv;
 
-	path.mnt = *mnt;
-	path.dentry = *dentry;
+        path.mnt = *mnt;
+        path.dentry = *dentry;
 
-	rv = follow_up(&path);
+        rv = follow_up(&path);
 
-	*mnt = path.mnt;
-	*dentry = path.dentry;
+        *mnt = path.mnt;
+        *dentry = path.dentry;
 
-	return rv;
-}
+        return rv;
+    }
 
 #else
 
-static inline int rfs_follow_up(struct vfsmount **mnt, struct dentry **dentry)
-{
-	return follow_up(mnt, dentry);
-}
+    static inline int rfs_follow_up(struct vfsmount **mnt, struct dentry **dentry)
+    {
+        return follow_up(mnt, dentry);
+    }
 
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
 
-static inline void rfs_dcache_lock(struct dentry *d)
-{
-	spin_lock(&dcache_lock);
-}
+    static inline void rfs_dcache_lock(struct dentry *d)
+    {
+        spin_lock(&dcache_lock);
+    }
 
-static inline void rfs_dcache_unlock(struct dentry *d)
-{
-	spin_unlock(&dcache_lock);
-}
+    static inline void rfs_dcache_unlock(struct dentry *d)
+    {
+        spin_unlock(&dcache_lock);
+    }
 
-static inline struct dentry *rfs_dget_locked(struct dentry *d)
-{
-	return dget_locked(d);
-}
+    static inline struct dentry *rfs_dget_locked(struct dentry *d)
+    {
+        return dget_locked(d);
+    }
 
 #else
 
-static inline void rfs_dcache_lock(struct dentry *d)
-{
-	spin_lock(&d->d_lock);
-}
+    static inline void rfs_dcache_lock(struct dentry *d)
+    {
+        spin_lock(&d->d_lock);
+    }
 
-static inline void rfs_dcache_unlock(struct dentry *d)
-{
-	spin_unlock(&d->d_lock);
-}
+    static inline void rfs_dcache_unlock(struct dentry *d)
+    {
+        spin_unlock(&d->d_lock);
+    }
 
-static inline struct dentry *rfs_dget_locked(struct dentry *d)
-{
-	return dget_dlock(d);
-}
+    static inline struct dentry *rfs_dget_locked(struct dentry *d)
+    {
+        return dget_dlock(d);
+    }
 
 #endif
 
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
 
-static inline int rfs_path_lookup(const char *name, struct nameidata *nd)
-{
-	return path_lookup(name, LOOKUP_FOLLOW, nd);
-}
+    static inline int rfs_path_lookup(const char *name, struct nameidata *nd)
+    {
+        return path_lookup(name, LOOKUP_FOLLOW, nd);
+    }
 
 #elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 
-static inline int rfs_path_lookup(const char *name, struct nameidata *nd)
-{
-	struct path path;
-	int rv;
+    static inline int rfs_path_lookup(const char *name, struct nameidata *nd)
+    {
+        struct path path;
+        int rv;
 
-	rv = kern_path(name, LOOKUP_FOLLOW, &path);
-	if (rv)
-		return rv;
+        rv = kern_path(name, LOOKUP_FOLLOW, &path);
+        if (rv)
+            return rv;
 
-	nd->path = path;
-	return 0;
-}
+        nd->path = path;
+        return 0;
+    }
 
 #else
 
-static inline int rfs_path_lookup(const char *name, struct path *path)
-{
-	return kern_path(name, LOOKUP_FOLLOW, path);
-}
+    static inline int rfs_path_lookup(const char *name, struct path *path)
+    {
+        return kern_path(name, LOOKUP_FOLLOW, path);
+    }
 
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36))
 
-static inline int rfs_inode_setattr(struct inode *inode, const struct iattr *attr)
-{
-	return inode_setattr(inode, attr);
-}
+    static inline int rfs_inode_setattr(struct inode *inode, const struct iattr *attr)
+    {
+        return inode_setattr(inode, attr);
+    }
 
 #else
 
-static inline int rfs_inode_setattr(struct inode *inode, const struct iattr *attr)
-{
-	setattr_copy(inode, attr);
-	mark_inode_dirty(inode);
-	return 0;
-}
+    static inline int rfs_inode_setattr(struct inode *inode, const struct iattr *attr)
+    {
+        setattr_copy(inode, attr);
+        mark_inode_dirty(inode);
+        return 0;
+    }
 
 #endif
 
-#endif
+#endif /* _RFS_H */
 

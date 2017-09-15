@@ -69,6 +69,19 @@ rfs_object_put_rcu(
 
 /*---------------------------------------------------------------------------*/
 
+char* rfs_type_to_string[RFS_TYPE_MAX] = {
+    [RFS_TYPE_UNKNOWN] = "RFS_TYPE_UNKNOWN",
+    [RFS_TYPE_RINODE] = "RFS_TYPE_RINODE",
+    [RFS_TYPE_RDENTRY] = "RFS_TYPE_RDENTRY",
+    [RFS_TYPE_RFILE] = "RFS_TYPE_RFILE",
+    [RFS_TYPE_INODE_OPS] = "RFS_TYPE_INODE_OPS",
+    [RFS_TYPE_DENTRY_OPS] = "RFS_TYPE_DENTRY_OPS",
+    [RFS_TYPE_FILE_OPS] = "RFS_TYPE_FILE_OPS",
+    [RFS_TYPE_AS_OPS] = "RFS_TYPE_AS_OPS",
+};
+
+/*---------------------------------------------------------------------------*/
+
 #ifdef RFS_USE_HASHTABLE
 
 void
@@ -260,7 +273,7 @@ rfs_get_object_by_system_object(
 {
     struct rfs_object*  object;
 
-    DBG_BUG_ON(!system_object);
+    DBG_BUG_ON(!system_object && radix_tree->rfs_type != RFS_TYPE_DENTRY_OPS);
 
     /* spin_lock can't synchronize user context with softirq */
     DBG_BUG_ON(in_softirq());
@@ -320,7 +333,9 @@ int rfs_insert_object(
 
             struct rfs_object*  robj_to_remove;
 
-            printk(KERN_CRIT"EEXIST error in rfs_insert_object\n");
+            printk(KERN_CRIT"EEXIST error in rfs_insert_object [%lx][%s]\n",
+                   (unsigned long)rfs_object->system_object,
+                   rfs_type_to_string[radix_tree->rfs_type]);
 
             /* remove the stalled object */
             robj_to_remove = rfs_get_object_by_system_object(
@@ -411,7 +426,7 @@ rfs_object_init(
 {
     DBG_BUG_ON(type->type >= RFS_TYPE_MAX);
     DBG_BUG_ON(!type->free);
-    DBG_BUG_ON(!system_object);
+    DBG_BUG_ON(!system_object && type->type != RFS_TYPE_DENTRY_OPS);
 
 #ifdef RFS_USE_HASHTABLE
     INIT_LIST_HEAD_RCU(&rfs_object->hash_list_entry);

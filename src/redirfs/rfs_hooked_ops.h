@@ -108,5 +108,9 @@ struct rfs_hoperations*
 rfs_create_address_space_ops(
     const struct address_space_operations *op_old);
 
+struct rfs_hoperations*
+rfs_create_dentry_ops(
+    const struct dentry_operations *op_old);
+
 /*---------------------------------------------------------------------------*/
 #endif /* _RFS_HOOKED_OPS_H */

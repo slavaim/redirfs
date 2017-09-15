@@ -60,6 +60,13 @@ static rfs_kmem_cache_t *rfs_inode_cache = NULL;
 
 /*---------------------------------------------------------------------------*/
 
+#ifdef RFS_PER_OBJECT_OPS
+    #define rfs_cast_to_rinode(inode) \
+        (inode && inode->i_op && inode->i_op->rename == rfs_rename ? \
+        container_of(inode->i_op, struct rfs_inode, op_new) : \
+        NULL)
+#endif /* RFS_PER_OBJECT_OPS */
+
 struct rfs_inode* rfs_inode_find(struct inode *inode) 
 {
     struct rfs_inode  *rinode;
@@ -116,9 +123,11 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
     /* rename hook is required for correct functioning of rfs_inode_find */
 	rinode->op_new.rename = rfs_rename;
 
-    if (inode->i_mapping && inode->i_mapping->a_ops)
-        memcpy(&rinode->a_op_new, inode->i_mapping->a_ops,
-                sizeof(struct address_space_operations));
+    if (inode->i_mapping && inode->i_mapping->a_ops) {
+        memcpy(&rinode->a_op_new,
+               inode->i_mapping->a_ops,
+               sizeof(struct address_space_operations));
+    }
                 
 #else /* RFS_PER_OBJECT_OPS */
                 
@@ -204,7 +213,9 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 
 	ri_new = rfs_inode_alloc(inode);
 	if (IS_ERR(ri_new))
-		return ri_new;
+        return ri_new;
+        
+    DBG_BUG_ON(!ri_new->i_rhops);
 
 	spin_lock(&inode->i_lock);
     {
@@ -226,18 +237,10 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 
 #ifdef RFS_PER_OBJECT_OPS
             inode->i_op = &ri_new->op_new;
-#else /* RFS_PER_OBJECT_OPS */
-            inode->i_op = ri_new->i_rhops->new.i_op;
-#endif /* !RFS_PER_OBJECT_OPS */
-
             if (inode->i_mapping && inode->i_mapping->a_ops) {
-#ifdef RFS_PER_OBJECT_OPS
                 inode->i_mapping->a_ops = &ri_new->a_op_new;
-#else /* RFS_PER_OBJECT_OPS */
-                DBG_BUG_ON(!ri_new->a_rhops);
-                inode->i_mapping->a_ops = ri_new->a_rhops->new.a_op;
-#endif /* !RFS_PER_OBJECT_OPS */
             }
+#endif /* RFS_PER_OBJECT_OPS */
 
             err = rfs_insert_object(&rfs_inode_radix_tree,
                                     &ri_new->robject,
@@ -253,16 +256,20 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 
     rfs_inode_put(ri_new);
     
-    if (err) {
-        if (ri)
-            rfs_inode_put(ri);
-        ri = ERR_PTR(err);
-    } else if (ri == ri_new) {
 #ifndef RFS_PER_OBJECT_OPS
+    if (ri == ri_new) {
         rfs_keep_operations(ri_new->i_rhops);
         if (ri_new->a_rhops)
             rfs_keep_operations(ri_new->a_rhops);
+    }
 #endif /* RFS_PER_OBJECT_OPS */
+
+    if (unlikely(err)) {
+        if (ri) {
+            rfs_inode_del(ri);
+            rfs_inode_put(ri);
+        }
+        ri = ERR_PTR(err);
     }
 
 	return ri;
@@ -279,6 +286,11 @@ void rfs_inode_del(struct rfs_inode *rinode)
 		rinode->inode->i_fop = rinode->f_op_old;
 
     rinode->inode->i_op = rinode->op_old;
+
+    if (rinode->inode->i_mapping && rinode->inode->i_mapping->a_ops) {
+        DBG_BUG_ON(!rinode->a_op_old);
+        rinode->inode->i_mapping->a_ops = rinode->a_op_old;
+    }
     
     rfs_remove_object(&rinode->robject);
 #ifndef RFS_PER_OBJECT_OPS
@@ -1495,7 +1507,28 @@ void rfs_inode_set_ops(struct rfs_inode *rinode)
                         rfs_rename);
     #endif /* !RFS_PER_OBJECT_OPS */
     }
-	spin_unlock(&rinode->lock);
+    spin_unlock(&rinode->lock);
+    
+#ifndef RFS_PER_OBJECT_OPS
+	spin_lock(&rinode->inode->i_lock);
+    {
+        DBG_BUG_ON(rinode->op_old != rinode->inode->i_op &&
+                   rinode->inode->i_op != rinode->i_rhops->new.i_op);
+        DBG_BUG_ON(!rinode->i_rhops->new.i_op);
+        if (rinode->inode->i_op != rinode->i_rhops->new.i_op)
+            rinode->inode->i_op = rinode->i_rhops->new.i_op;
+
+        if (rinode->inode->i_mapping && rinode->inode->i_mapping->a_ops) {
+            DBG_BUG_ON(!rinode->a_rhops);
+            DBG_BUG_ON(rinode->a_op_old != rinode->inode->i_mapping->a_ops &&
+                       rinode->inode->i_mapping->a_ops != rinode->a_rhops->new.a_op);
+            DBG_BUG_ON(!rinode->a_rhops->new.a_op);
+            if (rinode->inode->i_mapping->a_ops != rinode->a_rhops->new.a_op)
+                rinode->inode->i_mapping->a_ops = rinode->a_rhops->new.a_op;
+        }
+    }
+    spin_unlock(&rinode->inode->i_lock);
+#endif /* !RFS_PER_OBJECT_OPS */
 }
 
 #pragma GCC pop_options

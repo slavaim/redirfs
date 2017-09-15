@@ -30,11 +30,36 @@
 #ifdef RFS_USE_HASHTABLE
 #error "a hash table is not defined"
 #else
-struct rfs_radix_tree   rfs_hoperations_radix_tree = {
+static struct rfs_radix_tree   rfs_f_hoperations_radix_tree = {
     .root = RADIX_TREE_INIT(GFP_KERNEL),
-    .lock = __SPIN_LOCK_INITIALIZER(rfs_hoperations_radix_tree.lock),
-    .rfs_type = RFS_TYPE_UNKNOWN,
-    };
+    .lock = __SPIN_LOCK_INITIALIZER(rfs_f_hoperations_radix_tree.lock),
+    .rfs_type = RFS_TYPE_FILE_OPS,
+};
+
+static struct rfs_radix_tree   rfs_i_hoperations_radix_tree = {
+    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .lock = __SPIN_LOCK_INITIALIZER(rfs_i_hoperations_radix_tree.lock),
+    .rfs_type = RFS_TYPE_INODE_OPS,
+};
+
+static struct rfs_radix_tree   rfs_a_hoperations_radix_tree = {
+    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .lock = __SPIN_LOCK_INITIALIZER(rfs_a_hoperations_radix_tree.lock),
+    .rfs_type = RFS_TYPE_AS_OPS,
+};
+
+static struct rfs_radix_tree   rfs_d_hoperations_radix_tree = {
+    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .lock = __SPIN_LOCK_INITIALIZER(rfs_d_hoperations_radix_tree.lock),
+    .rfs_type = RFS_TYPE_DENTRY_OPS,
+};
+
+struct rfs_radix_tree*  rfs_hoperations_radix_tree[RFS_TYPE_MAX] = {
+    [RFS_TYPE_FILE_OPS]=&rfs_f_hoperations_radix_tree,
+    [RFS_TYPE_INODE_OPS]=&rfs_i_hoperations_radix_tree,
+    [RFS_TYPE_AS_OPS]=&rfs_a_hoperations_radix_tree,
+    [RFS_TYPE_DENTRY_OPS]=&rfs_d_hoperations_radix_tree,
+};
 #endif /* !RFS_USE_HASHTABLE */
 
 /*---------------------------------------------------------------------------*/
@@ -68,6 +93,7 @@ rfs_keep_operations(
 {
     int err;
     unsigned int old_flags;
+    enum rfs_type type;
 
     if (0x1 != atomic_inc_return(&rfs_hoperations->keep_alive))
         return;
@@ -84,11 +110,16 @@ rfs_keep_operations(
     if (old_flags & RFS_OPS_INSERTED)
         return;
 
-    err = rfs_insert_object(&rfs_hoperations_radix_tree,
+    type = rfs_hoperations->robject.type->type;
+    DBG_BUG_ON(type == RFS_TYPE_UNKNOWN || type >= RFS_TYPE_MAX);
+    DBG_BUG_ON(!rfs_hoperations_radix_tree[type]);
+    DBG_BUG_ON(rfs_hoperations_radix_tree[type]->rfs_type != type);
+
+    err = rfs_insert_object(rfs_hoperations_radix_tree[type],
                             &rfs_hoperations->robject,
                             true);
     DBG_BUG_ON(err && (-EEXIST != err));
-    if (err) {
+    if (unlikely(err)) {
         rfs_hoperations_set_flags(rfs_hoperations,
                                   0,
                                   RFS_OPS_INSERTED);
@@ -128,12 +159,13 @@ rfs_unkeep_operations(
 #else
 struct rfs_hoperations*
 rfs_find_operations(
+    struct rfs_radix_tree *radix_tree,
     const void  *old_op)
 {
     struct rfs_object      *robject;
     struct rfs_hoperations *rfs_hoperations;
 
-    robject = rfs_get_object_by_system_object(&rfs_hoperations_radix_tree,
+    robject = rfs_get_object_by_system_object(radix_tree,
                                               old_op);
     if (!robject)
         return NULL;
@@ -188,7 +220,8 @@ rfs_create_file_ops(
     if (!op_old)
         return NULL;
 
-    rhoperations = rfs_find_operations(op_old);
+    rhoperations = rfs_find_operations(rfs_hoperations_radix_tree[RFS_TYPE_FILE_OPS],
+                                       op_old);
     if (rhoperations) {
         /* found in the table */
         goto exit;
@@ -272,7 +305,8 @@ rfs_create_inode_ops(
     if (!op_old)
         return ERR_PTR(-EINVAL); 
 
-    rhoperations = rfs_find_operations(op_old);
+    rhoperations = rfs_find_operations(rfs_hoperations_radix_tree[RFS_TYPE_INODE_OPS],
+                                       op_old);
     if (rhoperations) {
         /* found in the table */
         goto exit;
@@ -348,7 +382,8 @@ rfs_create_address_space_ops(
     if (!op_old)
         return ERR_PTR(-EINVAL); 
 
-    rhoperations = rfs_find_operations(op_old);
+    rhoperations = rfs_find_operations(rfs_hoperations_radix_tree[RFS_TYPE_AS_OPS],
+                                       op_old);
     if (rhoperations) {
         /* found in the table */
         goto exit;
@@ -377,6 +412,82 @@ rfs_create_address_space_ops(
     rhoperations->new.a_op = (struct address_space_operations *)(rhoperations + 1);
     /* copy the old operations to the new ones */
     *rhoperations->new.a_op = *op_old;
+
+exit:
+
+    if (err && rhoperations)
+        rfs_object_put(&rhoperations->robject);
+
+    return err ? ERR_PTR(err) : rhoperations;
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void
+rfs_free_dentry_operations(
+    struct rfs_object* robject)
+{
+    struct rfs_hoperations *rhoperations;
+
+    rhoperations = container_of(robject,
+                                struct rfs_hoperations,
+                                robject);
+
+    DBG_BUG_ON(RFS_HOPERATIONS_SIGNATURE != rhoperations->signature);
+    DBG_BUG_ON(!(RFS_OPS_DENTRY & rhoperations->flags));
+    DBG_BUG_ON(RFS_OPS_INSERTED == ((RFS_OPS_INSERTED | RFS_OPS_REMOVED) & rhoperations->flags));
+
+	kfree(rhoperations);
+}
+
+static struct rfs_object_type rfs_dentry_type = {
+    .type = RFS_TYPE_DENTRY_OPS,
+    .free = rfs_free_dentry_operations,
+    };
+
+/*---------------------------------------------------------------------------*/
+
+struct rfs_hoperations*
+rfs_create_dentry_ops(
+    const struct dentry_operations *op_old)
+{
+    long                    err = 0;
+    struct rfs_hoperations  *rhoperations = NULL;
+    size_t                  size;
+
+    /* op_old might be NULL for some dentries */
+
+    rhoperations = rfs_find_operations(rfs_hoperations_radix_tree[RFS_TYPE_DENTRY_OPS],
+                                       op_old);
+    if (rhoperations) {
+        /* found in the table */
+        goto exit;
+    }
+
+    /* allocate space for the object and file operations just right after it */
+    size = sizeof(*rhoperations) + sizeof(*rhoperations->new.d_op);
+    rhoperations = kzalloc(size, GFP_KERNEL);
+    DBG_BUG_ON(!rhoperations);
+    if (!rhoperations) {
+        err = -ENOMEM;
+        goto exit;
+    }
+
+    rfs_object_init(&rhoperations->robject,
+                    &rfs_dentry_type,
+                    op_old);
+
+#ifdef RFS_DBG
+    rhoperations->signature = RFS_HOPERATIONS_SIGNATURE;
+#endif /* RFS_DBG */
+
+    rhoperations->flags = RFS_OPS_DENTRY;
+    rhoperations->old.d_op = op_old;
+    /* the space for new file operations is located after the object */
+    rhoperations->new.d_op = (struct dentry_operations *)(rhoperations + 1);
+    /* copy the old operations to the new ones */
+    if (op_old)
+        *rhoperations->new.d_op = *op_old;
 
 exit:
 

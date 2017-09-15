@@ -43,6 +43,8 @@ enum rfs_type {
     RFS_TYPE_MAX
 };
 
+extern char* rfs_type_to_string[RFS_TYPE_MAX];
+
 #ifdef RFS_USE_HASHTABLE
 
 struct rfs_object_table_entry {

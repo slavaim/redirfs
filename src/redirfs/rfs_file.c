@@ -47,6 +47,7 @@ struct file_operations rfs_file_ops = {
 
 /*---------------------------------------------------------------------------*/
 
+static void rfs_file_del(struct rfs_file *rfile);
 static void rfs_file_free(struct rfs_object *robject);
 
 static struct rfs_object_type rfs_file_type = {
@@ -86,6 +87,17 @@ struct rfs_radix_tree   rfs_file_radix_tree = {
 #endif /* !RFS_USE_HASHTABLE */
 
 /*---------------------------------------------------------------------------*/
+
+#ifdef RFS_PER_OBJECT_OPS
+    /*
+    * the macro is unreliable if f_op is replaced but f_op->open
+    * value has been preserved
+    */
+    #define rfs_cast_to_rfile(file) \
+        (file && file->f_op && file->f_op->open == rfs_open ? \
+        container_of(file->f_op, struct rfs_file, op_new): \
+        NULL)
+#endif /* RFS_PER_OBJECT_OPS */
 
 struct rfs_file* rfs_file_find(struct file *file)
 {
@@ -233,20 +245,7 @@ static struct rfs_file *rfs_file_add(struct file *file)
     fops_put(file->f_op);
 #ifdef RFS_PER_OBJECT_OPS 
     file->f_op = &rfile->op_new;
-#else
-    file->f_op = rfile->f_rhops->new.f_op;
 #endif /* RFS_PER_OBJECT_OPS */
-    
-#ifdef RFS_USE_HASHTABLE
-    err = rfs_insert_object(&rfs_file_table, &rfile->robject, false);
-#else
-    err = rfs_insert_object(&rfs_file_radix_tree, &rfile->robject, false);
-#endif
-    DBG_BUG_ON(err);
-    if (err) {
-        rfs_file_put(rfile);
-        return ERR_PTR(err);
-    }
 
 	spin_lock(&rfile->rdentry->lock);
     {
@@ -258,7 +257,18 @@ static struct rfs_file *rfs_file_add(struct file *file)
     rfs_keep_operations(rfile->f_rhops);
 #endif /* RFS_PER_OBJECT_OPS */
 
-	return rfile;
+#ifdef RFS_USE_HASHTABLE
+    err = rfs_insert_object(&rfs_file_table, &rfile->robject, false);
+#else
+    err = rfs_insert_object(&rfs_file_radix_tree, &rfile->robject, false);
+#endif
+    DBG_BUG_ON(err);
+    if (unlikely(err)) {
+        rfs_file_del(rfile);
+        rfs_file_put(rfile);
+        return ERR_PTR(err);
+    } else 
+        return rfile;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -697,7 +707,14 @@ void rfs_file_set_ops(struct rfs_file *rfile)
     RFS_SET_FOP_MGT(rfile,
                     RFS_OP_IDC(RFS_INODE_MAX, RFS_OP_f_release),
                     release, rfs_release);
+
+    DBG_BUG_ON(rfile->op_old != rfile->file->f_op &&
+               rfile->file->f_op != rfile->f_rhops->new.f_op);
+    DBG_BUG_ON(!rfile->f_rhops->new.f_op);
+    if (rfile->file->f_op != rfile->f_rhops->new.f_op)
+        rfile->file->f_op = rfile->f_rhops->new.f_op;
 #endif /* !RFS_PER_OBJECT_OPS */
+
 }
 #pragma GCC pop_options
 
