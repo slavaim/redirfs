@@ -21,6 +21,7 @@
  */
 
 #include <linux/rculist.h>
+#include <linux/version.h>
 #include "rfs_object.h"
 #include "rfs_dbg.h"
 
@@ -34,20 +35,20 @@
 
 /*---------------------------------------------------------------------------*/
 
-#ifdef RFS_DBG
 struct rfs_objects_debug_info {
+#ifdef RFS_DBG
     /* a list of allocated objects for debug purposses */
     struct list_head    objects_list_head;
 
     /* protects the list */
     spinlock_t          lock;
+#endif /* RFS_DBG */
 
     /* counts allocated objects */
     atomic_t            objects_count;
 };
 
 static struct rfs_objects_debug_info   rfs_objects_debug_info[RFS_TYPE_MAX];
-#endif // RFS_DBG
 
 void rfs_object_susbsystem_init(void)
 {
@@ -69,7 +70,7 @@ rfs_object_put_rcu(
 
 /*---------------------------------------------------------------------------*/
 
-char* rfs_type_to_string[RFS_TYPE_MAX] = {
+static const char* rfs_type_to_string[RFS_TYPE_MAX] = {
     [RFS_TYPE_UNKNOWN] = "RFS_TYPE_UNKNOWN",
     [RFS_TYPE_RINODE] = "RFS_TYPE_RINODE",
     [RFS_TYPE_RDENTRY] = "RFS_TYPE_RDENTRY",
@@ -399,7 +400,7 @@ rfs_remove_object(
     
 }
 
-#endif /* RFS_USE_HASHTABLE */
+#endif /* !RFS_USE_HASHTABLE */
 
 /*---------------------------------------------------------------------------*/
 
@@ -424,6 +425,8 @@ rfs_object_init(
     struct rfs_object_type  *type,
     const void              *system_object)
 {
+    struct rfs_objects_debug_info  *di;
+
     DBG_BUG_ON(type->type >= RFS_TYPE_MAX);
     DBG_BUG_ON(!type->free);
     DBG_BUG_ON(!system_object && type->type != RFS_TYPE_DENTRY_OPS);
@@ -435,24 +438,23 @@ rfs_object_init(
     rfs_object->type = type;
     rcu_assign_pointer(rfs_object->system_object, system_object);
 
+    DBG_BUG_ON(rfs_object->type->type >= ARRAY_SIZE(rfs_objects_debug_info));
+    di = &rfs_objects_debug_info[rfs_object->type->type];
+    atomic_inc(&di->objects_count);
+
 #ifdef RFS_DBG
+    rfs_object->signature = RFS_OBJECT_SIGNATURE;
+
+    /*
+        * acquire the spin lcok with disabled softirqs as
+        * we need to synchronize with RCU callback which
+        * is called from softirq
+        */
+    spin_lock_bh(&di->lock);
     {
-        struct rfs_objects_debug_info  *di = &rfs_objects_debug_info[rfs_object->type->type];
-
-        rfs_object->signature = RFS_OBJECT_SIGNATURE;
-        atomic_inc(&di->objects_count);
-
-        /*
-         * acquire the spin lcok with disabled softirqs as
-         * we need to synchronize with RCU callback which
-         * is called from softirq
-         */
-        spin_lock_bh(&di->lock);
-        {
-            list_add(&rfs_object->objects_list, &di->objects_list_head);
-        }
-        spin_unlock_bh(&di->lock);
+        list_add(&rfs_object->objects_list, &di->objects_list_head);
     }
+    spin_unlock_bh(&di->lock);
 #endif //RFS_DBG
 }
 
@@ -463,24 +465,24 @@ rfs_object_free_rcu(
     struct rcu_head *rcu_head)
 {
     struct rfs_object *rfs_object;
+    struct rfs_objects_debug_info  *di;
 
     rfs_object = container_of(rcu_head, struct rfs_object, rcu_head);
     DBG_BUG_ON(RFS_OBJECT_SIGNATURE != rfs_object->signature);
 
+    DBG_BUG_ON(rfs_object->type->type >= ARRAY_SIZE(rfs_objects_debug_info));
+    di = &rfs_objects_debug_info[rfs_object->type->type];
+
+    DBG_BUG_ON(!atomic_read(&di->objects_count));
+    atomic_dec(&di->objects_count);
+
 #ifdef RFS_DBG
+    /* we are in a softirq context */
+    spin_lock_bh(&di->lock);
     {
-        struct rfs_objects_debug_info  *di = &rfs_objects_debug_info[rfs_object->type->type];
-
-        DBG_BUG_ON(!atomic_read(&di->objects_count));
-        atomic_dec(&di->objects_count);
-
-        /* we are in a softirq context */
-        spin_lock_bh(&di->lock);
-        {
-            list_del(&rfs_object->objects_list);
-        }
-        spin_unlock_bh(&di->lock);
+        list_del(&rfs_object->objects_list);
     }
+    spin_unlock_bh(&di->lock);
 #endif //RFS_DBG
 
 #ifdef RFS_USE_HASHTABLE
@@ -531,6 +533,29 @@ void rfs_object_put(
         call_rcu(&rfs_object->rcu_head, rfs_object_free_rcu);
     }
 }
+
+/*---------------------------------------------------------------------------*/
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25))
+ssize_t rfs_get_stat(char *buf, ssize_t size)
+{
+    ssize_t bytes = 0;
+    int i;
+
+    if (!size)
+        return 0;
+
+    buf[0] = '\0';
+    for (i=0; i<RFS_TYPE_MAX; ++i) {
+        bytes += snprintf(buf + bytes,
+                    size - bytes,
+                    "[%s] = %u\n",
+                    rfs_type_to_string[i],
+                    atomic_read(&rfs_objects_debug_info[i].objects_count));
+    }  /* end for */          
+    return bytes;
+}
+#endif /* #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25)) */
 
 /*---------------------------------------------------------------------------*/
 

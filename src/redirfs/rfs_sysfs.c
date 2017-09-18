@@ -395,7 +395,7 @@ static ssize_t rfs_flt_unregister_store(redirfs_filter filter,
 
 	return count;
 }
-
+            
 static struct redirfs_filter_attribute rfs_flt_priority_attr =
 	REDIRFS_FILTER_ATTRIBUTE(priority, 0444, rfs_flt_priority_show, NULL);
 
@@ -632,21 +632,54 @@ err_kobj:
 	return rv;
 }
 #else
+
+ssize_t
+rfs_stat_show(struct kobject *s, struct kobj_attribute *attr, char *buf);
+
 static struct kobject *rfs_kobj;
+static struct kobject *rfs_info_kobj;
+static const struct kobj_attribute stat_attr =
+    __ATTR(stat, S_IRUGO, rfs_stat_show, NULL);
 
 int rfs_sysfs_create(void)
 {
+    int err;
+
 	rfs_kobj = kobject_create_and_add("redirfs", fs_kobj);
-	if (!rfs_kobj)
-		return -ENOMEM;
+	if (!rfs_kobj) {
+        err = -ENOMEM;
+        goto error;
+    }
 
 	rfs_flt_kset = kset_create_and_add("filters", NULL, rfs_kobj);
 	if (!rfs_flt_kset) {
-		kobject_put(rfs_kobj);
-		return -ENOMEM;
-	}
+        err = -ENOMEM;
+        goto error;
+    }
+    
+    rfs_info_kobj = kobject_create_and_add("info", rfs_kobj);
+	if (!rfs_info_kobj) {
+        err = -ENOMEM;
+        goto error;
+    }
+    
+    err = sysfs_create_file(rfs_info_kobj, &stat_attr.attr);
+    if (err)
+        goto error;
 
-	return 0;
+    return 0;
+
+error:
+    if (rfs_info_kobj)
+        kobject_put(rfs_info_kobj);
+
+    if (rfs_flt_kset)
+        kobject_put(&rfs_flt_kset->kobj);
+    
+    if (rfs_kobj)
+	    kobject_put(rfs_kobj);
+
+	return err;
 }
 #endif
 
@@ -754,6 +787,20 @@ void rfs_flt_sysfs_exit(struct rfs_flt *rflt)
 {
 	kobject_del(&rflt->kobj);
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25))
+
+extern ssize_t rfs_get_stat(char *buf, ssize_t size);
+
+ssize_t
+rfs_stat_show(
+    struct kobject *s,
+    struct kobj_attribute *attr,
+    char *buf)
+{
+    return rfs_get_stat(buf, PAGE_SIZE);
+}
+#endif
 
 EXPORT_SYMBOL(redirfs_create_attribute);
 EXPORT_SYMBOL(redirfs_remove_attribute);
