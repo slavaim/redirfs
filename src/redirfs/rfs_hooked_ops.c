@@ -31,25 +31,25 @@
 #error "a hash table is not defined"
 #else
 static struct rfs_radix_tree   rfs_f_hoperations_radix_tree = {
-    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .root = RADIX_TREE_INIT(GFP_ATOMIC),
     .lock = __SPIN_LOCK_INITIALIZER(rfs_f_hoperations_radix_tree.lock),
     .rfs_type = RFS_TYPE_FILE_OPS,
 };
 
 static struct rfs_radix_tree   rfs_i_hoperations_radix_tree = {
-    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .root = RADIX_TREE_INIT(GFP_ATOMIC),
     .lock = __SPIN_LOCK_INITIALIZER(rfs_i_hoperations_radix_tree.lock),
     .rfs_type = RFS_TYPE_INODE_OPS,
 };
 
 static struct rfs_radix_tree   rfs_a_hoperations_radix_tree = {
-    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .root = RADIX_TREE_INIT(GFP_ATOMIC),
     .lock = __SPIN_LOCK_INITIALIZER(rfs_a_hoperations_radix_tree.lock),
     .rfs_type = RFS_TYPE_AS_OPS,
 };
 
 static struct rfs_radix_tree   rfs_d_hoperations_radix_tree = {
-    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .root = RADIX_TREE_INIT(GFP_ATOMIC),
     .lock = __SPIN_LOCK_INITIALIZER(rfs_d_hoperations_radix_tree.lock),
     .rfs_type = RFS_TYPE_DENTRY_OPS,
 };

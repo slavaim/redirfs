@@ -50,7 +50,7 @@ static struct rfs_object_type rfs_dentry_type = {
 /*---------------------------------------------------------------------------*/
 
 struct rfs_radix_tree   rfs_dentry_radix_tree = {
-    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .root = RADIX_TREE_INIT(GFP_ATOMIC),
     .lock = __SPIN_LOCK_INITIALIZER(rfs_dentry_radix_tree.lock),
     .rfs_type = RFS_TYPE_RDENTRY,
     };

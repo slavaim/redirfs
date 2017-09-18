@@ -79,7 +79,7 @@ static struct rfs_object_table rfs_file_table = {
 #else /* RFS_USE_HASHTABLE */
 
 struct rfs_radix_tree   rfs_file_radix_tree = {
-    .root = RADIX_TREE_INIT(GFP_KERNEL),
+    .root = RADIX_TREE_INIT(GFP_ATOMIC),
     .lock = __SPIN_LOCK_INITIALIZER(rfs_file_radix_tree.lock),
     .rfs_type = RFS_TYPE_RFILE,
     };

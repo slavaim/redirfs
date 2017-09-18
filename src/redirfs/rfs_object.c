@@ -22,6 +22,7 @@
 
 #include <linux/rculist.h>
 #include <linux/version.h>
+#include <linux/gfp.h>
 #include "rfs_object.h"
 #include "rfs_dbg.h"
 
@@ -298,31 +299,40 @@ int rfs_insert_object(
     int    err;
 
     do {
-        rcu_read_lock();
-        { /* start of the RCU lock */
-
-            rfs_object_get(rfs_object);
-            rfs_object->radix_tree = radix_tree;
-
-            /* spin_lock can't synchronize user context with softirq */
-            DBG_BUG_ON(in_softirq());
-
-            spin_lock(&radix_tree->lock);
-            {
-                err = radix_tree_insert(&radix_tree->root,
-                                        (long)rfs_object->system_object,
-                                        rfs_object);
-            }
-            spin_unlock(&radix_tree->lock);
-
+        DBG_BUG_ON(in_atomic());
+        err = radix_tree_preload(GFP_KERNEL);
+        {
+            DBG_BUG_ON(err);
             if (err)
-            {
-                rfs_object->radix_tree = NULL;
-                rfs_object_put(rfs_object);
-            }
+                break;
 
-        } /* end of the RCU lock */
-        rcu_read_unlock();
+            rcu_read_lock();
+            { /* start of the RCU lock */
+
+                rfs_object_get(rfs_object);
+                rfs_object->radix_tree = radix_tree;
+
+                /* spin_lock can't synchronize user context with softirq */
+                DBG_BUG_ON(in_softirq());
+
+                spin_lock(&radix_tree->lock);
+                {
+                    err = radix_tree_insert(&radix_tree->root,
+                                            (long)rfs_object->system_object,
+                                            rfs_object);
+                }
+                spin_unlock(&radix_tree->lock);
+
+                if (err)
+                {
+                    rfs_object->radix_tree = NULL;
+                    rfs_object_put(rfs_object);
+                }
+
+            } /* end of the RCU lock */
+            rcu_read_unlock();
+        }
+        radix_tree_preload_end();
 
         /*
          * this error can happen when f_op was replaced
