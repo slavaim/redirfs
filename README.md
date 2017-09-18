@@ -2,7 +2,7 @@
 This is an attempt to resurrect and extend the discontinued redirfs project from https://github.com/fhrbata/redirfs
 
 What's new:
- - the redirfs.ko module was made compilable up to 4.12 kernel
+ - the redirfs.ko module was made compilable up to 4.14 kernel
  - some fixies to vfsmount usage
  - complete set of file_operations
  - address_space_operations support
