@@ -93,6 +93,8 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 {
 	struct rfs_inode *rinode;
 
+    DBG_BUG_ON(!preemptible());
+    
 	rinode = kmem_cache_zalloc(rfs_inode_cache, GFP_KERNEL);
 	if (IS_ERR(rinode))
         return ERR_PTR(-ENOMEM);

@@ -128,6 +128,8 @@ static struct rfs_file *rfs_file_alloc(struct file *file)
 {
 	struct rfs_file *rfile;
 
+    DBG_BUG_ON(!preemptible());
+    
 	rfile = kmem_cache_zalloc(rfs_file_cache, GFP_KERNEL);
 	if (!rfile)
         return ERR_PTR(-ENOMEM);

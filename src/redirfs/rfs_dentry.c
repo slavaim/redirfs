@@ -90,6 +90,8 @@ static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
 {
 	struct rfs_dentry *rdentry;
 
+    DBG_BUG_ON(!preemptible());
+    
 	rdentry = kmem_cache_zalloc(rfs_dentry_cache, GFP_KERNEL);
 	if (!rdentry)
 		return ERR_PTR(-ENOMEM);

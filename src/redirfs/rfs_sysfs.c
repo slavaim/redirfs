@@ -159,6 +159,8 @@ static int rfs_flt_paths_add(redirfs_filter filter, const char *buf,
 	char type;
 	int rv;
 
+    DBG_BUG_ON(!preemptible());
+
 	path = kzalloc(sizeof(char) * PAGE_SIZE, GFP_KERNEL);
 	if (!path)
 		return -ENOMEM;
@@ -260,6 +262,8 @@ static int rfs_flt_paths_rem_name(redirfs_filter filter, const char *buf,
 	struct vfsmount *mnt;
 	struct rfs_path *rpath;
 	int rv;
+
+    DBG_BUG_ON(!preemptible());
 
 	path = kzalloc(sizeof(char) * PAGE_SIZE, GFP_KERNEL);
 	if (!path)
@@ -449,6 +453,8 @@ int rfs_sysfs_create(void)
 {
 	int rv;
 
+    DBG_BUG_ON(!preemptible());
+
 	rfs_fs_kobj = kzalloc(sizeof(struct kobject), GFP_KERNEL);
 	if (!rfs_fs_kobj)
 		return -ENOMEM;
@@ -529,6 +535,8 @@ int rfs_sysfs_create(void)
 {
 	int rv;
 
+    DBG_BUG_ON(!preemptible());
+
 	rfs_kobj = kzalloc(sizeof(struct kobject), GFP_KERNEL);
 	if (!rfs_kobj)
 		return -ENOMEM;
@@ -588,6 +596,8 @@ int rfs_sysfs_create(void)
 {
 	int rv;
 
+    DBG_BUG_ON(!preemptible());
+    
 	rfs_kobj = kzalloc(sizeof(struct kobject), GFP_KERNEL);
 	if (!rfs_kobj)
 		return -ENOMEM;

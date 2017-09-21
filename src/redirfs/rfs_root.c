@@ -38,6 +38,8 @@ static struct rfs_root *rfs_root_alloc(struct dentry *dentry)
 {
 	struct rfs_root *rroot;
 
+    DBG_BUG_ON(!preemptible());
+    
 	rroot = kzalloc(sizeof(struct rfs_root), GFP_KERNEL);
 	if (!rroot)
 		return ERR_PTR(-ENOMEM);

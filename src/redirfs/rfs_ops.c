@@ -38,6 +38,8 @@ struct rfs_ops *rfs_ops_alloc(void)
 {
 	struct rfs_ops *rops;
 
+    DBG_BUG_ON(!preemptible());
+    
 	rops = kzalloc(sizeof(struct rfs_ops), GFP_KERNEL);
     WARN_ON(!rops);
 	if (!rops) {

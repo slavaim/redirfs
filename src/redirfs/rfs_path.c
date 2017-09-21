@@ -39,6 +39,8 @@ static struct rfs_path *rfs_path_alloc(struct vfsmount *mnt,
 {
 	struct rfs_path *rpath;
 
+    DBG_BUG_ON(!preemptible());
+
 	rpath = kzalloc(sizeof(struct rfs_path), GFP_KERNEL);
 	if (!rpath)
 		return ERR_PTR(-ENOMEM);
@@ -454,7 +456,9 @@ redirfs_path* redirfs_get_paths_root(redirfs_filter filter, redirfs_root root)
 	struct rfs_root *rroot = (struct rfs_root *)root;
 	struct rfs_path *rpath;
 	redirfs_path *paths;
-	int i = 0;
+    int i = 0;
+    
+    DBG_BUG_ON(!preemptible());
 
 	if (!filter || IS_ERR(filter) || !root)
 		return ERR_PTR(-EINVAL);
@@ -487,8 +491,9 @@ redirfs_path* redirfs_get_paths(redirfs_filter filter)
 	struct rfs_flt *rflt = filter;
 	struct rfs_path *rpath;
 	redirfs_path *paths;
-	int i = 0;
-
+    int i = 0;
+    
+    DBG_BUG_ON(!preemptible());
 	might_sleep();
 
 	if (!filter || IS_ERR(filter))
@@ -538,6 +543,7 @@ struct redirfs_path_info *redirfs_get_path_info(redirfs_filter filter,
 	struct rfs_path *rpath = path;
 	struct redirfs_path_info *info;
 
+    DBG_BUG_ON(!preemptible());
 	might_sleep();
 
 	if (!filter || IS_ERR(filter) || !path)
@@ -611,6 +617,8 @@ int rfs_path_get_info(struct rfs_flt *rflt, char *buf, int size)
 	int len = 0;
 	int rv;
 
+    DBG_BUG_ON(!preemptible());
+    
 	path = kzalloc(sizeof(char) * PAGE_SIZE, GFP_KERNEL);
 	if (!path)
 		return -ENOMEM;

@@ -940,7 +940,7 @@ struct redirfs_args {
 struct redirfs_path_info {
 	struct dentry *dentry;
 	struct vfsmount *mnt;
-	int flags;
+    int flags;
 };
 
 struct redirfs_op_info {

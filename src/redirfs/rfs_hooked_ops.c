@@ -216,6 +216,7 @@ rfs_create_file_ops(
     struct rfs_hoperations  *rhoperations = NULL;
     size_t                  size;
 
+    DBG_BUG_ON(!preemptible());
     DBG_BUG_ON(!op_old);
     if (!op_old)
         return NULL;
@@ -226,7 +227,7 @@ rfs_create_file_ops(
         /* found in the table */
         goto exit;
     }
-
+    
     /* allocate space for the object and file operations just right after it */
     size = sizeof(*rhoperations) + sizeof(*rhoperations->new.f_op);
     rhoperations = kzalloc(size, GFP_KERNEL);
@@ -301,6 +302,7 @@ rfs_create_inode_ops(
     struct rfs_hoperations  *rhoperations = NULL;
     size_t                  size;
 
+    DBG_BUG_ON(!preemptible());
     DBG_BUG_ON(!op_old);
     if (!op_old)
         return ERR_PTR(-EINVAL); 
@@ -378,6 +380,7 @@ rfs_create_address_space_ops(
     struct rfs_hoperations  *rhoperations = NULL;
     size_t                  size;
 
+    DBG_BUG_ON(!preemptible());
     DBG_BUG_ON(!op_old);
     if (!op_old)
         return ERR_PTR(-EINVAL); 
@@ -455,8 +458,9 @@ rfs_create_dentry_ops(
     struct rfs_hoperations  *rhoperations = NULL;
     size_t                  size;
 
-    /* op_old might be NULL for some dentries */
+    DBG_BUG_ON(!preemptible());
 
+    /* op_old might be NULL for some dentries */
     rhoperations = rfs_find_operations(rfs_hoperations_radix_tree[RFS_TYPE_DENTRY_OPS],
                                        op_old);
     if (rhoperations) {

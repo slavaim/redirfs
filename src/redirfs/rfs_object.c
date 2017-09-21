@@ -299,7 +299,7 @@ int rfs_insert_object(
     int    err;
 
     do {
-        DBG_BUG_ON(in_atomic());
+        DBG_BUG_ON(!preemptible());
         err = radix_tree_preload(GFP_KERNEL);
         {
             DBG_BUG_ON(err);

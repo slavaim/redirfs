@@ -3,6 +3,7 @@
  * Written by Frantisek Hrbata <frantisek.hrbata@redirfs.org>
  *
  * History:
+ *   2008 - 2010 Frantisek Hrbata
  *   2017 - modified for new kernels by Slava Imameev
  *
  * Copyright 2008 - 2010 Frantisek Hrbata
