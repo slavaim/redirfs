@@ -368,8 +368,11 @@ struct rfs_path {
 	struct list_head rroot_list;
 	struct rfs_root *rroot;
 	struct rfs_chain *rinch;
-	struct rfs_chain *rexch;
-	struct vfsmount *mnt;
+    struct rfs_chain *rexch;
+#ifdef RFS_PATH_WITH_MNT
+    struct vfsmount *mnt;
+#endif
+    char*  pathname;
 	struct dentry *dentry;
 	atomic_t count;
 	int id;

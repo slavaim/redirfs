@@ -938,8 +938,8 @@ struct redirfs_args {
 };
 
 struct redirfs_path_info {
-	struct dentry *dentry;
-	struct vfsmount *mnt;
+    struct dentry *dentry;
+    struct vfsmount *mnt;
     int flags;
 };
 

@@ -37,7 +37,10 @@ RFS_DEFINE_MUTEX(rfs_path_mutex);
 static struct rfs_path *rfs_path_alloc(struct vfsmount *mnt,
 		struct dentry *dentry)
 {
-	struct rfs_path *rpath;
+    struct rfs_path *rpath;
+    int err;
+    size_t size;
+    char* pathname;
 
     DBG_BUG_ON(!preemptible());
 
@@ -46,12 +49,45 @@ static struct rfs_path *rfs_path_alloc(struct vfsmount *mnt,
 		return ERR_PTR(-ENOMEM);
 
 	INIT_LIST_HEAD(&rpath->list);
-	INIT_LIST_HEAD(&rpath->rroot_list);
-	rpath->mnt = mntget(mnt);
+    INIT_LIST_HEAD(&rpath->rroot_list);
+#ifdef RFS_PATH_WITH_MNT
+    rpath->mnt = mntget(mnt);
+#endif
 	rpath->dentry = dget(dentry);
-	atomic_set(&rpath->count, 1);
+    atomic_set(&rpath->count, 1);
+    
+#ifdef RFS_DBG
+    size = 16;
+#else
+    size = 128;
+#endif /* !RFS_DBG */
+    do {
+        err = 0;
+        pathname = kmalloc(size, GFP_KERNEL);
+        if (pathname) {
+            char *fn;
+            struct path path;
+            path.mnt = mnt;
+	        path.dentry = dentry;
+	        fn = d_path(&path, pathname, size);
+            if (IS_ERR(fn)) {
+                err = PTR_ERR(fn);
+                kfree(pathname);
+                if (-ENAMETOOLONG == err)
+                    size = 2*size;
+            } else {
+                if (fn != pathname)
+	                memmove(pathname, fn, strlen(fn)+1);
+                rpath->pathname = pathname;
+            }
+        } else
+            err = -ENOMEM;
+    } while(-ENAMETOOLONG == err);
+    
+    if (err)
+        rfs_path_put(rpath);
 
-	return rpath;
+	return err ? ERR_PTR(err) : rpath;
 }
 
 struct rfs_path *rfs_path_get(struct rfs_path *rpath)
@@ -74,8 +110,14 @@ void rfs_path_put(struct rfs_path *rpath)
 	if (!atomic_dec_and_test(&rpath->count))
 		return;
 
-	dput(rpath->dentry);
-	mntput(rpath->mnt);
+    dput(rpath->dentry);
+#ifdef RFS_PATH_WITH_MNT
+    mntput(rpath->mnt);
+#endif
+
+    if (rpath->pathname)
+        kfree(rpath->pathname);
+
 	kfree(rpath);
 }
 
@@ -86,8 +128,10 @@ struct rfs_path *rfs_path_find(struct vfsmount *mnt,
 	struct rfs_path *found = NULL;
 
 	list_for_each_entry(rpath, &rfs_path_list, list) {
+#ifdef RFS_PATH_WITH_MNT
 		if (rpath->mnt != mnt) 
-			continue;
+            continue;
+#endif
 
 		if (rpath->dentry != dentry)
 			continue;
@@ -568,7 +612,9 @@ struct redirfs_path_info *redirfs_get_path_info(redirfs_filter filter,
 		return ERR_PTR(-ENODATA);
 	}
 
-	info->mnt = mntget(rpath->mnt);
+#ifdef RFS_PATH_WITH_MNT
+    info->mnt = mntget(rpath->mnt);
+#endif
 	info->dentry = dget(rpath->dentry);
 
 	return info;
@@ -612,16 +658,10 @@ int redirfs_rem_paths(redirfs_filter filter)
 int rfs_path_get_info(struct rfs_flt *rflt, char *buf, int size)
 {
 	struct rfs_path *rpath;
-	char *path;
 	char type;
 	int len = 0;
-	int rv;
 
     DBG_BUG_ON(!preemptible());
-    
-	path = kzalloc(sizeof(char) * PAGE_SIZE, GFP_KERNEL);
-	if (!path)
-		return -ENOMEM;
 
 	rfs_mutex_lock(&rfs_path_mutex);
 
@@ -635,17 +675,8 @@ int rfs_path_get_info(struct rfs_flt *rflt, char *buf, int size)
 		else
 			continue;
 
-		rv = redirfs_get_filename(rpath->mnt, rpath->dentry, path,
-				PAGE_SIZE);
-
-		if (rv) {
-			rfs_mutex_unlock(&rfs_path_mutex);
-			kfree(path);
-			return rv;
-		}
-
 		len += snprintf(buf + len, size - len,"%c:%d:%s",
-				type, rpath->id, path) + 1;
+				type, rpath->id, rpath->pathname) + 1;
 
 		if (len >= size) {
 			len = size;
@@ -654,7 +685,6 @@ int rfs_path_get_info(struct rfs_flt *rflt, char *buf, int size)
 	}
 
 	rfs_mutex_unlock(&rfs_path_mutex);
-	kfree(path);
 
 	return len;
 }
