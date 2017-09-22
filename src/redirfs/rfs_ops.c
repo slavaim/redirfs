@@ -36,42 +36,42 @@ static atomic_t ops_allocations_count = ATOMIC_INIT(0);
 
 struct rfs_ops *rfs_ops_alloc(void)
 {
-	struct rfs_ops *rops;
+    struct rfs_ops *rops;
 
     DBG_BUG_ON(!preemptible());
-    
-	rops = kzalloc(sizeof(struct rfs_ops), GFP_KERNEL);
+
+    rops = kzalloc(sizeof(struct rfs_ops), GFP_KERNEL);
     WARN_ON(!rops);
-	if (!rops) {
-		return ERR_PTR(-ENOMEM);
-	}
+    if (!rops) {
+        return ERR_PTR(-ENOMEM);
+    }
 
     atomic_inc(&ops_allocations_count);
 
-	memset(rops->arr, 0, sizeof(rops->arr)) ;
+    memset(rops->arr, 0, sizeof(rops->arr)) ;
     atomic_set(&rops->count, 1);
 
-	return rops;
+    return rops;
 }
 
 struct rfs_ops *rfs_ops_get(struct rfs_ops *rops)
 {
-	if (!rops || IS_ERR(rops))
-		return NULL;
+    if (!rops || IS_ERR(rops))
+        return NULL;
 
-	BUG_ON(!atomic_read(&rops->count));
-	atomic_inc(&rops->count);
-	return rops;
+    BUG_ON(!atomic_read(&rops->count));
+    atomic_inc(&rops->count);
+    return rops;
 }
 
 void rfs_ops_put(struct rfs_ops *rops)
 {
-	if (!rops || IS_ERR(rops))
-		return;
+    if (!rops || IS_ERR(rops))
+        return;
 
-	BUG_ON(!atomic_read(&rops->count));
-	if (!atomic_dec_and_test(&rops->count))
-		return;
+    BUG_ON(!atomic_read(&rops->count));
+    if (!atomic_dec_and_test(&rops->count))
+        return;
 
     kfree(rops);
     atomic_dec(&ops_allocations_count);

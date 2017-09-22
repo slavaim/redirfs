@@ -21,33 +21,33 @@ ssize_t cflt_orig_read(struct file *f, char __user *buf, size_t len, loff_t *off
 
         rv = rfs_read_subcall(compflt, &args);
 
-	set_fs(orig_fs);
+    set_fs(orig_fs);
 
-	cflt_hexdump((char*)buf, len); // DEBUG
+    cflt_hexdump((char*)buf, len); // DEBUG
 
         return rv;
 }
 
 ssize_t cflt_orig_write(struct file *f, const char __user *buf, size_t len, loff_t *off)
 {
-	mm_segment_t orig_fs;
+    mm_segment_t orig_fs;
         int rv;
         union rfs_op_args args;
 
-	cflt_debug_printk("compflt: [f:orig_write] %i@%i\n", len, (int) *off);
-	cflt_hexdump((char*)buf, len); // DEBUG
+    cflt_debug_printk("compflt: [f:orig_write] %i@%i\n", len, (int) *off);
+    cflt_hexdump((char*)buf, len); // DEBUG
 
         args.f_write.file = f;
         args.f_write.buf = buf;
         args.f_write.count = len;
         args.f_write.pos = off;
 
-	orig_fs = get_fs();
-	set_fs(KERNEL_DS);
+    orig_fs = get_fs();
+    set_fs(KERNEL_DS);
 
         rv = rfs_write_subcall(compflt, &args);
 
-	set_fs(orig_fs);
+    set_fs(orig_fs);
 
         return rv;
 }

@@ -88,13 +88,13 @@ struct rfs_dentry* rfs_dentry_find(const struct dentry *dentry)
 
 static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
 {
-	struct rfs_dentry *rdentry;
+    struct rfs_dentry *rdentry;
 
     DBG_BUG_ON(!preemptible());
-    
-	rdentry = kmem_cache_zalloc(rfs_dentry_cache, GFP_KERNEL);
-	if (!rdentry)
-		return ERR_PTR(-ENOMEM);
+
+    rdentry = kmem_cache_zalloc(rfs_dentry_cache, GFP_KERNEL);
+    if (!rdentry)
+        return ERR_PTR(-ENOMEM);
 
     rfs_object_init(&rdentry->robject, &rfs_dentry_type, dentry);
 
@@ -102,17 +102,17 @@ static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
     rdentry->signature = RFS_DENTRY_SIGNATURE;
 #endif // RFS_DBG
 
-	INIT_LIST_HEAD(&rdentry->rinode_list);
-	INIT_LIST_HEAD(&rdentry->rfiles);
-	INIT_LIST_HEAD(&rdentry->data);
-	rdentry->dentry = dentry;
-	rdentry->op_old = dentry->d_op;
+    INIT_LIST_HEAD(&rdentry->rinode_list);
+    INIT_LIST_HEAD(&rdentry->rfiles);
+    INIT_LIST_HEAD(&rdentry->data);
+    rdentry->dentry = dentry;
+    rdentry->op_old = dentry->d_op;
     spin_lock_init(&rdentry->lock);
     
 #ifdef RFS_PER_OBJECT_OPS
 
-	if (dentry->d_op)
-		memcpy(&rdentry->op_new, dentry->d_op,
+    if (dentry->d_op)
+        memcpy(&rdentry->op_new, dentry->d_op,
                 sizeof(struct dentry_operations));
     
     rdentry->op_new.d_iput = rfs_d_iput;
@@ -130,30 +130,30 @@ static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
 
 #endif /* !RFS_PER_OBJECT_OPS */
 
-	return rdentry;
+    return rdentry;
 }
 
 /*---------------------------------------------------------------------------*/
 
 struct rfs_dentry *rfs_dentry_get(struct rfs_dentry *rdentry)
 {
-	if (!rdentry || IS_ERR(rdentry))
+    if (!rdentry || IS_ERR(rdentry))
         return NULL;
         
     DBG_BUG_ON(RFS_DENTRY_SIGNATURE != rdentry->signature);
 
-	rfs_object_get(&rdentry->robject);
-	return rdentry;
+    rfs_object_get(&rdentry->robject);
+    return rdentry;
 }
 
 void rfs_dentry_put(struct rfs_dentry *rdentry)
 {
-	if (!rdentry || IS_ERR(rdentry))
+    if (!rdentry || IS_ERR(rdentry))
         return;
         
     DBG_BUG_ON(RFS_DENTRY_SIGNATURE != rdentry->signature);
 
-	rfs_object_put(&rdentry->robject);
+    rfs_object_put(&rdentry->robject);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -166,8 +166,8 @@ static void rfs_dentry_free(struct rfs_object *robject)
 
     DBG_BUG_ON(RFS_DENTRY_SIGNATURE != rdentry->signature);
 
-	rfs_inode_put(rdentry->rinode);
-	rfs_info_put(rdentry->rinfo);
+    rfs_inode_put(rdentry->rinode);
+    rfs_info_put(rdentry->rinfo);
 
     rfs_data_remove(&rdentry->data);
     
@@ -176,23 +176,23 @@ static void rfs_dentry_free(struct rfs_object *robject)
             rfs_object_put(&rdentry->d_rhops->robject);
 #endif /* !RFS_PER_OBJECT_OPS */
 
-	kmem_cache_free(rfs_dentry_cache, rdentry);
+    kmem_cache_free(rfs_dentry_cache, rdentry);
 }
 
 /*---------------------------------------------------------------------------*/
 
 struct rfs_dentry *rfs_dentry_add(struct dentry *dentry, struct rfs_info *rinfo)
 {
-	struct rfs_dentry *rd_new;
+    struct rfs_dentry *rd_new;
     struct rfs_dentry *rd = NULL;
 
     DBG_BUG_ON(!dentry);
     if (!dentry)
         return NULL;
 
-	rd_new = rfs_dentry_alloc(dentry);
-	if (IS_ERR(rd_new))
-		return rd_new;
+    rd_new = rfs_dentry_alloc(dentry);
+    if (IS_ERR(rd_new))
+        return rd_new;
 
     DBG_BUG_ON(!rd_new->d_rhops);
 
@@ -247,7 +247,7 @@ struct rfs_dentry *rfs_dentry_add(struct dentry *dentry, struct rfs_info *rinfo)
         }
     }
 
-	return rd;
+    return rd;
 }
 
 void rfs_dentry_del(struct rfs_dentry *rdentry)
@@ -260,75 +260,75 @@ void rfs_dentry_del(struct rfs_dentry *rdentry)
 #endif /* !RFS_PER_OBJECT_OPS */
 
     rfs_remove_object(&rdentry->robject);
-	rfs_dentry_put(rdentry);
+    rfs_dentry_put(rdentry);
 }
 
 int rfs_dentry_add_rinode(struct rfs_dentry *rdentry, struct rfs_info *rinfo)
 {
-	struct rfs_inode *rinode;
+    struct rfs_inode *rinode;
 
-	if (!rdentry->dentry->d_inode)
-		return 0;
+    if (!rdentry->dentry->d_inode)
+        return 0;
 
-	if (rdentry->rinode) {
-		return 0;
-	}
-
-	rinode = rfs_inode_add(rdentry->dentry->d_inode, rinfo);
-	if (IS_ERR(rinode))
-		return PTR_ERR(rinode);
-
-	spin_lock(&rdentry->lock);
-    {
-	    if (rdentry->rinode) {
-		    spin_unlock(&rdentry->lock);
-		    rfs_inode_del(rinode);
-		    rfs_inode_put(rinode);
-		    return 0;
-	    }
-	    rdentry->rinode = rfs_inode_get(rinode);
+    if (rdentry->rinode) {
+        return 0;
     }
-	spin_unlock(&rdentry->lock);
 
-	rfs_inode_add_rdentry(rinode, rdentry);
-	rfs_inode_put(rinode);
-	return 0;
+    rinode = rfs_inode_add(rdentry->dentry->d_inode, rinfo);
+    if (IS_ERR(rinode))
+        return PTR_ERR(rinode);
+
+    spin_lock(&rdentry->lock);
+    {
+        if (rdentry->rinode) {
+            spin_unlock(&rdentry->lock);
+            rfs_inode_del(rinode);
+            rfs_inode_put(rinode);
+            return 0;
+        }
+        rdentry->rinode = rfs_inode_get(rinode);
+    }
+    spin_unlock(&rdentry->lock);
+
+    rfs_inode_add_rdentry(rinode, rdentry);
+    rfs_inode_put(rinode);
+    return 0;
 }
 
 void rfs_dentry_rem_rinode(struct rfs_dentry *rdentry)
 {
-	if (!rdentry->rinode)
-		return;
+    if (!rdentry->rinode)
+        return;
 
-	rfs_inode_rem_rdentry(rdentry->rinode, rdentry);
-	rfs_inode_del(rdentry->rinode);
-	rfs_inode_put(rdentry->rinode);
-	rdentry->rinode = NULL;
+    rfs_inode_rem_rdentry(rdentry->rinode, rdentry);
+    rfs_inode_del(rdentry->rinode);
+    rfs_inode_put(rdentry->rinode);
+    rdentry->rinode = NULL;
 }
 
 struct rfs_info *rfs_dentry_get_rinfo(struct rfs_dentry *rdentry)
 {
-	struct rfs_info *rinfo;
+    struct rfs_info *rinfo;
 
-	spin_lock(&rdentry->lock);
+    spin_lock(&rdentry->lock);
     {
-	    rinfo = rfs_info_get(rdentry->rinfo);
+        rinfo = rfs_info_get(rdentry->rinfo);
     }
-	spin_unlock(&rdentry->lock);
+    spin_unlock(&rdentry->lock);
 
-	return rinfo;
+    return rinfo;
 }
 
 void rfs_dentry_set_rinfo(struct rfs_dentry *rdentry, struct rfs_info *rinfo)
 {
     struct rfs_info *rinfo_old;
 
-	spin_lock(&rdentry->lock);
+    spin_lock(&rdentry->lock);
     {
         rinfo_old = rdentry->rinfo;
-	    rdentry->rinfo = rfs_info_get(rinfo);
+        rdentry->rinfo = rfs_info_get(rinfo);
     }
-	spin_unlock(&rdentry->lock);
+    spin_unlock(&rdentry->lock);
 
     rfs_info_put(rinfo_old);
 }
@@ -337,11 +337,11 @@ void rfs_dentry_add_rfile(struct rfs_dentry *rdentry, struct rfs_file *rfile)
 {
     rfs_file_get(rfile);
 
-	spin_lock(&rdentry->lock);
+    spin_lock(&rdentry->lock);
     {
-	    list_add_tail(&rfile->rdentry_list, &rdentry->rfiles);
+        list_add_tail(&rfile->rdentry_list, &rdentry->rfiles);
     }
-	spin_unlock(&rdentry->lock);
+    spin_unlock(&rdentry->lock);
 }
 
 void rfs_dentry_rem_rfile(struct rfs_file *rfile)
@@ -349,310 +349,310 @@ void rfs_dentry_rem_rfile(struct rfs_file *rfile)
     if (list_empty(&rfile->rdentry_list))
         return;
 
-	spin_lock(&rfile->rdentry->lock);
+    spin_lock(&rfile->rdentry->lock);
     {
-	    list_del_init(&rfile->rdentry_list);
+        list_del_init(&rfile->rdentry_list);
     }
-	spin_unlock(&rfile->rdentry->lock);
+    spin_unlock(&rfile->rdentry->lock);
 
-	rfs_file_put(rfile);
+    rfs_file_put(rfile);
 }
 
 int rfs_dentry_cache_create(void)
 {
-	rfs_dentry_cache = rfs_kmem_cache_create("rfs_dentry_cache",
-			sizeof(struct rfs_dentry));
+    rfs_dentry_cache = rfs_kmem_cache_create("rfs_dentry_cache",
+            sizeof(struct rfs_dentry));
 
-	if (!rfs_dentry_cache)
-		return -ENOMEM;
+    if (!rfs_dentry_cache)
+        return -ENOMEM;
 
-	return 0;
+    return 0;
 }
 
 void rfs_dentry_cache_destory(void)
 {
-	kmem_cache_destroy(rfs_dentry_cache);
+    kmem_cache_destroy(rfs_dentry_cache);
 }
 
 void rfs_d_iput(struct dentry *dentry, struct inode *inode)
 {
-	struct rfs_dentry *rdentry;
-	struct rfs_info *rinfo;
-	struct rfs_context rcont;
-	struct redirfs_args rargs;
+    struct rfs_dentry *rdentry;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
-	rdentry = rfs_dentry_find(dentry);
-	rinfo = rfs_dentry_get_rinfo(rdentry);
-	rfs_context_init(&rcont, 0);
+    rdentry = rfs_dentry_find(dentry);
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    rfs_context_init(&rcont, 0);
 
-	if (S_ISREG(inode->i_mode))
-		rargs.type.id = REDIRFS_REG_DOP_D_IPUT;
-	else if (S_ISDIR(inode->i_mode))
-		rargs.type.id = REDIRFS_DIR_DOP_D_IPUT;
-	else if (S_ISLNK(inode->i_mode))
-		rargs.type.id = REDIRFS_LNK_DOP_D_IPUT;
-	else if (S_ISCHR(inode->i_mode))
-		rargs.type.id = REDIRFS_CHR_DOP_D_IPUT;
-	else if (S_ISBLK(inode->i_mode))
-		rargs.type.id = REDIRFS_BLK_DOP_D_IPUT;
-	else if (S_ISFIFO(inode->i_mode))
-		rargs.type.id = REDIRFS_FIFO_DOP_D_IPUT;
-	else
-		rargs.type.id = REDIRFS_SOCK_DOP_D_IPUT;
+    if (S_ISREG(inode->i_mode))
+        rargs.type.id = REDIRFS_REG_DOP_D_IPUT;
+    else if (S_ISDIR(inode->i_mode))
+        rargs.type.id = REDIRFS_DIR_DOP_D_IPUT;
+    else if (S_ISLNK(inode->i_mode))
+        rargs.type.id = REDIRFS_LNK_DOP_D_IPUT;
+    else if (S_ISCHR(inode->i_mode))
+        rargs.type.id = REDIRFS_CHR_DOP_D_IPUT;
+    else if (S_ISBLK(inode->i_mode))
+        rargs.type.id = REDIRFS_BLK_DOP_D_IPUT;
+    else if (S_ISFIFO(inode->i_mode))
+        rargs.type.id = REDIRFS_FIFO_DOP_D_IPUT;
+    else
+        rargs.type.id = REDIRFS_SOCK_DOP_D_IPUT;
 
-	rargs.args.d_iput.dentry = dentry;
-	rargs.args.d_iput.inode = inode;
+    rargs.args.d_iput.dentry = dentry;
+    rargs.args.d_iput.inode = inode;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		BUG_ON(rfs_dcache_rinode_del(rdentry, inode));
+        BUG_ON(rfs_dcache_rinode_del(rdentry, inode));
 
-		if (rdentry->op_old && rdentry->op_old->d_iput)
-			rdentry->op_old->d_iput(rargs.args.d_iput.dentry,
-					rargs.args.d_iput.inode);
-		else
-			iput(inode);
-	}
+        if (rdentry->op_old && rdentry->op_old->d_iput)
+            rdentry->op_old->d_iput(rargs.args.d_iput.dentry,
+                    rargs.args.d_iput.inode);
+        else
+            iput(inode);
+    }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 
-	rfs_context_deinit(&rcont);
+    rfs_context_deinit(&rcont);
 
-	rfs_dentry_put(rdentry);
-	rfs_info_put(rinfo);
+    rfs_dentry_put(rdentry);
+    rfs_info_put(rinfo);
 }
 
 static void rfs_d_release(struct dentry *dentry)
 {
-	struct rfs_dentry *rdentry;
-	struct rfs_info *rinfo;
-	struct rfs_context rcont;
-	struct redirfs_args rargs;
+    struct rfs_dentry *rdentry;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
-	rdentry = rfs_dentry_find(dentry);
-	rinfo = rfs_dentry_get_rinfo(rdentry);
-	rfs_context_init(&rcont, 0);
-	rargs.type.id = REDIRFS_NONE_DOP_D_RELEASE;
-	rargs.args.d_release.dentry = dentry;
+    rdentry = rfs_dentry_find(dentry);
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    rfs_context_init(&rcont, 0);
+    rargs.type.id = REDIRFS_NONE_DOP_D_RELEASE;
+    rargs.args.d_release.dentry = dentry;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rdentry->op_old && rdentry->op_old->d_release)
-			rdentry->op_old->d_release(rargs.args.d_release.dentry);
-	}
+        if (rdentry->op_old && rdentry->op_old->d_release)
+            rdentry->op_old->d_release(rargs.args.d_release.dentry);
+    }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 
-	rfs_context_deinit(&rcont);
+    rfs_context_deinit(&rcont);
 
-	rfs_dentry_del(rdentry);
-	rfs_dentry_put(rdentry);
-	rfs_info_put(rinfo);
+    rfs_dentry_del(rdentry);
+    rfs_dentry_put(rdentry);
+    rfs_info_put(rinfo);
 }
 
 static inline int rfs_d_compare_default(const struct qstr *name1,
-		const struct qstr *name2)
+        const struct qstr *name2)
 {
-	if (name1->len != name2->len)
-		return 1;
-	if (memcmp(name1->name, name2->name, name1->len))
-		return 1;
+    if (name1->len != name2->len)
+        return 1;
+    if (memcmp(name1->name, name2->name, name1->len))
+        return 1;
 
-	return 0;
+    return 0;
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
 
 static int rfs_d_compare(struct dentry *dentry, struct qstr *name1,
-		struct qstr *name2)
+        struct qstr *name2)
 {
-	struct rfs_dentry *rdentry;
-	struct rfs_info *rinfo;
-	struct rfs_context rcont;
-	struct redirfs_args rargs;
+    struct rfs_dentry *rdentry;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
-	rdentry = rfs_dentry_find(dentry);
-	rinfo = rfs_dentry_get_rinfo(rdentry);
-	rfs_context_init(&rcont, 0);
+    rdentry = rfs_dentry_find(dentry);
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    rfs_context_init(&rcont, 0);
 
-	if (dentry->d_inode) {
-		if (S_ISREG(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_REG_DOP_D_COMPARE;
-		else if (S_ISDIR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_DIR_DOP_D_COMPARE;
-		else if (S_ISLNK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_LNK_DOP_D_COMPARE;
-		else if (S_ISCHR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_CHR_DOP_D_COMPARE;
-		else if (S_ISBLK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_BLK_DOP_D_COMPARE;
-		else if (S_ISFIFO(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_FIFO_DOP_D_COMPARE;
-		else
-			rargs.type.id = REDIRFS_SOCK_DOP_D_COMPARE;
-	} else
-		rargs.type.id = REDIRFS_NONE_DOP_D_COMPARE;
+    if (dentry->d_inode) {
+        if (S_ISREG(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_REG_DOP_D_COMPARE;
+        else if (S_ISDIR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_DIR_DOP_D_COMPARE;
+        else if (S_ISLNK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_LNK_DOP_D_COMPARE;
+        else if (S_ISCHR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_CHR_DOP_D_COMPARE;
+        else if (S_ISBLK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_BLK_DOP_D_COMPARE;
+        else if (S_ISFIFO(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_FIFO_DOP_D_COMPARE;
+        else
+            rargs.type.id = REDIRFS_SOCK_DOP_D_COMPARE;
+    } else
+        rargs.type.id = REDIRFS_NONE_DOP_D_COMPARE;
 
-	rargs.args.d_compare.dentry = dentry;
-	rargs.args.d_compare.name1 = name1;
-	rargs.args.d_compare.name2 = name2;
+    rargs.args.d_compare.dentry = dentry;
+    rargs.args.d_compare.name1 = name1;
+    rargs.args.d_compare.name2 = name2;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rdentry->op_old && rdentry->op_old->d_compare)
-			rargs.rv.rv_int = rdentry->op_old->d_compare(
-					rargs.args.d_compare.dentry,
-					rargs.args.d_compare.name1,
-					rargs.args.d_compare.name2);
-		else
-			rargs.rv.rv_int = rfs_d_compare_default(
-					rargs.args.d_compare.name1,
-					rargs.args.d_compare.name2);
-	}
+        if (rdentry->op_old && rdentry->op_old->d_compare)
+            rargs.rv.rv_int = rdentry->op_old->d_compare(
+                    rargs.args.d_compare.dentry,
+                    rargs.args.d_compare.name1,
+                    rargs.args.d_compare.name2);
+        else
+            rargs.rv.rv_int = rfs_d_compare_default(
+                    rargs.args.d_compare.name1,
+                    rargs.args.d_compare.name2);
+    }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 
-	rfs_context_deinit(&rcont);
+    rfs_context_deinit(&rcont);
 
-	rfs_dentry_put(rdentry);
-	rfs_info_put(rinfo);
+    rfs_dentry_put(rdentry);
+    rfs_info_put(rinfo);
 
-	return rargs.rv.rv_int;
+    return rargs.rv.rv_int;
 }
 
 #elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 
 static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
-		const struct dentry *dentry, const struct inode *d_inode,
-		unsigned int tlen, const char *tname,
-		const struct qstr *name)
+        const struct dentry *dentry, const struct inode *d_inode,
+        unsigned int tlen, const char *tname,
+        const struct qstr *name)
 {
-	struct rfs_dentry *rdentry;
-	struct rfs_info *rinfo;
-	struct rfs_context rcont;
-	struct redirfs_args rargs;
+    struct rfs_dentry *rdentry;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
-	rdentry = rfs_dentry_find(dentry);
-	rinfo = rfs_dentry_get_rinfo(rdentry);
-	rfs_context_init(&rcont, 0);
+    rdentry = rfs_dentry_find(dentry);
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    rfs_context_init(&rcont, 0);
 
-	if (dentry->d_inode) {
-		if (S_ISREG(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_REG_DOP_D_COMPARE;
-		else if (S_ISDIR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_DIR_DOP_D_COMPARE;
-		else if (S_ISLNK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_LNK_DOP_D_COMPARE;
-		else if (S_ISCHR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_CHR_DOP_D_COMPARE;
-		else if (S_ISBLK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_BLK_DOP_D_COMPARE;
-		else if (S_ISFIFO(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_FIFO_DOP_D_COMPARE;
-		else
-			rargs.type.id = REDIRFS_SOCK_DOP_D_COMPARE;
-	} else
-		rargs.type.id = REDIRFS_NONE_DOP_D_COMPARE;
+    if (dentry->d_inode) {
+        if (S_ISREG(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_REG_DOP_D_COMPARE;
+        else if (S_ISDIR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_DIR_DOP_D_COMPARE;
+        else if (S_ISLNK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_LNK_DOP_D_COMPARE;
+        else if (S_ISCHR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_CHR_DOP_D_COMPARE;
+        else if (S_ISBLK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_BLK_DOP_D_COMPARE;
+        else if (S_ISFIFO(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_FIFO_DOP_D_COMPARE;
+        else
+            rargs.type.id = REDIRFS_SOCK_DOP_D_COMPARE;
+    } else
+        rargs.type.id = REDIRFS_NONE_DOP_D_COMPARE;
 
-	rargs.args.d_compare.parent = parent;
-	rargs.args.d_compare.inode = inode;
-	rargs.args.d_compare.dentry = dentry;
-	rargs.args.d_compare.d_inode = d_inode;
-	rargs.args.d_compare.tlen = tlen;
-	rargs.args.d_compare.tname = tname;
-	rargs.args.d_compare.name = name;
+    rargs.args.d_compare.parent = parent;
+    rargs.args.d_compare.inode = inode;
+    rargs.args.d_compare.dentry = dentry;
+    rargs.args.d_compare.d_inode = d_inode;
+    rargs.args.d_compare.tlen = tlen;
+    rargs.args.d_compare.tname = tname;
+    rargs.args.d_compare.name = name;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rdentry->op_old && rdentry->op_old->d_compare)
-			rargs.rv.rv_int = rdentry->op_old->d_compare(
-					rargs.args.d_compare.parent,
-					rargs.args.d_compare.inode,
-					rargs.args.d_compare.dentry,
-					rargs.args.d_compare.d_inode,
-					rargs.args.d_compare.tlen,
-					rargs.args.d_compare.tname,
-					rargs.args.d_compare.name);
-		else
-			rargs.rv.rv_int = rfs_d_compare_default(
-					&rargs.args.d_compare.dentry->d_name,
-					rargs.args.d_compare.name);
-	}
+        if (rdentry->op_old && rdentry->op_old->d_compare)
+            rargs.rv.rv_int = rdentry->op_old->d_compare(
+                    rargs.args.d_compare.parent,
+                    rargs.args.d_compare.inode,
+                    rargs.args.d_compare.dentry,
+                    rargs.args.d_compare.d_inode,
+                    rargs.args.d_compare.tlen,
+                    rargs.args.d_compare.tname,
+                    rargs.args.d_compare.name);
+        else
+            rargs.rv.rv_int = rfs_d_compare_default(
+                    &rargs.args.d_compare.dentry->d_name,
+                    rargs.args.d_compare.name);
+    }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 
-	rfs_context_deinit(&rcont);
+    rfs_context_deinit(&rcont);
 
-	rfs_dentry_put(rdentry);
-	rfs_info_put(rinfo);
+    rfs_dentry_put(rdentry);
+    rfs_info_put(rinfo);
 
-	return rargs.rv.rv_int;
+    return rargs.rv.rv_int;
 }
 
 #else
 
 static int rfs_d_compare(const struct dentry *dentry,
-		unsigned int len, const char *str, const struct qstr *name)
+        unsigned int len, const char *str, const struct qstr *name)
 {
-	struct rfs_dentry *rdentry;
-	struct rfs_info *rinfo;
-	struct rfs_context rcont;
-	struct redirfs_args rargs;
+    struct rfs_dentry *rdentry;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
-	rdentry = rfs_dentry_find(dentry);
-	rinfo = rfs_dentry_get_rinfo(rdentry);
-	rfs_context_init(&rcont, 0);
+    rdentry = rfs_dentry_find(dentry);
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    rfs_context_init(&rcont, 0);
 
-	if (dentry->d_inode) {
-		if (S_ISREG(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_REG_DOP_D_COMPARE;
-		else if (S_ISDIR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_DIR_DOP_D_COMPARE;
-		else if (S_ISLNK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_LNK_DOP_D_COMPARE;
-		else if (S_ISCHR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_CHR_DOP_D_COMPARE;
-		else if (S_ISBLK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_BLK_DOP_D_COMPARE;
-		else if (S_ISFIFO(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_FIFO_DOP_D_COMPARE;
-		else
-			rargs.type.id = REDIRFS_SOCK_DOP_D_COMPARE;
-	} else
-		rargs.type.id = REDIRFS_NONE_DOP_D_COMPARE;
+    if (dentry->d_inode) {
+        if (S_ISREG(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_REG_DOP_D_COMPARE;
+        else if (S_ISDIR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_DIR_DOP_D_COMPARE;
+        else if (S_ISLNK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_LNK_DOP_D_COMPARE;
+        else if (S_ISCHR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_CHR_DOP_D_COMPARE;
+        else if (S_ISBLK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_BLK_DOP_D_COMPARE;
+        else if (S_ISFIFO(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_FIFO_DOP_D_COMPARE;
+        else
+            rargs.type.id = REDIRFS_SOCK_DOP_D_COMPARE;
+    } else
+        rargs.type.id = REDIRFS_NONE_DOP_D_COMPARE;
 
-	rargs.args.d_compare.dentry = dentry;
-	rargs.args.d_compare.len = len;
-	rargs.args.d_compare.str = str;
-	rargs.args.d_compare.name = name;
+    rargs.args.d_compare.dentry = dentry;
+    rargs.args.d_compare.len = len;
+    rargs.args.d_compare.str = str;
+    rargs.args.d_compare.name = name;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rdentry->op_old && rdentry->op_old->d_compare)
-			rargs.rv.rv_int = rdentry->op_old->d_compare(
-					rargs.args.d_compare.dentry,
-					rargs.args.d_compare.len,
-					rargs.args.d_compare.str,
-					rargs.args.d_compare.name);
-		else
-			rargs.rv.rv_int = rfs_d_compare_default(
-					&rargs.args.d_compare.dentry->d_name,
-					rargs.args.d_compare.name);
-	}
+        if (rdentry->op_old && rdentry->op_old->d_compare)
+            rargs.rv.rv_int = rdentry->op_old->d_compare(
+                    rargs.args.d_compare.dentry,
+                    rargs.args.d_compare.len,
+                    rargs.args.d_compare.str,
+                    rargs.args.d_compare.name);
+        else
+            rargs.rv.rv_int = rfs_d_compare_default(
+                    &rargs.args.d_compare.dentry->d_name,
+                    rargs.args.d_compare.name);
+    }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 
-	rfs_context_deinit(&rcont);
+    rfs_context_deinit(&rcont);
 
-	rfs_dentry_put(rdentry);
-	rfs_info_put(rinfo);
+    rfs_dentry_put(rdentry);
+    rfs_info_put(rinfo);
 
-	return rargs.rv.rv_int;
+    return rargs.rv.rv_int;
 }
 
 #endif
@@ -661,165 +661,165 @@ static int rfs_d_compare(const struct dentry *dentry,
 
 static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 {
-	struct rfs_dentry *rdentry;
-	struct rfs_info *rinfo;
-	struct rfs_context rcont;
-	struct redirfs_args rargs;
+    struct rfs_dentry *rdentry;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
-	rdentry = rfs_dentry_find(dentry);
-	rinfo = rfs_dentry_get_rinfo(rdentry);
-	rfs_context_init(&rcont, 0);
+    rdentry = rfs_dentry_find(dentry);
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    rfs_context_init(&rcont, 0);
 
-	if (dentry->d_inode) {
-		if (S_ISREG(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_REG_DOP_D_REVALIDATE;
-		else if (S_ISDIR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_DIR_DOP_D_REVALIDATE;
-		else if (S_ISLNK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_LNK_DOP_D_REVALIDATE;
-		else if (S_ISCHR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_CHR_DOP_D_REVALIDATE;
-		else if (S_ISBLK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_BLK_DOP_D_REVALIDATE;
-		else if (S_ISFIFO(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_FIFO_DOP_D_REVALIDATE;
-		else
-			rargs.type.id = REDIRFS_SOCK_DOP_D_REVALIDATE;
-	} else
-		rargs.type.id = REDIRFS_NONE_DOP_D_REVALIDATE;
+    if (dentry->d_inode) {
+        if (S_ISREG(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_REG_DOP_D_REVALIDATE;
+        else if (S_ISDIR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_DIR_DOP_D_REVALIDATE;
+        else if (S_ISLNK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_LNK_DOP_D_REVALIDATE;
+        else if (S_ISCHR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_CHR_DOP_D_REVALIDATE;
+        else if (S_ISBLK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_BLK_DOP_D_REVALIDATE;
+        else if (S_ISFIFO(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_FIFO_DOP_D_REVALIDATE;
+        else
+            rargs.type.id = REDIRFS_SOCK_DOP_D_REVALIDATE;
+    } else
+        rargs.type.id = REDIRFS_NONE_DOP_D_REVALIDATE;
 
-	rargs.args.d_revalidate.dentry = dentry;
-	rargs.args.d_revalidate.nd = nd;
+    rargs.args.d_revalidate.dentry = dentry;
+    rargs.args.d_revalidate.nd = nd;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rdentry->op_old && rdentry->op_old->d_revalidate)
-			rargs.rv.rv_int = rdentry->op_old->d_revalidate(
-					rargs.args.d_revalidate.dentry,
-					rargs.args.d_revalidate.nd);
-		else
-			rargs.rv.rv_int = 1;
-	}
+        if (rdentry->op_old && rdentry->op_old->d_revalidate)
+            rargs.rv.rv_int = rdentry->op_old->d_revalidate(
+                    rargs.args.d_revalidate.dentry,
+                    rargs.args.d_revalidate.nd);
+        else
+            rargs.rv.rv_int = 1;
+    }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 
-	rfs_context_deinit(&rcont);
+    rfs_context_deinit(&rcont);
 
-	rfs_dentry_put(rdentry);
-	rfs_info_put(rinfo);
+    rfs_dentry_put(rdentry);
+    rfs_info_put(rinfo);
 
-	return rargs.rv.rv_int;
+    return rargs.rv.rv_int;
 }
 
 #else
 
 static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
-	struct rfs_dentry *rdentry;
-	struct rfs_info *rinfo;
-	struct rfs_context rcont;
-	struct redirfs_args rargs;
+    struct rfs_dentry *rdentry;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
-	rdentry = rfs_dentry_find(dentry);
-	rinfo = rfs_dentry_get_rinfo(rdentry);
-	rfs_context_init(&rcont, 0);
+    rdentry = rfs_dentry_find(dentry);
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    rfs_context_init(&rcont, 0);
 
-	if (dentry->d_inode) {
-		if (S_ISREG(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_REG_DOP_D_REVALIDATE;
-		else if (S_ISDIR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_DIR_DOP_D_REVALIDATE;
-		else if (S_ISLNK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_LNK_DOP_D_REVALIDATE;
-		else if (S_ISCHR(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_CHR_DOP_D_REVALIDATE;
-		else if (S_ISBLK(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_BLK_DOP_D_REVALIDATE;
-		else if (S_ISFIFO(dentry->d_inode->i_mode))
-			rargs.type.id = REDIRFS_FIFO_DOP_D_REVALIDATE;
-		else
-			rargs.type.id = REDIRFS_SOCK_DOP_D_REVALIDATE;
-	} else
-		rargs.type.id = REDIRFS_NONE_DOP_D_REVALIDATE;
+    if (dentry->d_inode) {
+        if (S_ISREG(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_REG_DOP_D_REVALIDATE;
+        else if (S_ISDIR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_DIR_DOP_D_REVALIDATE;
+        else if (S_ISLNK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_LNK_DOP_D_REVALIDATE;
+        else if (S_ISCHR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_CHR_DOP_D_REVALIDATE;
+        else if (S_ISBLK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_BLK_DOP_D_REVALIDATE;
+        else if (S_ISFIFO(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_FIFO_DOP_D_REVALIDATE;
+        else
+            rargs.type.id = REDIRFS_SOCK_DOP_D_REVALIDATE;
+    } else
+        rargs.type.id = REDIRFS_NONE_DOP_D_REVALIDATE;
 
-	rargs.args.d_revalidate.dentry = dentry;
-	rargs.args.d_revalidate.flags = flags;
+    rargs.args.d_revalidate.dentry = dentry;
+    rargs.args.d_revalidate.flags = flags;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-		if (rdentry->op_old && rdentry->op_old->d_revalidate)
-			rargs.rv.rv_int = rdentry->op_old->d_revalidate(
-					rargs.args.d_revalidate.dentry,
-					rargs.args.d_revalidate.flags);
-		else
-			rargs.rv.rv_int = 1;
-	}
+        if (rdentry->op_old && rdentry->op_old->d_revalidate)
+            rargs.rv.rv_int = rdentry->op_old->d_revalidate(
+                    rargs.args.d_revalidate.dentry,
+                    rargs.args.d_revalidate.flags);
+        else
+            rargs.rv.rv_int = 1;
+    }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
         rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
 
-	rfs_context_deinit(&rcont);
+    rfs_context_deinit(&rcont);
 
-	rfs_dentry_put(rdentry);
-	rfs_info_put(rinfo);
+    rfs_dentry_put(rdentry);
+    rfs_info_put(rinfo);
 
-	return rargs.rv.rv_int;
+    return rargs.rv.rv_int;
 }
 
 #endif
 
 static void rfs_dentry_set_ops_none(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_NONE_DOP_D_COMPARE, d_compare, rfs_d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_NONE_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
+    RFS_SET_DOP(rdentry, REDIRFS_NONE_DOP_D_COMPARE, d_compare, rfs_d_compare);
+    RFS_SET_DOP(rdentry, REDIRFS_NONE_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_reg(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_REG_DOP_D_COMPARE, d_compare, rfs_d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_REG_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
+    RFS_SET_DOP(rdentry, REDIRFS_REG_DOP_D_COMPARE, d_compare, rfs_d_compare);
+    RFS_SET_DOP(rdentry, REDIRFS_REG_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_dir(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_DIR_DOP_D_COMPARE, d_compare, rfs_d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_DIR_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
+    RFS_SET_DOP(rdentry, REDIRFS_DIR_DOP_D_COMPARE, d_compare, rfs_d_compare);
+    RFS_SET_DOP(rdentry, REDIRFS_DIR_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_lnk(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_LNK_DOP_D_COMPARE, d_compare, rfs_d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_LNK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
+    RFS_SET_DOP(rdentry, REDIRFS_LNK_DOP_D_COMPARE, d_compare, rfs_d_compare);
+    RFS_SET_DOP(rdentry, REDIRFS_LNK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_chr(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_CHR_DOP_D_COMPARE, d_compare, rfs_d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_CHR_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
+    RFS_SET_DOP(rdentry, REDIRFS_CHR_DOP_D_COMPARE, d_compare, rfs_d_compare);
+    RFS_SET_DOP(rdentry, REDIRFS_CHR_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_blk(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_BLK_DOP_D_COMPARE, d_compare, rfs_d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_BLK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
+    RFS_SET_DOP(rdentry, REDIRFS_BLK_DOP_D_COMPARE, d_compare, rfs_d_compare);
+    RFS_SET_DOP(rdentry, REDIRFS_BLK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_fifo(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_FIFO_DOP_D_COMPARE, d_compare, rfs_d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_FIFO_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
+    RFS_SET_DOP(rdentry, REDIRFS_FIFO_DOP_D_COMPARE, d_compare, rfs_d_compare);
+    RFS_SET_DOP(rdentry, REDIRFS_FIFO_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 static void rfs_dentry_set_ops_sock(struct rfs_dentry *rdentry)
 {
-	RFS_SET_DOP(rdentry, REDIRFS_SOCK_DOP_D_COMPARE, d_compare, rfs_d_compare);
-	RFS_SET_DOP(rdentry, REDIRFS_SOCK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
+    RFS_SET_DOP(rdentry, REDIRFS_SOCK_DOP_D_COMPARE, d_compare, rfs_d_compare);
+    RFS_SET_DOP(rdentry, REDIRFS_SOCK_DOP_D_REVALIDATE, d_revalidate, rfs_d_revalidate);
 }
 
 void rfs_dentry_set_ops(struct rfs_dentry *rdentry)
 {
-	struct rfs_file *rfile;
+    struct rfs_file *rfile;
     umode_t mode;
 
     spin_lock(&rdentry->lock);
@@ -892,69 +892,69 @@ void rfs_dentry_set_ops(struct rfs_dentry *rdentry)
     spin_unlock(&rdentry->dentry->d_lock);
 #endif /* !RFS_PER_OBJECT_OPS */
 
-	rfs_inode_set_ops(rdentry->rinode);
+    rfs_inode_set_ops(rdentry->rinode);
 }
 
 void rfs_dentry_rem_data(struct dentry *dentry, struct rfs_flt *rflt)
 {
-	struct redirfs_data *data;
-	struct rfs_dentry *rdentry;
-	struct rfs_file *rfile;
-	
-	data = redirfs_detach_data_dentry(rflt, dentry);
-	if (data && data->detach)
-		data->detach(data);
-	redirfs_put_data(data);
+    struct redirfs_data *data;
+    struct rfs_dentry *rdentry;
+    struct rfs_file *rfile;
+    
+    data = redirfs_detach_data_dentry(rflt, dentry);
+    if (data && data->detach)
+        data->detach(data);
+    redirfs_put_data(data);
 
-	rdentry = rfs_dentry_find(dentry);
-	if (!rdentry)
-		return;
+    rdentry = rfs_dentry_find(dentry);
+    if (!rdentry)
+        return;
 
-	spin_lock(&rdentry->lock);
+    spin_lock(&rdentry->lock);
 
-	list_for_each_entry(rfile, &rdentry->rfiles, rdentry_list) {
-		data = redirfs_detach_data_file(rflt, rfile->file);
-		if (data && data->detach)
-			data->detach(data);
-		redirfs_put_data(data);
-	}
+    list_for_each_entry(rfile, &rdentry->rfiles, rdentry_list) {
+        data = redirfs_detach_data_file(rflt, rfile->file);
+        if (data && data->detach)
+            data->detach(data);
+        redirfs_put_data(data);
+    }
 
-	spin_unlock(&rdentry->lock);
+    spin_unlock(&rdentry->lock);
 
-	if (!dentry->d_inode) {
-		rfs_dentry_put(rdentry);
-		return;
-	}
+    if (!dentry->d_inode) {
+        rfs_dentry_put(rdentry);
+        return;
+    }
 
-	data = redirfs_detach_data_inode(rflt, dentry->d_inode);
-	if (data && data->detach)
-		data->detach(data);
-	redirfs_put_data(data);
+    data = redirfs_detach_data_inode(rflt, dentry->d_inode);
+    if (data && data->detach)
+        data->detach(data);
+    redirfs_put_data(data);
 
-	rfs_dentry_put(rdentry);
+    rfs_dentry_put(rdentry);
 }
 
 int rfs_dentry_move(struct dentry *dentry, struct rfs_flt *rflt,
-		struct rfs_root *src, struct rfs_root *dst)
+        struct rfs_root *src, struct rfs_root *dst)
 {
-	int rv = 0;
+    int rv = 0;
 
-	if (!rflt->ops)
-		return 0;
+    if (!rflt->ops)
+        return 0;
 
-	if (rflt->ops->dentry_moved)
-		rv = rflt->ops->dentry_moved(src, dst, dentry);
+    if (rflt->ops->dentry_moved)
+        rv = rflt->ops->dentry_moved(src, dst, dentry);
 
-	if (rv)
-		return rv;
+    if (rv)
+        return rv;
 
-	if (!dentry->d_inode)
-		return 0;
+    if (!dentry->d_inode)
+        return 0;
 
-	if (rflt->ops->inode_moved)
-		rv = rflt->ops->inode_moved(src, dst, dentry->d_inode);
+    if (rflt->ops->inode_moved)
+        rv = rflt->ops->inode_moved(src, dst, dentry->d_inode);
 
-	return rv;
+    return rv;
 }
 
 #ifdef RFS_DBG

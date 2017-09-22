@@ -37,33 +37,33 @@
 #include <linux/slab.h>
 #include <redirfs.h>
 
-#define AVFLT_VERSION	"0.6"
+#define AVFLT_VERSION    "0.6"
 
-#define AVFLT_EVENT_OPEN	1
-#define AVFLT_EVENT_CLOSE	2
+#define AVFLT_EVENT_OPEN    1
+#define AVFLT_EVENT_CLOSE    2
 
-#define AVFLT_FILE_CLEAN	1
-#define AVFLT_FILE_INFECTED	2
+#define AVFLT_FILE_CLEAN    1
+#define AVFLT_FILE_INFECTED    2
 
 struct avflt_event {
-	struct list_head req_list;
-	struct list_head proc_list;
-	struct avflt_root_data *root_data;
-	struct completion wait;
-	atomic_t count;
-	int type;
-	int id;
-	int result;
-	struct vfsmount *mnt;
-	struct dentry *dentry;
-	unsigned int flags;
-	struct file *file;
-	int fd;
-	int root_cache_ver;
-	int cache_ver;
-	int cache;
-	pid_t pid;
-	pid_t tgid;
+    struct list_head req_list;
+    struct list_head proc_list;
+    struct avflt_root_data *root_data;
+    struct completion wait;
+    atomic_t count;
+    int type;
+    int id;
+    int result;
+    struct vfsmount *mnt;
+    struct dentry *dentry;
+    unsigned int flags;
+    struct file *file;
+    int fd;
+    int root_cache_ver;
+    int cache_ver;
+    int cache;
+    pid_t pid;
+    pid_t tgid;
 };
 
 struct avflt_event *avflt_event_get(struct avflt_event *event);
@@ -76,7 +76,7 @@ int avflt_get_file(struct avflt_event *event);
 void avflt_put_file(struct avflt_event *event);
 void avflt_install_fd(struct avflt_event *event);
 ssize_t avflt_copy_cmd(char __user *buf, size_t size,
-		struct avflt_event *event);
+        struct avflt_event *event);
 int avflt_add_reply(struct avflt_event *event);
 int avflt_request_empty(void);
 void avflt_start_accept(void);
@@ -88,9 +88,9 @@ int avflt_check_init(void);
 void avflt_check_exit(void);
 
 struct avflt_trusted {
-	struct list_head list;
-	pid_t tgid;
-	int open;
+    struct list_head list;
+    pid_t tgid;
+    int open;
 };
 
 int avflt_trusted_add(pid_t tgid);
@@ -99,12 +99,12 @@ int avflt_trusted_allow(pid_t tgid);
 ssize_t avflt_trusted_get_info(char *buf, int size);
 
 struct avflt_proc {
-	struct list_head list;
-	struct list_head events; 
-	spinlock_t lock;
-	atomic_t count;
-	pid_t tgid;
-	int open;
+    struct list_head list;
+    struct list_head events; 
+    spinlock_t lock;
+    atomic_t count;
+    pid_t tgid;
+    int open;
 };
 
 struct avflt_proc *avflt_proc_get(struct avflt_proc *proc);
@@ -120,12 +120,12 @@ struct avflt_event *avflt_proc_get_event(struct avflt_proc *proc, int id);
 ssize_t avflt_proc_get_info(char *buf, int size);
 
 #define rfs_to_root_data(ptr) \
-	container_of(ptr, struct avflt_root_data, rfs_data)
+    container_of(ptr, struct avflt_root_data, rfs_data)
 
 struct avflt_root_data {
-	struct redirfs_data rfs_data;
-	atomic_t cache_enabled;
-	atomic_t cache_ver;
+    struct redirfs_data rfs_data;
+    atomic_t cache_enabled;
+    atomic_t cache_ver;
 };
 
 struct avflt_root_data *avflt_get_root_data_root(redirfs_root root);
@@ -135,16 +135,16 @@ void avflt_put_root_data(struct avflt_root_data *data);
 struct avflt_root_data *avflt_attach_root_data(redirfs_root root);
 
 #define rfs_to_inode_data(ptr) \
-	container_of(ptr, struct avflt_inode_data, rfs_data)
+    container_of(ptr, struct avflt_inode_data, rfs_data)
 
 struct avflt_inode_data {
-	struct redirfs_data rfs_data;
-	struct avflt_root_data *root_data;
-	int root_cache_ver;
-	int inode_cache_ver;
-	int cache_ver;
-	int state;
-	spinlock_t lock;
+    struct redirfs_data rfs_data;
+    struct avflt_root_data *root_data;
+    int root_cache_ver;
+    int inode_cache_ver;
+    int cache_ver;
+    int state;
+    spinlock_t lock;
 };
 
 struct avflt_inode_data *avflt_get_inode_data_inode(struct inode *inode);

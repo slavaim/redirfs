@@ -269,8 +269,8 @@ static void __exit compflt_exit(void)
 
         cflt_sysfs_deinit();
 
-	err = rfs_unregister_filter(compflt);
-	if (err)
+    err = rfs_unregister_filter(compflt);
+    if (err)
                 printk(KERN_ERR "compflt: unregistration failed: error %d\n", err);
 
         cflt_privd_cache_deinit();

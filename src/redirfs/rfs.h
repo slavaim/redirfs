@@ -42,11 +42,11 @@
 #include "rfs_dbg.h"
 
 #ifndef f_dentry
-    #define f_dentry	f_path.dentry
+    #define f_dentry    f_path.dentry
 #endif
 
 #ifndef f_vfsmnt
-    #define f_vfsmnt	f_path.mnt
+    #define f_vfsmnt    f_path.mnt
 #endif
 
 /*
@@ -56,18 +56,18 @@
     ((ops_old && ops_old->op && ops_new.op != f) ? (ops_new.op = f) : (void)0)
     
 #define RFS_ADD_OP_MGT(ops_new, ops_old, op, f) \
-	((ops_new.op != f) ? (ops_new.op = f) : (void)0)
+    ((ops_new.op != f) ? (ops_new.op = f) : (void)0)
 
 #define RFS_REM_OP(ops_new, ops_old, op) \
-	(ops_new.op = (ops_old ? ops_old->op : NULL))
+    (ops_new.op = (ops_old ? ops_old->op : NULL))
 
 /*
  * if there is a filter registered for this operation then hook it
  */
 #define RFS_SET_OP(arr, idc, ops_new, ops_old, op, f) \
-	((arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) ? \
-	 	RFS_ADD_OP(ops_new, ops_old, op, f) : \
-	 	RFS_REM_OP(ops_new, ops_old, op) \
+    ((arr[RFS_IDC_TO_ITYPE(idc)][RFS_IDC_TO_OP_ID(idc)]) ? \
+         RFS_ADD_OP(ops_new, ops_old, op, f) : \
+         RFS_REM_OP(ops_new, ops_old, op) \
     )
 
 /*---------------------------------------------------------------------------*/
@@ -325,11 +325,11 @@ struct rfs_file;
 
     inline static void rfs_inode_mutex_lock(struct inode *inode)
     {
-	    down_write(&inode->i_rwsem);
+        down_write(&inode->i_rwsem);
     }
     inline static void rfs_inode_mutex_unlock(struct inode *inode)
     {
-	    up_write(&inode->i_rwsem);
+        up_write(&inode->i_rwsem);
     }
 #endif
 
@@ -340,22 +340,22 @@ struct rfs_file;
 #endif
 
 struct rfs_op_info {
-	enum redirfs_rv (*pre_cb)(redirfs_context, struct redirfs_args *);
-	enum redirfs_rv (*post_cb)(redirfs_context, struct redirfs_args *);
+    enum redirfs_rv (*pre_cb)(redirfs_context, struct redirfs_args *);
+    enum redirfs_rv (*post_cb)(redirfs_context, struct redirfs_args *);
 };
 
 struct rfs_flt {
-	struct list_head list;
-	struct rfs_op_info cbs[RFS_INODE_MAX][RFS_OP_MAX];
-	struct module *owner;
-	struct kobject kobj;
-	char *name;
-	int priority;
-	int paths_nr;
-	spinlock_t lock;
-	atomic_t active;
-	atomic_t count;
-	struct redirfs_filter_operations *ops;
+    struct list_head list;
+    struct rfs_op_info cbs[RFS_INODE_MAX][RFS_OP_MAX];
+    struct module *owner;
+    struct kobject kobj;
+    char *name;
+    int priority;
+    int paths_nr;
+    spinlock_t lock;
+    atomic_t active;
+    atomic_t count;
+    struct redirfs_filter_operations *ops;
 };
 
 void rfs_flt_put(struct rfs_flt *rflt);
@@ -363,19 +363,19 @@ struct rfs_flt *rfs_flt_get(struct rfs_flt *rflt);
 void rfs_flt_release(struct kobject *kobj);
 
 struct rfs_path {
-	struct list_head list;
-	struct list_head rfst_list;
-	struct list_head rroot_list;
-	struct rfs_root *rroot;
-	struct rfs_chain *rinch;
+    struct list_head list;
+    struct list_head rfst_list;
+    struct list_head rroot_list;
+    struct rfs_root *rroot;
+    struct rfs_chain *rinch;
     struct rfs_chain *rexch;
 #ifdef RFS_PATH_WITH_MNT
     struct vfsmount *mnt;
 #endif
     char*  pathname;
-	struct dentry *dentry;
-	atomic_t count;
-	int id;
+    struct dentry *dentry;
+    atomic_t count;
+    int id;
 };
 
 extern struct rfs_mutex_t rfs_path_mutex;
@@ -386,20 +386,20 @@ struct rfs_path *rfs_path_find(struct vfsmount *mnt, struct dentry *dentry);
 struct rfs_path *rfs_path_find_id(int id);
 int rfs_path_get_info(struct rfs_flt *rflt, char *buf, int size);
 int rfs_fsrename(struct inode *old_dir, struct dentry *old_dentry,
-		struct inode *new_dir, struct dentry *new_dentry);
+        struct inode *new_dir, struct dentry *new_dentry);
 
 struct rfs_root {
-	struct list_head list;
-	struct list_head walk_list;
-	struct list_head rpaths;
-	struct list_head data;
-	struct rfs_chain *rinch;
-	struct rfs_chain *rexch;
-	struct rfs_info *rinfo;
-	struct dentry *dentry;
-	int paths_nr;
-	spinlock_t lock;
-	atomic_t count;
+    struct list_head list;
+    struct list_head walk_list;
+    struct list_head rpaths;
+    struct list_head data;
+    struct rfs_chain *rinch;
+    struct rfs_chain *rexch;
+    struct rfs_info *rinfo;
+    struct dentry *dentry;
+    int paths_nr;
+    spinlock_t lock;
+    atomic_t count;
 };
 
 extern struct list_head rfs_root_list;
@@ -425,7 +425,7 @@ struct rfs_ops {
     //
     // reference count
     //
-	atomic_t count;
+    atomic_t count;
 
     int flags;
 
@@ -435,7 +435,7 @@ struct rfs_ops {
     // array, this allows register up to 127 filters ( pre and post callbacks
     // are accounted separatelly ) for each inode type
     //
-	unsigned char arr[RFS_INODE_MAX][RFS_OP_MAX];
+    unsigned char arr[RFS_INODE_MAX][RFS_OP_MAX];
 };
 
 struct rfs_ops *rfs_ops_alloc(void);
@@ -443,9 +443,9 @@ struct rfs_ops *rfs_ops_get(struct rfs_ops *rops);
 void rfs_ops_put(struct rfs_ops *rops);
 
 struct rfs_chain {
-	struct rfs_flt **rflts;
-	int rflts_nr;
-	atomic_t count;
+    struct rfs_flt **rflts;
+    int rflts_nr;
+    atomic_t count;
 };
 
 struct rfs_chain *rfs_chain_get(struct rfs_chain *rchain);
@@ -456,21 +456,21 @@ struct rfs_chain *rfs_chain_rem(struct rfs_chain *rchain, struct rfs_flt *rflt);
 void rfs_chain_ops(struct rfs_chain *rchain, struct rfs_ops *ops);
 int rfs_chain_cmp(struct rfs_chain *rch1, struct rfs_chain *rch2);
 struct rfs_chain *rfs_chain_join(struct rfs_chain *rch1,
-		struct rfs_chain *rch2);
+        struct rfs_chain *rch2);
 struct rfs_chain *rfs_chain_diff(struct rfs_chain *rch1,
-		struct rfs_chain *rch2);
+        struct rfs_chain *rch2);
 
 struct rfs_info {
-	struct rfs_chain *rchain;
-	struct rfs_ops *rops;
-	struct rfs_root *rroot;
-	atomic_t count;
+    struct rfs_chain *rchain;
+    struct rfs_ops *rops;
+    struct rfs_root *rroot;
+    atomic_t count;
 };
 
 extern struct rfs_info *rfs_info_none;
 
 struct rfs_info *rfs_info_alloc(struct rfs_root *rroot,
-		struct rfs_chain *rchain);
+        struct rfs_chain *rchain);
 struct rfs_info *rfs_info_get(struct rfs_info *rinfo);
 void rfs_info_put(struct rfs_info *rinfo);
 struct rfs_info *rfs_info_parent(struct dentry *dentry);
@@ -479,11 +479,11 @@ int rfs_info_add_exclude(struct rfs_root *rroot, struct rfs_flt *rflt);
 int rfs_info_rem_include(struct rfs_root *rroot, struct rfs_flt *rflt);
 int rfs_info_rem_exclude(struct rfs_root *rroot, struct rfs_flt *rflt);
 int rfs_info_add(struct dentry *dentry, struct rfs_info *rinfo,
-		struct rfs_flt *rflt);
+        struct rfs_flt *rflt);
 int rfs_info_rem(struct dentry *dentry, struct rfs_info *rinfo,
-		struct rfs_flt *rflt);
+        struct rfs_flt *rflt);
 int rfs_info_set(struct dentry *dentry, struct rfs_info *rinfo,
-		struct rfs_flt *rflt);
+        struct rfs_flt *rflt);
 int rfs_info_reset(struct dentry *dentry, struct rfs_info *rinfo);
 
 struct rfs_dentry {
@@ -492,14 +492,14 @@ struct rfs_dentry {
     uint32_t   signature;
 #endif /* RFS_DBG */
     struct rfs_object robject;
-	struct list_head rinode_list;
-	struct list_head rfiles;
-	struct list_head data;
-	struct dentry *dentry;
+    struct list_head rinode_list;
+    struct list_head rfiles;
+    struct list_head data;
+    struct dentry *dentry;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
-	const struct dentry_operations *op_old;
+    const struct dentry_operations *op_old;
 #else
-	struct dentry_operations *op_old;
+    struct dentry_operations *op_old;
 #endif
 #ifdef RFS_PER_OBJECT_OPS
     struct dentry_operations op_new;
@@ -508,9 +508,9 @@ struct rfs_dentry {
     /* a mask of hooked operations for a file */
     unsigned long   d_op_bitfield[BIT_WORD(RFS_OP_d_end-RFS_OP_d_start) + 1];
 #endif /* !RFS_PER_OBJECT_OPS */
-	struct rfs_inode *rinode;
-	struct rfs_info *rinfo;
-	spinlock_t lock;
+    struct rfs_inode *rinode;
+    struct rfs_info *rinfo;
+    spinlock_t lock;
 }; 
 
 struct rfs_dentry* rfs_dentry_find(const struct dentry *dentry);
@@ -519,7 +519,7 @@ void rfs_d_iput(struct dentry *dentry, struct inode *inode);
 struct rfs_dentry *rfs_dentry_get(struct rfs_dentry *rdentry);
 void rfs_dentry_put(struct rfs_dentry *rdentry);
 struct rfs_dentry *rfs_dentry_add(struct dentry *dentry,
-		struct rfs_info *rinfo);
+        struct rfs_info *rinfo);
 void rfs_dentry_del(struct rfs_dentry *rdentry);
 int rfs_dentry_add_rinode(struct rfs_dentry *rdentry, struct rfs_info *rinfo);
 void rfs_dentry_rem_rinode(struct rfs_dentry *rdentry);
@@ -533,7 +533,7 @@ int rfs_dentry_cache_create(void);
 void rfs_dentry_cache_destory(void);
 void rfs_dentry_rem_data(struct dentry *dentry, struct rfs_flt *rflt);
 int rfs_dentry_move(struct dentry *dentry, struct rfs_flt *rflt,
-		struct rfs_root *src, struct rfs_root *dst);
+        struct rfs_root *src, struct rfs_root *dst);
 
 struct rfs_inode {
 #ifdef RFS_DBG
@@ -541,16 +541,16 @@ struct rfs_inode {
     uint32_t   signature;
 #endif // RFS_DBG
     struct rfs_object robject;
-	struct list_head rdentries; /* mutex */
-	struct list_head data;
-	struct inode *inode;
+    struct list_head rdentries; /* mutex */
+    struct list_head data;
+    struct inode *inode;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17))
-	const struct inode_operations           *op_old;
-	const struct file_operations            *f_op_old;
+    const struct inode_operations           *op_old;
+    const struct file_operations            *f_op_old;
     const struct address_space_operations   *a_op_old;
 #else
-	struct inode_operations         *op_old;
-	struct file_operations          *f_op_old;
+    struct inode_operations         *op_old;
+    struct file_operations          *f_op_old;
     struct address_space_operations *a_op_old;
 #endif
 #ifdef RFS_PER_OBJECT_OPS
@@ -563,21 +563,21 @@ struct rfs_inode {
     unsigned long   i_op_bitfield[BIT_WORD(RFS_OP_i_end-RFS_OP_i_start) + 1];
     unsigned long   a_op_bitfield[BIT_WORD(RFS_OP_a_end-RFS_OP_a_start) + 1];
 #endif
-	struct rfs_info *rinfo;
-	struct rfs_mutex_t mutex;
-	spinlock_t lock;
-	atomic_t nlink;
-	int rdentries_nr; /* mutex */
+    struct rfs_info *rinfo;
+    struct rfs_mutex_t mutex;
+    spinlock_t lock;
+    atomic_t nlink;
+    int rdentries_nr; /* mutex */
 };
 
 struct rfs_inode* rfs_inode_find(struct inode *inode);
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
 int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
-		struct inode *new_dir, struct dentry *new_dentry);
+        struct inode *new_dir, struct dentry *new_dentry);
 #else
 int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
-		struct inode *new_dir, struct dentry *new_dentry,
+        struct inode *new_dir, struct dentry *new_dentry,
         unsigned int flags);
 #endif
 
@@ -586,9 +586,9 @@ void rfs_inode_put(struct rfs_inode *rinode);
 struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo);
 void rfs_inode_del(struct rfs_inode *rinode);
 void rfs_inode_add_rdentry(struct rfs_inode *rinode,
-		struct rfs_dentry *rdentry);
+        struct rfs_dentry *rdentry);
 void rfs_inode_rem_rdentry(struct rfs_inode *rinode,
-		struct rfs_dentry *rdentry);
+        struct rfs_dentry *rdentry);
 struct rfs_info *rfs_inode_get_rinfo(struct rfs_inode *rinode);
 int rfs_inode_set_rinfo(struct rfs_inode *rinode);
 void rfs_inode_set_ops(struct rfs_inode *rinode);
@@ -603,9 +603,9 @@ struct rfs_file {
 #endif
 
     struct rfs_object robject;
-	struct list_head rdentry_list;
-	struct list_head data;
-	struct file *file;
+    struct list_head rdentry_list;
+    struct list_head data;
+    struct file *file;
     struct rfs_dentry *rdentry;
 #ifndef RFS_PER_OBJECT_OPS 
     struct rfs_hoperations* f_rhops;
@@ -614,19 +614,19 @@ struct rfs_file {
 #endif /* ! RFS_PER_OBJECT_OPS */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17))
-	const struct file_operations *op_old;
+    const struct file_operations *op_old;
 #else
-	struct file_operations *op_old;
+    struct file_operations *op_old;
 #endif
 
 #ifdef RFS_PER_OBJECT_OPS 
     struct file_operations op_new;
 #endif /* RFS_PER_OBJECT_OPS */
-	spinlock_t lock;
+    spinlock_t lock;
 };
 
 struct rfs_file* rfs_file_find(struct file *file);
-	 
+     
 extern struct file_operations rfs_file_ops;
 
 int rfs_open(struct inode *inode, struct file *file);
@@ -637,22 +637,22 @@ int rfs_file_cache_create(void);
 void rfs_file_cache_destory(void);
 
 struct rfs_dcache_data {
-	struct rfs_info *rinfo;
-	struct rfs_flt *rflt;
-	struct dentry *droot;
+    struct rfs_info *rinfo;
+    struct rfs_flt *rflt;
+    struct dentry *droot;
 };
 
 struct rfs_dcache_data *rfs_dcache_data_alloc(struct dentry *dentry,
-		struct rfs_info *rinfo, struct rfs_flt *rflt);
+        struct rfs_info *rinfo, struct rfs_flt *rflt);
 void rfs_dcache_data_free(struct rfs_dcache_data *rdata);
 
 struct rfs_dcache_entry {
-	struct list_head list;
-	struct dentry *dentry;
+    struct list_head list;
+    struct dentry *dentry;
 };
 
 int rfs_dcache_walk(struct dentry *root, int (*cb)(struct dentry *, void *),
-		void *data);
+        void *data);
 int rfs_dcache_add_dir(struct dentry *dentry, void *data);
 int rfs_dcache_add(struct dentry *dentry, void *data);
 int rfs_dcache_rem(struct dentry *dentry, void *data);
@@ -664,18 +664,18 @@ int rfs_dcache_get_subs(struct dentry *dir, struct list_head *sibs);
 void rfs_dcache_entry_free_list(struct list_head *head);
 
 struct rfs_context {
-	struct list_head data;
-	int idx;
-	int idx_start;
+    struct list_head data;
+    int idx;
+    int idx_start;
 };
 
 void rfs_context_init(struct rfs_context *rcont, int start);
 void rfs_context_deinit(struct rfs_context *rcont);
 
 int rfs_precall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
-		struct redirfs_args *rargs);
+        struct redirfs_args *rargs);
 void rfs_postcall_flts(struct rfs_chain *rchain, struct rfs_context *rcont,
-		struct redirfs_args *rargs);
+        struct redirfs_args *rargs);
 
 enum rfs_inode_type rfs_imode_to_type(umode_t i_mode, bool is_dentry);
 enum redirfs_op_idc rfs_inode_to_idc(struct inode* inode, enum rfs_op_id id);

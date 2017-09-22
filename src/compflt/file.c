@@ -77,7 +77,7 @@ static struct cflt_file* cflt_file_init(struct inode *inode)
 // dealloc a (struct cflt_file) and remove from master file list
 static void cflt_file_deinit(struct cflt_file *fh)
 {
-	unsigned long flags;
+    unsigned long flags;
 
         cflt_debug_printk("compflt: [f:cflt_file_deinit] i=%li\n", fh->inode->i_ino);
 

@@ -20,17 +20,17 @@
 #define AV_CACHE_ENABLE  1
 
 struct av_connection {
-	int fd;
+    int fd;
 };
 
 struct av_event {
-	int id;
-	int type;
-	int fd;
-	pid_t pid;
-	pid_t tgid;
-	int res;
-	int cache;
+    int id;
+    int type;
+    int fd;
+    pid_t pid;
+    pid_t tgid;
+    int res;
+    int cache;
 };
 
 int av_register(struct av_connection *conn);

@@ -39,9 +39,9 @@ int cflt_decomp_block(struct crypto_comp *tfm, struct cflt_block *blk)
 
         cflt_debug_printk("compflt: [f:decomp_block]\n");
 
-	memset(blk->data_u, 0, blk->par->blksize);
+    memset(blk->data_u, 0, blk->par->blksize);
 
-	if ((rv = crypto_comp_decompress(tfm, blk->data_c, blk->size_c, blk->data_u, &blk->size_u))) {
+    if ((rv = crypto_comp_decompress(tfm, blk->data_c, blk->size_c, blk->data_u, &blk->size_u))) {
                 printk(KERN_ERR "compflt: failed to decompress data block error: %i\n", rv);
                 kfree(blk->data_u);
                 return rv;
@@ -64,7 +64,7 @@ int cflt_comp_block(struct crypto_comp *tfm, struct cflt_block *blk)
         if (!blk->data_c)
                 return -ENOMEM;
 
-	memset(blk->data_c, 0, size_c);
+    memset(blk->data_c, 0, size_c);
         if ((rv = crypto_comp_compress(tfm, blk->data_u, blk->size_u, blk->data_c, &size_c))) {
                 printk(KERN_ERR "compflt: failed to compress data block error: %i\n", rv);
                 kfree(blk->data_c);

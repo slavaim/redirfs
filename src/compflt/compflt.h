@@ -16,12 +16,12 @@
 enum { CFLT_BLK_NORM, CFLT_BLK_FREE }; // block types
 
 struct cflt_block {
-	struct list_head file;
+    struct list_head file;
         unsigned int type; // u8 (0 == free , 1 == normal)
-	unsigned int off_u; // u32
-	unsigned int off_c; // not written to file
-	unsigned int size_u; // u16
-	unsigned int size_c; // u16 (size without header)
+    unsigned int off_u; // u32
+    unsigned int off_c; // not written to file
+    unsigned int size_u; // u16
+    unsigned int size_c; // u16 (size without header)
         struct cflt_file *par; // parent cflt_file
         char *data_u;
         char *data_c;
@@ -29,11 +29,11 @@ struct cflt_block {
 };
 
 struct cflt_file {
-	struct list_head all;
+    struct list_head all;
         // ===
-	struct list_head blks;
-	struct inode *inode;
-	unsigned int method; // u8
+    struct list_head blks;
+    struct inode *inode;
+    unsigned int method; // u8
         unsigned int blksize; // u32
         unsigned int size_u; // whole uncompressed size
         atomic_t compressed;
@@ -44,7 +44,7 @@ struct cflt_file {
 };
 
 struct cflt_privd {
-	struct list_head all;
+    struct list_head all;
         struct rfs_priv_data rfs_data;
         struct cflt_file *fh;
 };

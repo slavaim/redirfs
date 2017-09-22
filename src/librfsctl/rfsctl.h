@@ -8,20 +8,20 @@
 #ifndef __RFSCTL_H__
 #define __RFSCTL_H__
 
-#define RFSCTL_PATH_INCLUDE	1
-#define RFSCTL_PATH_EXCLUDE	2
+#define RFSCTL_PATH_INCLUDE    1
+#define RFSCTL_PATH_EXCLUDE    2
 
 struct rfsctl_path {
-	int type;
-	int id;
-	char *name;
+    int type;
+    int id;
+    char *name;
 };
 
 struct rfsctl_filter {
-	struct rfsctl_path **paths;
-	char *name;
-	int priority;
-	int active;
+    struct rfsctl_path **paths;
+    char *name;
+    int priority;
+    int active;
 };
 
 struct rfsctl_filter *rfsctl_get_filter(const char *name);
@@ -36,9 +36,9 @@ int rfsctl_unregister(const char *name);
 int rfsctl_activate(const char *name);
 int rfsctl_deactivate(const char *name);
 int rfsctl_read_data(const char *fltname, const char *filename, char *buf,
-		int size);
+        int size);
 int rfsctl_write_data(const char *fltname, const char *filename, char *buf,
-		int size);
+        int size);
 
 #endif
 

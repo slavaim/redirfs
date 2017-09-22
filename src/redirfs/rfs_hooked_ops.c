@@ -71,13 +71,13 @@ rfs_hoperations_set_flags(
     unsigned int flags_to_set,
     unsigned int flags_to_remove)
 {
-	unsigned int old_flags, new_flags;
+    unsigned int old_flags, new_flags;
 
-	do {
-		old_flags = ACCESS_ONCE(rfs_hoperations->flags);
-		new_flags = (old_flags & ~flags_to_remove) | flags_to_set;
-	} while (unlikely(cmpxchg(&rfs_hoperations->flags, old_flags,
-				  new_flags) != old_flags));
+    do {
+        old_flags = ACCESS_ONCE(rfs_hoperations->flags);
+        new_flags = (old_flags & ~flags_to_remove) | flags_to_set;
+    } while (unlikely(cmpxchg(&rfs_hoperations->flags, old_flags,
+                  new_flags) != old_flags));
 
     return old_flags;
 }
@@ -198,7 +198,7 @@ rfs_free_file_operations(
     if (rhoperations->old.f_op)
         fops_put(rhoperations->old.f_op);
 
-	kfree(rhoperations);
+    kfree(rhoperations);
 }
 
 static struct rfs_object_type rfs_file_operations_type = {
@@ -284,7 +284,7 @@ rfs_free_inode_operations(
     DBG_BUG_ON(!(RFS_OPS_INODE & rhoperations->flags));
     DBG_BUG_ON(RFS_OPS_INSERTED == ((RFS_OPS_INSERTED | RFS_OPS_REMOVED) & rhoperations->flags));
 
-	kfree(rhoperations);
+    kfree(rhoperations);
 }
 
 static struct rfs_object_type rfs_inode_operations_type = {
@@ -362,7 +362,7 @@ rfs_free_address_space_operations(
     DBG_BUG_ON(!(RFS_OPS_AS & rhoperations->flags));
     DBG_BUG_ON(RFS_OPS_INSERTED == ((RFS_OPS_INSERTED | RFS_OPS_REMOVED) & rhoperations->flags));
 
-	kfree(rhoperations);
+    kfree(rhoperations);
 }
 
 static struct rfs_object_type rfs_address_space_operations_type = {
@@ -440,7 +440,7 @@ rfs_free_dentry_operations(
     DBG_BUG_ON(!(RFS_OPS_DENTRY & rhoperations->flags));
     DBG_BUG_ON(RFS_OPS_INSERTED == ((RFS_OPS_INSERTED | RFS_OPS_REMOVED) & rhoperations->flags));
 
-	kfree(rhoperations);
+    kfree(rhoperations);
 }
 
 static struct rfs_object_type rfs_dentry_type = {

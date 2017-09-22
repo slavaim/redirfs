@@ -14,21 +14,21 @@
 #define AVFLTCTL_PATH_EXCLUDE RFSCTL_PATH_EXCLUDE
 
 struct avfltctl_path {
-	int type;
-	int id;
-	char *name;
-	int cache;
+    int type;
+    int id;
+    char *name;
+    int cache;
 };
 
 struct avfltctl_filter {
-	struct avfltctl_path **paths;
-	char *name;
-	pid_t *registered;
-	pid_t *trusted;
-	int priority;
-	int active;
-	int timeout;
-	int cache;
+    struct avfltctl_path **paths;
+    char *name;
+    pid_t *registered;
+    pid_t *trusted;
+    int priority;
+    int active;
+    int timeout;
+    int cache;
 };
 
 struct avfltctl_filter *avfltctl_get_filter(void);
