@@ -194,6 +194,7 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Frantisek Hrbata <frantisek.hrbata@redirfs.org>");
 MODULE_DESCRIPTION("Redirecting File System Framework Version "
         REDIRFS_VERSION " <www.redirfs.org>");
+MODULE_INFO(supported, "external");
 
 #ifdef RFS_DBG
     #pragma GCC pop_options
