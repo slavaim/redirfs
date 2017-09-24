@@ -440,7 +440,9 @@ static int rfs_release(struct inode *inode, struct file *file)
 
 /*---------------------------------------------------------------------------*/
 
-void rfs_add_dir_subs(struct rfs_file *rfile)
+void rfs_add_dir_subs(
+    struct rfs_file *rfile,
+    struct dentry *last)
 {
     LIST_HEAD(sibs);
     struct rfs_dentry *rdentry;
@@ -449,12 +451,13 @@ void rfs_add_dir_subs(struct rfs_file *rfile)
 
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
 
-    if (rfs_dcache_get_subs(rfile->file->f_dentry, &sibs)) {
+    if (rfs_dcache_get_subs(rfile->file->f_dentry, &sibs, last)) {
         BUG();
         goto exit;
     }
 
     list_for_each_entry(sib, &sibs, list) {
+
         rdentry = rfs_dentry_find(sib->dentry);
         if (rdentry) {
             rfs_dentry_put(rdentry);
@@ -489,6 +492,11 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
     struct rfs_info *rinfo;
     struct rfs_context rcont;
     struct redirfs_args rargs;
+    struct dentry *d_first = NULL;
+
+    /* this optimization was borrowed from
+       the Kaspersky's version of rfs filter */
+    d_first = rfs_get_first_cached_dir_entry(file->f_dentry);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -524,9 +532,10 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
     if (rargs.rv.rv_int)
         goto exit;
 
-    rfs_add_dir_subs(rfile);
+    rfs_add_dir_subs(rfile, d_first);
 
 exit:
+    dput(d_first);
     rfs_file_put(rfile);
     rfs_info_put(rinfo);
     return rargs.rv.rv_int;

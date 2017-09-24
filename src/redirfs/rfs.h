@@ -275,10 +275,13 @@ struct rfs_file;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16))
     #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_child)
+    #define rfs_d_child_entry(pos) list_entry(pos, struct dentry, d_child)
 #elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0))
     #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_u.d_child)
+    #define rfs_d_child_entry(pos) list_entry(pos, struct dentry, d_u.d_child)
 #else
     #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_child)
+    #define rfs_d_child_entry(pos) list_entry(pos, struct dentry, d_child)
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16))
@@ -337,6 +340,24 @@ struct rfs_file;
     #define rfs_kmem_cache_t kmem_cache_t
 #else
     #define rfs_kmem_cache_t struct kmem_cache
+#endif
+
+/* borrowed from the Kaspersky's version of rfs filter */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 38))
+    #define DCACHE_UNLOCK(d) spin_unlock(&dcache_lock)
+    #define RENAME_LOCK() spin_lock(&dcache_lock)
+    #define RENAME_UNLOCK() spin_unlock(&dcache_lock)
+    #define DENTRY_LOCK(d)
+    #define DENTRY_NESTED(d)
+    #define DENTRY_UNLOCK(d)
+    #define dget_dlock(d) dget_locked(d)
+#else
+    #define DENTRY_LOCK(d) spin_lock(&(d)->d_lock)
+    #define DENTRY_NESTED(d) spin_lock_nested(&(d)->d_lock, DENTRY_D_LOCK_NESTED)
+    #define DENTRY_UNLOCK(d) spin_unlock(&(d)->d_lock)
+    #define DCACHE_UNLOCK(d) spin_unlock(&(d)->d_lock)
+    #define RENAME_LOCK() write_seqlock(&rename_lock)
+    #define RENAME_UNLOCK() write_sequnlock(&rename_lock)
 #endif
 
 struct rfs_op_info {
@@ -636,6 +657,10 @@ void rfs_file_set_ops(struct rfs_file *rfile);
 int rfs_file_cache_create(void);
 void rfs_file_cache_destory(void);
 
+void rfs_add_dir_subs(
+    struct rfs_file *rfile,
+    struct dentry *last);
+
 struct rfs_dcache_data {
     struct rfs_info *rinfo;
     struct rfs_flt *rflt;
@@ -660,8 +685,17 @@ int rfs_dcache_set(struct dentry *dentry, void *data);
 int rfs_dcache_reset(struct dentry *dentry, void *data);
 int rfs_dcache_rdentry_add(struct dentry *dentry, struct rfs_info *rinfo);
 int rfs_dcache_rinode_del(struct rfs_dentry *rdentry, struct inode *inode);
-int rfs_dcache_get_subs(struct dentry *dir, struct list_head *sibs);
+
+int rfs_dcache_get_subs(
+    struct dentry *dir,
+    struct list_head *sibs,
+    struct dentry* last);
+
 void rfs_dcache_entry_free_list(struct list_head *head);
+
+struct dentry*
+rfs_get_first_cached_dir_entry(
+    struct dentry *dentry);
 
 struct rfs_context {
     struct list_head data;
@@ -847,6 +881,11 @@ void rfs_data_remove(struct list_head *head);
     static inline void rfs_dcache_lock(struct dentry *d)
     {
         spin_lock(&d->d_lock);
+    }
+
+    static inline void rfs_dcache_lock_nested(struct dentry *d)
+    {
+        spin_lock_nested(&d->d_lock, DENTRY_D_LOCK_NESTED);
     }
 
     static inline void rfs_dcache_unlock(struct dentry *d)

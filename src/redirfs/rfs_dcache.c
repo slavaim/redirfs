@@ -57,22 +57,6 @@ void rfs_dcache_data_free(struct rfs_dcache_data *rdata)
     kfree(rdata);
 }
 
-static struct rfs_dcache_entry *rfs_dcache_entry_alloc_locked(
-        struct dentry *dentry, struct list_head *list)
-{
-    struct rfs_dcache_entry *entry;
-
-    entry = kzalloc(sizeof(struct rfs_dcache_entry), GFP_ATOMIC);
-    if (!entry)
-        return ERR_PTR(-ENOMEM);
-
-    INIT_LIST_HEAD(&entry->list);
-    entry->dentry = rfs_dget_locked(dentry);
-    list_add_tail(&entry->list, list);
-
-    return entry;
-}
-
 static struct rfs_dcache_entry *rfs_dcache_entry_alloc(struct dentry *dentry,
         struct list_head *list)
 {
@@ -101,31 +85,11 @@ static void rfs_dcache_entry_free(struct rfs_dcache_entry *entry)
     kfree(entry);
 }
 
-static int rfs_dcache_get_subs_atomic(struct dentry *dir,
-        struct list_head *sibs)
-{
-    struct rfs_dcache_entry *sib;
-    struct dentry *dentry;
-    int rv = 0;
-
-    rfs_dcache_lock(dir);
-
-    rfs_for_each_d_child(dentry, &dir->d_subdirs) {
-
-        sib = rfs_dcache_entry_alloc_locked(dentry, sibs);
-        if (IS_ERR(sib)) {
-            rv = PTR_ERR(sib);
-            break;
-        }
-    }
-
-    rfs_dcache_unlock(dir);
-
-    return rv;
-}
-
-static int rfs_dcache_get_subs_kernel(struct dentry *dir,
-        struct list_head *sibs)
+static int rfs_dcache_get_subs_kernel(
+    struct dentry *dir,
+    struct list_head *sibs,
+    struct dentry* last
+    )
 {
     LIST_HEAD(pool);
     int pool_size = 32;
@@ -146,18 +110,23 @@ again:
     }
 
     rfs_dcache_lock(dir);
-
     rfs_for_each_d_child(dentry, &dir->d_subdirs) {
         if (list_empty(&pool)) {
             pool_small = 1;
             break;
         }
+
+        if (last && (dentry == last))
+            break;
         
-        sib = list_entry(pool.next, struct rfs_dcache_entry, list);
-        sib->dentry = rfs_dget_locked(dentry);
+        rfs_dcache_lock_nested(dentry);
+        {
+            sib = list_entry(pool.next, struct rfs_dcache_entry, list);
+            sib->dentry = rfs_dget_locked(dentry);
+        }
+        rfs_dcache_unlock(dentry);
         list_move(&sib->list, sibs);
     }
-
     rfs_dcache_unlock(dir);
 
     rfs_dcache_entry_free_list(&pool);
@@ -171,19 +140,12 @@ again:
     return 0;
 }
 
-int rfs_dcache_get_subs(struct dentry *dir, struct list_head *sibs)
+int rfs_dcache_get_subs(
+    struct dentry *dir,
+    struct list_head *sibs,
+    struct dentry* last)
 {
-    int rv;
-
-    rv = rfs_dcache_get_subs_atomic(dir, sibs);
-    if (!rv)
-        return rv;
-
-    rfs_dcache_entry_free_list(sibs);
-    
-    rv = rfs_dcache_get_subs_kernel(dir, sibs);
-
-    return rv;
+    return rfs_dcache_get_subs_kernel(dir, sibs, last);
 }
 
 void rfs_dcache_entry_free_list(struct list_head *head)
@@ -204,7 +166,7 @@ static int rfs_dcache_get_subs_mutex(struct dentry *dir, struct list_head *sibs)
         return 0;
 
     rfs_inode_mutex_lock(dir->d_inode);
-    rv = rfs_dcache_get_subs(dir, sibs);
+    rv = rfs_dcache_get_subs(dir, sibs, NULL);
     rfs_inode_mutex_unlock(dir->d_inode);
 
     return rv;
@@ -466,6 +428,27 @@ int rfs_dcache_reset(struct dentry *dentry, void *data)
         return rfs_dcache_rdentry_del(dentry, rfs_info_none);
 
     return rfs_dcache_rdentry_add(dentry, rdata->rinfo);
+}
+
+struct dentry*
+rfs_get_first_cached_dir_entry(
+    struct dentry *dentry)
+{
+    struct dentry *d_first = NULL;
+
+    if (S_ISDIR(dentry->d_inode->i_mode)){
+
+        rfs_dcache_lock(dentry);
+
+        if (!list_empty(&dentry->d_subdirs)) {
+            d_first = rfs_d_child_entry(dentry->d_subdirs.next);
+            dget(d_first);
+        }
+
+        rfs_dcache_unlock(dentry);
+    }
+
+    return d_first;
 }
 
 #ifdef RFS_DBG

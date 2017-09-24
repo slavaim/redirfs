@@ -224,14 +224,17 @@ ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 
 /*---------------------------------------------------------------------------*/
 
-extern void rfs_add_dir_subs(struct rfs_file *rfile);
-
 int rfs_iterate(struct file *file, struct dir_context *dir_context)
 {
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
     struct redirfs_args rargs;
+    struct dentry *d_first = NULL;
+
+    /* this optimization was borrowed from
+       the Kaspersky's version of rfs filter */
+    d_first = rfs_get_first_cached_dir_entry(file->f_dentry);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -260,8 +263,9 @@ int rfs_iterate(struct file *file, struct dir_context *dir_context)
     rfs_context_deinit(&rcont);
 
     if (!rargs.rv.rv_int)
-        rfs_add_dir_subs(rfile);
+        rfs_add_dir_subs(rfile, d_first);
 
+    dput(d_first);
     rfs_file_put(rfile);
     rfs_info_put(rinfo);
     return rargs.rv.rv_int;
@@ -275,6 +279,11 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
     struct rfs_info *rinfo;
     struct rfs_context rcont;
     struct redirfs_args rargs;
+    struct dentry *d_first = NULL;
+
+    /* this optimization was borrowed from
+       the Kaspersky's version of rfs filter */
+    d_first = rfs_get_first_cached_dir_entry(file->f_dentry);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -302,8 +311,9 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
     rfs_context_deinit(&rcont);
 
     if (!rargs.rv.rv_int)
-        rfs_add_dir_subs(rfile);
+        rfs_add_dir_subs(rfile, d_first);
 
+    dput(d_first);
     rfs_file_put(rfile);
     rfs_info_put(rinfo);
     return rargs.rv.rv_int;
