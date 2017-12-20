@@ -55,9 +55,13 @@ int rfs_write_end(struct file *file,
 sector_t rfs_bmap(struct address_space *mapping,
                   sector_t block);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+void rfs_invalidatepage(struct page *page, unsigned long offset);
+#else
 void rfs_invalidatepage(struct page *page,
                         unsigned int offset,
                         unsigned int length);
+#endif
 
 int rfs_releasepage(struct page *page,
                     gfp_t flags);

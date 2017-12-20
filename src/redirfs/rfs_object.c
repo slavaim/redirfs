@@ -446,7 +446,7 @@ rfs_object_init(
 #endif
     refcount_set(&rfs_object->refcount, 1);
     rfs_object->type = type;
-    rcu_assign_pointer(rfs_object->system_object, system_object);
+    rcu_assign_pointer(rfs_object->system_object, (void*) system_object);
 
     DBG_BUG_ON(rfs_object->type->type >= ARRAY_SIZE(rfs_objects_debug_info));
     di = &rfs_objects_debug_info[rfs_object->type->type];

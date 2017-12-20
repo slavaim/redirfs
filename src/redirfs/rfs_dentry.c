@@ -523,7 +523,7 @@ static int rfs_d_compare(struct dentry *dentry, struct qstr *name1,
     return rargs.rv.rv_int;
 }
 
-#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+#elif !(defined RH_KABI_DEPRECATE && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
 
 static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
         const struct dentry *dentry, const struct inode *d_inode,
@@ -591,6 +591,72 @@ static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
     rfs_info_put(rinfo);
 
     return rargs.rv.rv_int;
+}
+
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0))
+
+static int rfs_d_compare(const struct dentry *parent,
+		const struct dentry *dentry, unsigned int len, const char *str,
+		const struct qstr *name)
+{
+    struct rfs_dentry *rdentry;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+    rdentry = rfs_dentry_find(dentry);
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    rfs_context_init(&rcont, 0);
+
+    if (dentry->d_inode) {
+        if (S_ISREG(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_REG_DOP_D_COMPARE;
+        else if (S_ISDIR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_DIR_DOP_D_COMPARE;
+        else if (S_ISLNK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_LNK_DOP_D_COMPARE;
+        else if (S_ISCHR(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_CHR_DOP_D_COMPARE;
+        else if (S_ISBLK(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_BLK_DOP_D_COMPARE;
+        else if (S_ISFIFO(dentry->d_inode->i_mode))
+            rargs.type.id = REDIRFS_FIFO_DOP_D_COMPARE;
+        else
+            rargs.type.id = REDIRFS_SOCK_DOP_D_COMPARE;
+    } else
+        rargs.type.id = REDIRFS_NONE_DOP_D_COMPARE;
+
+    rargs.args.d_compare.parent = parent;
+    rargs.args.d_compare.dentry = dentry;
+    rargs.args.d_compare.len = len;
+    rargs.args.d_compare.str = str;
+    rargs.args.d_compare.name = name;
+
+    if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rdentry->op_old && rdentry->op_old->d_compare)
+            rargs.rv.rv_int = rdentry->op_old->d_compare(
+                    rargs.args.d_compare.parent,
+                    rargs.args.d_compare.dentry,
+                    rargs.args.d_compare.len,
+                    rargs.args.d_compare.str,
+                    rargs.args.d_compare.name);
+        else
+            rargs.rv.rv_int = rfs_d_compare_default(
+                    &rargs.args.d_compare.dentry->d_name,
+                    rargs.args.d_compare.name);
+    }
+
+    if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+
+    rfs_dentry_put(rdentry);
+    rfs_info_put(rinfo);
+
+    return rargs.rv.rv_int;
+
 }
 
 #else
