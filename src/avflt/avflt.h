@@ -37,7 +37,7 @@
 #include <linux/slab.h>
 #include <redirfs.h>
 
-#define AVFLT_VERSION    "0.6"
+#define AVFLT_VERSION    "0.7"
 
 #define AVFLT_EVENT_OPEN    1
 #define AVFLT_EVENT_CLOSE    2
@@ -54,8 +54,16 @@ struct avflt_event {
     int type;
     int id;
     int result;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
     struct vfsmount *mnt;
-    struct dentry *dentry;
+    struct dentry *f_path_dentry;
+#else
+	#ifndef f_dentry
+		#define f_dentry f_path.dentry
+	#endif
+	#define f_path_dentry f_path.dentry
+    struct path f_path;
+#endif
     unsigned int flags;
     struct file *file;
     int fd;

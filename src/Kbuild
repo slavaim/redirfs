@@ -1,3 +1,1 @@
-# obj-m := redirfs/ avflt/ dummyflt/
-obj-m := redirfs/ dummyflt/
-
+obj-m := redirfs/ avflt/ dummyflt/

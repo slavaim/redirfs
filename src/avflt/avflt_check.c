@@ -23,6 +23,13 @@
 
 #include "avflt.h"
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,18,0))
+static int get_unused_fd(void)
+{
+	return get_unused_fd_flags(0);
+}
+#endif
+
 DECLARE_WAIT_QUEUE_HEAD(avflt_request_available);
 static DEFINE_SPINLOCK(avflt_request_lock);
 static LIST_HEAD(avflt_request_list);
@@ -47,8 +54,13 @@ static struct avflt_event *avflt_event_alloc(struct file *file, int type)
     atomic_set(&event->count, 1);
     event->type = type;
     event->id = -1;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
     event->mnt = mntget(file->f_vfsmnt);
-    event->dentry = dget(file->f_dentry);
+    event->f_path_dentry = dget(file->f_dentry);
+#else
+    path_get(&file->f_path);
+    event->f_path = file->f_path;
+#endif
     event->flags = file->f_flags;
     event->fd = -1;
     event->pid = current->pid;
@@ -97,8 +109,12 @@ void avflt_event_put(struct avflt_event *event)
         return;
 
     avflt_put_root_data(event->root_data);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
     mntput(event->mnt);
-    dput(event->dentry);
+    dput(event->f_path_dentry);
+#else
+    path_put(&event->f_path);
+#endif
     kmem_cache_free(avflt_event_cache, event);
 }
 
@@ -200,7 +216,7 @@ static void avflt_update_cache(struct avflt_event *event)
     if (!atomic_read(&avflt_cache_enabled))
         return;
 
-    root_data = avflt_get_root_data_inode(event->dentry->d_inode);
+    root_data = avflt_get_root_data_inode(event->f_path_dentry->d_inode);
     if (!root_data)
         return;
 
@@ -211,7 +227,7 @@ static void avflt_update_cache(struct avflt_event *event)
 
     avflt_put_root_data(root_data);
 
-    inode_data = avflt_attach_inode_data(event->dentry->d_inode);
+    inode_data = avflt_attach_inode_data(event->f_path_dentry->d_inode);
     if (!inode_data)
         return;
 
@@ -268,10 +284,13 @@ int avflt_get_file(struct avflt_event *event)
     flags |= event->flags & O_LARGEFILE;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
-    file = dentry_open(dget(event->dentry), mntget(event->mnt), flags);
-#else
-    file = dentry_open(dget(event->dentry), mntget(event->mnt), flags,
+    file = dentry_open(dget(event->f_path_dentry), mntget(event->mnt), flags);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
+    file = dentry_open(dget(event->f_path_dentry), mntget(event->mnt), flags,
             current_cred());
+#else
+    path_get(&event->f_path);
+    file = dentry_open(&event->f_path, flags, current_cred());
 #endif
     if (IS_ERR(file)) {
         put_unused_fd(fd);
