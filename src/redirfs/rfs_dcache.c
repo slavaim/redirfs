@@ -124,7 +124,7 @@ again:
             sib = list_entry(pool.next, struct rfs_dcache_entry, list);
             sib->dentry = rfs_dget_locked(dentry);
         }
-        rfs_dcache_unlock(dentry);
+        rfs_dcache_unlock_nested(dentry);
         list_move(&sib->list, sibs);
     }
     rfs_dcache_unlock(dir);
@@ -442,7 +442,11 @@ rfs_get_first_cached_dir_entry(
 
         if (!list_empty(&dentry->d_subdirs)) {
             d_first = rfs_d_child_entry(dentry->d_subdirs.next);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
+            rfs_dget_locked(d_first);
+#else
             dget(d_first);
+#endif
         }
 
         rfs_dcache_unlock(dentry);

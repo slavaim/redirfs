@@ -59,14 +59,19 @@ static struct rfs_object_type rfs_inode_type = {
 static rfs_kmem_cache_t *rfs_inode_cache = NULL;
 
 /*---------------------------------------------------------------------------*/
-
 #ifdef RFS_PER_OBJECT_OPS
-    #define rfs_cast_to_rinode(inode) \
-        (inode && inode->i_op && inode->i_op->rename == rfs_rename ? \
-        container_of(inode->i_op, struct rfs_inode, op_new) : \
-        NULL)
+	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+        #define rfs_cast_to_rinode(inode) \
+            (inode && inode->i_op && inode->i_op->rename2 == rfs_rename2 ? \
+            container_of(inode->i_op, struct rfs_inode, op_new) : \
+            NULL)
+    #else
+        #define rfs_cast_to_rinode(inode) \
+            (inode && inode->i_op && inode->i_op->rename == rfs_rename ? \
+            container_of(inode->i_op, struct rfs_inode, op_new) : \
+            NULL)
+    #endif
 #endif /* RFS_PER_OBJECT_OPS */
-
 struct rfs_inode* rfs_inode_find(struct inode *inode) 
 {
     struct rfs_inode  *rinode;
@@ -1250,7 +1255,7 @@ static void rfs_postcall_flts_rename(struct rfs_info *rinfo,
     rcont->idx++;
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0))
 int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
         struct inode *new_dir, struct dentry *new_dentry)
 {
@@ -1323,10 +1328,15 @@ skip:
     return rargs.rv.rv_int;
 }
 #else
-// TODO: add rename2 (4.0.0 - 4.9.0)
-int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+int rfs_rename2(struct inode *old_dir, struct dentry *old_dentry,
         struct inode *new_dir, struct dentry *new_dentry,
         unsigned int flags)
+#else
+int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
+        struct inode *new_dir, struct dentry *new_dentry,
+		unsigned int flags)
+#endif //(LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
 {
     struct rfs_inode *rinode_old;
     struct rfs_inode *rinode_new;
@@ -1367,6 +1377,23 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
         rfs_precall_flts_rename(rinfo_new, &rcont_new, &rargs))
         goto skip;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+    if (rinode_old->op_old && rinode_old->op_old->rename2)
+        rargs.rv.rv_int = rinode_old->op_old->rename2(
+                rargs.args.i_rename.old_dir,
+                rargs.args.i_rename.old_dentry,
+                rargs.args.i_rename.new_dir,
+                rargs.args.i_rename.new_dentry,
+                rargs.args.i_rename.flags);
+    else if (rinode_old->op_old && rinode_old->op_old->rename)
+        rargs.rv.rv_int = rinode_old->op_old->rename(
+                rargs.args.i_rename.old_dir,
+                rargs.args.i_rename.old_dentry,
+                rargs.args.i_rename.new_dir,
+                rargs.args.i_rename.new_dentry);
+    else
+        rargs.rv.rv_int = -ENOSYS;
+#else
     if (rinode_old->op_old && rinode_old->op_old->rename)
         rargs.rv.rv_int = rinode_old->op_old->rename(
                 rargs.args.i_rename.old_dir,
@@ -1376,7 +1403,8 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
                 rargs.args.i_rename.flags);
     else
         rargs.rv.rv_int = -ENOSYS;
-    
+#endif //(LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+
 skip:
     if (!rargs.rv.rv_int)
         rargs.rv.rv_int = rfs_fsrename(
@@ -1398,7 +1426,7 @@ skip:
     rfs_info_put(rinfo_new);
     return rargs.rv.rv_int;
 }
-#endif
+#endif //(LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0))
 
 /*---------------------------------------------------------------------------*/
 
@@ -1503,10 +1531,22 @@ void rfs_inode_set_ops(struct rfs_inode *rinode)
             rfs_inode_set_ops_sock(rinode);
             
     #ifndef RFS_PER_OBJECT_OPS
+    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+        RFS_SET_IOP_MGT(rinode,
+                        RFS_OP_IDC(rfs_imode_to_type(mode, false), RFS_OP_i_rename2),
+                        rename2,
+                        rfs_rename2);
+        RFS_SET_IOP_MGT(rinode,
+                        RFS_OP_IDC(rfs_imode_to_type(mode, false), RFS_OP_i_rename),
+                        rename,
+                        NULL);
+    #else
         RFS_SET_IOP_MGT(rinode,
                         RFS_OP_IDC(rfs_imode_to_type(mode, false), RFS_OP_i_rename),
                         rename,
                         rfs_rename);
+    #endif
+
     #endif /* !RFS_PER_OBJECT_OPS */
     }
     spin_unlock(&rinode->lock);

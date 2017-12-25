@@ -49,6 +49,10 @@
     #define f_vfsmnt    f_path.mnt
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0))
+    #define f_inode     f_path.dentry->d_inode
+#endif
+
 /*
  * do not replace NULL operations to preserve file system driver semantics
  */
@@ -276,7 +280,7 @@ struct rfs_file;
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16))
     #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_child)
     #define rfs_d_child_entry(pos) list_entry(pos, struct dentry, d_child)
-#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0))
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
     #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_u.d_child)
     #define rfs_d_child_entry(pos) list_entry(pos, struct dentry, d_u.d_child)
 #else
@@ -340,24 +344,6 @@ struct rfs_file;
     #define rfs_kmem_cache_t kmem_cache_t
 #else
     #define rfs_kmem_cache_t struct kmem_cache
-#endif
-
-/* borrowed from the Kaspersky's version of rfs filter */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 38))
-    #define DCACHE_UNLOCK(d) spin_unlock(&dcache_lock)
-    #define RENAME_LOCK() spin_lock(&dcache_lock)
-    #define RENAME_UNLOCK() spin_unlock(&dcache_lock)
-    #define DENTRY_LOCK(d)
-    #define DENTRY_NESTED(d)
-    #define DENTRY_UNLOCK(d)
-    #define dget_dlock(d) dget_locked(d)
-#else
-    #define DENTRY_LOCK(d) spin_lock(&(d)->d_lock)
-    #define DENTRY_NESTED(d) spin_lock_nested(&(d)->d_lock, DENTRY_D_LOCK_NESTED)
-    #define DENTRY_UNLOCK(d) spin_unlock(&(d)->d_lock)
-    #define DCACHE_UNLOCK(d) spin_unlock(&(d)->d_lock)
-    #define RENAME_LOCK() write_seqlock(&rename_lock)
-    #define RENAME_UNLOCK() write_sequnlock(&rename_lock)
 #endif
 
 struct rfs_op_info {
@@ -860,7 +846,6 @@ void rfs_data_remove(struct list_head *head);
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
-
     static inline void rfs_dcache_lock(struct dentry *d)
     {
         spin_lock(&dcache_lock);
@@ -869,6 +854,14 @@ void rfs_data_remove(struct list_head *head);
     static inline void rfs_dcache_unlock(struct dentry *d)
     {
         spin_unlock(&dcache_lock);
+    }
+
+    static inline void rfs_dcache_lock_nested(struct dentry *d)
+    {
+    }
+
+    static inline void rfs_dcache_unlock_nested(struct dentry *d)
+    {
     }
 
     static inline struct dentry *rfs_dget_locked(struct dentry *d)
@@ -886,6 +879,11 @@ void rfs_data_remove(struct list_head *head);
     static inline void rfs_dcache_lock_nested(struct dentry *d)
     {
         spin_lock_nested(&d->d_lock, DENTRY_D_LOCK_NESTED);
+	}
+
+    static inline void rfs_dcache_unlock_nested(struct dentry *d)
+    {
+        spin_unlock(&d->d_lock);
     }
 
     static inline void rfs_dcache_unlock(struct dentry *d)
@@ -936,7 +934,11 @@ void rfs_data_remove(struct list_head *head);
 
     static inline int rfs_inode_setattr(struct inode *inode, const struct iattr *attr)
     {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35))
+        return inode_setattr(inode, (struct iattr *) attr);
+#else
         return inode_setattr(inode, attr);
+#endif
     }
 
 #else

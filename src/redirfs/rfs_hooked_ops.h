@@ -23,8 +23,8 @@
 #ifndef _RFS_HOOKED_OPS_H
 #define _RFS_HOOKED_OPS_H
 
-#include "rfs_object.h"
 #include "redirfs.h"
+#include "rfs_object.h"
 
 struct rfs_file;
 struct rfs_inode;

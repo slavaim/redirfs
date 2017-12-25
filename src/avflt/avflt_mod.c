@@ -40,7 +40,7 @@ static int __init avflt_init(void)
         goto err_data;
 
     rv = avflt_sys_init();
-    if (rv) 
+    if (rv)
         goto err_rfs;
 
     rv = avflt_dev_init();

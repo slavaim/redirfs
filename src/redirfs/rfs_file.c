@@ -583,11 +583,17 @@ static void rfs_file_set_ops_reg(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_splice_write), splice_write, rfs_splice_write);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_splice_read), splice_read, rfs_splice_read);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_setlease), setlease, rfs_setlease);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_fallocate), fallocate, rfs_fallocate);
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_show_fdinfo), show_fdinfo, rfs_show_fdinfo);
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_copy_file_range), copy_file_range, rfs_copy_file_range);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_clone_file_range), clone_file_range, rfs_clone_file_range);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
+	RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
+#endif
 }
 
 /*---------------------------------------------------------------------------*/
@@ -613,10 +619,11 @@ static void rfs_file_set_ops_dir(struct rfs_file *rfile)
     RFS_SET_FOP_MGT(rfile,
                     RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate),
                     iterate, rfs_iterate);
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
     RFS_SET_FOP_MGT(rfile,
                     RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate_shared),
-                    iterate_shared, rfs_iterate_shared);
+					iterate_shared, rfs_iterate_shared);
+#endif
 #endif
 
 #endif /* !RFS_PER_OBJECT_OPS  */
@@ -662,11 +669,17 @@ static void rfs_file_set_ops_chr(struct rfs_file *rfile)
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_splice_write), splice_write, rfs_splice_write);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_splice_read), splice_read, rfs_splice_read);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_setlease), setlease, rfs_setlease);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fallocate), fallocate, rfs_fallocate);
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_show_fdinfo), show_fdinfo, rfs_show_fdinfo);
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_copy_file_range), copy_file_range, rfs_copy_file_range);
     RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_clone_file_range), clone_file_range, rfs_clone_file_range);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
+	RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
+#endif
 }
 
 /*---------------------------------------------------------------------------*/

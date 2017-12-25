@@ -224,6 +224,7 @@ ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
 
 /*---------------------------------------------------------------------------*/
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
 int rfs_iterate(struct file *file, struct dir_context *dir_context)
 {
     struct rfs_file *rfile;
@@ -270,9 +271,10 @@ int rfs_iterate(struct file *file, struct dir_context *dir_context)
     rfs_info_put(rinfo);
     return rargs.rv.rv_int;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
 int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
 {
     struct rfs_file *rfile;
@@ -318,7 +320,7 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
     rfs_info_put(rinfo);
     return rargs.rv.rv_int;
 }
-
+#endif
 /*---------------------------------------------------------------------------*/
 
 unsigned int rfs_poll(struct file *file, struct poll_table_struct *poll_table_struct)
@@ -509,7 +511,79 @@ int rfs_flush(struct file *file, fl_owner_t owner)
 }
 
 /*---------------------------------------------------------------------------*/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35))
+int rfs_fsync(struct file *file, struct dentry *dentry, int datasync)
+{
+    struct rfs_file *rfile;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
+    rfile = rfs_file_find(file);
+    rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+    rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_fsync);
+	rargs.args.f_fsync.file = file;
+	rargs.args.f_fsync.dentry = dentry;
+    rargs.args.f_fsync.datasync = datasync;
+
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rfile->op_old && rfile->op_old->fsync)
+            rargs.rv.rv_int = rfile->op_old->fsync(
+					rargs.args.f_fsync.file,
+					rargs.args.f_fsync.dentry,
+                    rargs.args.f_fsync.datasync);
+        else
+            rargs.rv.rv_int = -EIO;
+    }
+
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+
+    rfs_file_put(rfile);
+    rfs_info_put(rinfo);
+    return rargs.rv.rv_int;
+}
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3, 1, 0))
+int rfs_fsync(struct file *file, int datasync)
+{
+    struct rfs_file *rfile;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+    rfile = rfs_file_find(file);
+    rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+    rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_fsync);
+    rargs.args.f_fsync.file = file;
+    rargs.args.f_fsync.datasync = datasync;
+
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rfile->op_old && rfile->op_old->fsync)
+            rargs.rv.rv_int = rfile->op_old->fsync(
+                    rargs.args.f_fsync.file,
+                    rargs.args.f_fsync.datasync);
+        else
+            rargs.rv.rv_int = -EIO;
+    }
+
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+
+    rfs_file_put(rfile);
+    rfs_info_put(rinfo);
+    return rargs.rv.rv_int;
+}
+#else
 int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 {
     struct rfs_file *rfile;
@@ -548,6 +622,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     rfs_info_put(rinfo);
     return rargs.rv.rv_int;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 
@@ -846,7 +921,44 @@ ssize_t rfs_splice_read(struct file *in, loff_t *ppos,
 }
 
 /*---------------------------------------------------------------------------*/
+#if !(defined RH_KABI_DEPRECATE && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0))
+int rfs_setlease(struct file *file, long arg, struct file_lock **flock)
+{
+    struct rfs_file *rfile;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
 
+    rfile = rfs_file_find(file);
+    rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+    rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_setlease);
+    rargs.args.f_setlease.file = file;
+    rargs.args.f_setlease.arg = arg;
+    rargs.args.f_setlease.flock = flock;
+
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rfile->op_old && rfile->op_old->setlease)
+            rargs.rv.rv_int = rfile->op_old->setlease(
+                    rargs.args.f_setlease.file,
+                    rargs.args.f_setlease.arg,
+                    rargs.args.f_setlease.flock);
+        else
+            rargs.rv.rv_int = -EIO;
+    }
+
+    if (RFS_IS_FOP_SET(rfile, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+
+    rfs_file_put(rfile);
+    rfs_info_put(rinfo);
+    return rargs.rv.rv_int;
+}
+#else
 int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
           void **priv)
 {
@@ -886,9 +998,11 @@ int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
     rfs_info_put(rinfo);
     return rargs.rv.rv_int;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
 long rfs_fallocate(struct file *file, int mode,
               loff_t offset, loff_t len)
 {
@@ -928,9 +1042,45 @@ long rfs_fallocate(struct file *file, int mode,
     rfs_info_put(rinfo);
     return rargs.rv.rv_long;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0))
+int rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
+{
+    struct rfs_file *rfile;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
+
+    rfile = rfs_file_find(file);
+    rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
+    rfs_context_init(&rcont, 0);
+
+    rargs.type.id = rfs_inode_to_idc(file->f_inode, RFS_OP_f_show_fdinfo);
+    rargs.args.f_show_fdinfo.seq_file = seq_file;
+    rargs.args.f_show_fdinfo.file = file;
+
+    if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rfile->op_old && rfile->op_old->show_fdinfo)
+            rargs.rv.rv_int = rfile->op_old->show_fdinfo(
+                    rargs.args.f_show_fdinfo.seq_file,
+                    rargs.args.f_show_fdinfo.file);
+        else
+            rargs.rv.rv_int = -EIO;
+    }
+
+    rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+    rfs_context_deinit(&rcont);
+
+    rfs_file_put(rfile);
+    rfs_info_put(rinfo);
+    return rargs.rv.rv_int;
+}
+#else
 void rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
 {
     struct rfs_file *rfile;
@@ -960,9 +1110,12 @@ void rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
     rfs_file_put(rfile);
     rfs_info_put(rinfo);
 }
+#endif //(LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0))
+#endif //(LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
 
 /*---------------------------------------------------------------------------*/
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
 ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
                     struct file *file_out, loff_t pos_out,
                     size_t count, unsigned int flags)
@@ -1010,9 +1163,11 @@ ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
     rfs_info_put(rinfo);
     return rargs.rv.rv_ssize;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
 int rfs_clone_file_range(struct file *src_file, loff_t src_off,
         struct file *dst_file, loff_t dst_off, u64 count)
 {
@@ -1057,9 +1212,11 @@ int rfs_clone_file_range(struct file *src_file, loff_t src_off,
     rfs_info_put(rinfo);
     return rargs.rv.rv_int;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
 ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
                     u64 len, struct file *dst_file, u64 dst_loff)
 {
@@ -1104,6 +1261,7 @@ ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
     rfs_info_put(rinfo);
     return rargs.rv.rv_ssize;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 

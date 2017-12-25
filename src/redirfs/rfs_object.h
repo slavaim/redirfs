@@ -25,8 +25,43 @@
 
 #include <linux/types.h>
 #include <linux/list.h>
-#include <linux/refcount.h>
+
 #include <linux/spinlock.h>
+
+#ifndef __SPIN_LOCK_INITIALIZER
+#define __SPIN_LOCK_INITIALIZER(lockname)  __SPIN_LOCK_UNLOCKED(lockname)
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
+#include <linux/refcount.h>
+#else
+#include <linux/atomic.h>
+
+typedef struct refcount_struct {
+   atomic_t refs;
+} refcount_t;
+
+static inline void refcount_set(refcount_t *r, unsigned int n)
+{
+	atomic_set(&r->refs, n);
+}
+
+static inline void refcount_inc(refcount_t *r)
+{
+    atomic_inc(&r->refs);
+}
+
+static inline __must_check bool refcount_dec_and_test(refcount_t *r)
+{
+    return atomic_dec_and_test(&r->refs);
+}
+
+static inline unsigned int refcount_read(const refcount_t *r)
+{
+    return atomic_read(&r->refs);
+}
+
+#endif //(LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0)
 #include <linux/rcupdate.h>
 #include <linux/radix-tree.h>
 

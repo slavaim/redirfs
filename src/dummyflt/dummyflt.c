@@ -39,6 +39,10 @@
     #define f_vfsmnt    f_path.mnt
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0))
+    #define f_inode f_path.dentry->d_inode
+#endif
+
 #define DUMMYFLT_VERSION "0.5"
 
 static redirfs_filter dummyflt;

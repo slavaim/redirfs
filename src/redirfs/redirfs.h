@@ -40,7 +40,7 @@
 #include <linux/aio.h>
 #include <linux/version.h>
 
-#define REDIRFS_VERSION "0.12 EXPERIMENTAL"
+#define REDIRFS_VERSION "0.13 EXPERIMENTAL"
 
 #define REDIRFS_PATH_INCLUDE        1
 #define REDIRFS_PATH_EXCLUDE        2
@@ -107,6 +107,9 @@ enum rfs_op_id {
     RFS_OP_i_rmdir,
     RFS_OP_i_mknod,
     RFS_OP_i_rename,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+    RFS_OP_i_rename2,
+#endif
     RFS_OP_i_setattr,
     RFS_OP_i_getattr,
     RFS_OP_i_listxattr,
@@ -273,7 +276,11 @@ enum redirfs_op_idc {
     REDIRFS_DIR_IOP_MKDIR        = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_mkdir),
     REDIRFS_DIR_IOP_RMDIR        = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_rmdir),
     REDIRFS_DIR_IOP_MKNOD        = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_mknod),
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+    REDIRFS_DIR_IOP_RENAME       = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_rename2),
+#else
     REDIRFS_DIR_IOP_RENAME       = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_rename),
+#endif
     REDIRFS_DIR_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_permission),
     REDIRFS_DIR_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_setattr),
 
@@ -429,7 +436,7 @@ union redirfs_op_args {
         struct qstr *name1;
         struct qstr *name2;
     } d_compare;
-#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+#elif !(defined RH_KABI_DEPRECATE && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
     struct {
         const struct dentry *parent;
         const struct inode *inode;
@@ -437,6 +444,14 @@ union redirfs_op_args {
         const struct inode *d_inode;
         unsigned int tlen;
         const char *tname;
+        const struct qstr *name;
+	} d_compare;
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0))
+    struct {
+        const struct dentry *parent;
+        const struct dentry *dentry;
+        unsigned int len;
+        const char   *str;
         const struct qstr *name;
     } d_compare;
 #else
@@ -543,7 +558,7 @@ union redirfs_op_args {
     } i_mknod;
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0))
     struct {
         struct inode *old_dir;
         struct dentry *old_dentry;
@@ -551,7 +566,6 @@ union redirfs_op_args {
         struct dentry *new_dentry;
     } i_rename;
 #else
-    // TODO: rename2 (4.0.0 - 4.9.0)
     struct {
         struct inode *old_dir;
         struct dentry *old_dentry;
@@ -675,12 +689,25 @@ union redirfs_op_args {
         unsigned long arg;
     } f_compat_ioctl;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35))
+    struct {
+		struct file *file;
+		struct dentry *dentry;
+        int datasync;
+    } f_fsync;
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3, 1, 0))
+    struct {
+		struct file *file;
+        int datasync;
+    } f_fsync;
+#else
     struct {
         struct file *file;
         loff_t start;
         loff_t end;
         int datasync;
     } f_fsync;
+#endif
 
     struct {
         int fd;
@@ -733,12 +760,20 @@ union redirfs_op_args {
         unsigned int flags;
     } f_splice_read;
 
+#if !(defined RH_KABI_DEPRECATE && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0))
+    struct {
+        struct file *file;
+        long arg;
+        struct file_lock **flock;
+    } f_setlease;
+#else
     struct {
         struct file *file;
         long arg;
         struct file_lock **flock;
         void **priv;
     } f_setlease;
+#endif
 
     struct {
         struct file *file;
@@ -848,11 +883,18 @@ union redirfs_op_args {
         sector_t block;
     } a_bmap;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+    struct {
+        struct page *page;
+        unsigned int offset;
+    } a_invalidatepage;
+#else
     struct {
         struct page *page;
         unsigned int offset;
         unsigned int length;
     } a_invalidatepage;
+#endif
 
     struct {
         struct page *page;

@@ -68,10 +68,16 @@ int rfs_mmap(struct file *file,
 int rfs_flush(struct file *,
               fl_owner_t owner);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35))
+int rfs_fsync(struct file *file, struct dentry *dentry, int datasync);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3, 1, 0))
+int rfs_fsync(struct file *file, int datasync);
+#else
 int rfs_fsync(struct file *file,
               loff_t start,
               loff_t end,
               int datasync);
+#endif
 
 int rfs_fasync(int fd,
                struct file *file,
@@ -109,19 +115,26 @@ ssize_t rfs_splice_read(struct file *in,
                         struct pipe_inode_info *pipe,
                         size_t len,
                         unsigned int flags);
-
+#if !(defined RH_KABI_DEPRECATE && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0))
+int rfs_setlease(struct file *file, long arg, struct file_lock **flock);
+#else
 int rfs_setlease(struct file *file,
                  long arg,
                  struct file_lock **flock,
                  void **priv);
-
+#endif
 long rfs_fallocate(struct file *file,
                    int mode,
                    loff_t offset,
                    loff_t len);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0))
+int rfs_show_fdinfo(struct seq_file *seq_file,
+                    struct file *file);
+#else
 void rfs_show_fdinfo(struct seq_file *seq_file,
                      struct file *file);
+#endif
 
 ssize_t rfs_copy_file_range(struct file *file_in,
                             loff_t pos_in,

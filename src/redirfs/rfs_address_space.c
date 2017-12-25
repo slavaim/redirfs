@@ -28,6 +28,36 @@
     #pragma GCC optimize ("O0")
 #endif // RFS_DBG
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0))
+#define page_mapping rfs_page_mapping
+static struct address_space *rfs_page_mapping(struct page *page)
+{
+	struct address_space *mapping;
+
+	page = compound_head(page);
+
+	/* This happens if someone calls flush_dcache_page on slab page */
+	if (unlikely(PageSlab(page)))
+		return NULL;
+
+	if (unlikely(PageSwapCache(page))) {
+		//TODO
+		return NULL;
+		/*
+		swp_entry_t entry;
+
+		entry.val = page_private(page);
+		return swap_address_space(entry);
+		*/
+	}
+
+	mapping = page->mapping;
+	if ((unsigned long)mapping & PAGE_MAPPING_FLAGS)
+		return NULL;
+	return mapping;
+}
+#endif //(LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0))
+
 int rfs_readpage(struct file *file,
                  struct page *page)
 {
@@ -366,6 +396,50 @@ sector_t rfs_bmap(struct address_space *mapping,
     return rargs.rv.rv_int;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+void rfs_invalidatepage(struct page *page,
+                        unsigned int offset)
+{
+    struct rfs_info *rinfo;
+    struct rfs_inode *rinode;
+    struct rfs_context rcont;
+    struct redirfs_args rargs;
+    struct address_space *mapping;
+
+    mapping = page_mapping(page);
+
+    WARN_ON(!mapping);
+    if (unlikely(!mapping))
+        return;
+
+    rinode = rfs_inode_find(mapping->host);
+    rinfo = rfs_inode_get_rinfo(rinode);
+    rfs_context_init(&rcont, 0);
+
+    BUG_ON(!rinfo);
+
+    rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_invalidatepage);
+    rargs.args.a_invalidatepage.page = page;
+    rargs.args.a_invalidatepage.offset = offset;
+
+    if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rinode->a_op_old && rinode->a_op_old->invalidatepage)
+            rinode->a_op_old->invalidatepage(
+                    rargs.args.a_invalidatepage.page,
+                    rargs.args.a_invalidatepage.offset);
+    }
+
+    if (RFS_IS_AOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+
+    rfs_info_put(rinfo);
+    rfs_inode_put(rinode);
+}
+
+#else
 void rfs_invalidatepage(struct page *page,
                         unsigned int offset,
                         unsigned int length)
@@ -375,7 +449,7 @@ void rfs_invalidatepage(struct page *page,
     struct rfs_context rcont;
     struct redirfs_args rargs;
     struct address_space *mapping;
-    
+
     mapping = page_mapping(page);
 
     WARN_ON(!mapping);
@@ -395,7 +469,7 @@ void rfs_invalidatepage(struct page *page,
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-        if (rinode->a_op_old && rinode->a_op_old->invalidatepage) 
+        if (rinode->a_op_old && rinode->a_op_old->invalidatepage)
             rinode->a_op_old->invalidatepage(
                     rargs.args.a_invalidatepage.page,
                     rargs.args.a_invalidatepage.offset,
@@ -410,6 +484,7 @@ void rfs_invalidatepage(struct page *page,
     rfs_info_put(rinfo);
     rfs_inode_put(rinode);
 }
+#endif
 
 int rfs_releasepage(struct page *page,
                     gfp_t flags)

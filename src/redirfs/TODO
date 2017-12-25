@@ -10,3 +10,6 @@ Slava
   third party hooks, e.g. add a hash table
 * hung_up_tty_fops and similar cases of f_op replacement for an initialized file
   and disabling hooks
+
+Kralik
+* old kernel doesn't exports page_mapping. add a emulation of swap_address_space
