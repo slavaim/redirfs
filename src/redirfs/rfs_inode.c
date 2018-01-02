@@ -492,7 +492,7 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *dadd = dentry;
 
     if (S_ISDIR(dir->i_mode))
@@ -560,7 +560,7 @@ static int rfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -612,7 +612,7 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -674,7 +674,7 @@ static int rfs_link(struct dentry *old_dentry, struct inode *dir,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -721,7 +721,7 @@ static int rfs_symlink(struct inode *dir, struct dentry *dentry,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -773,7 +773,7 @@ static int rfs_mknod(struct inode * dir, struct dentry *dentry, umode_t mode,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -821,7 +821,7 @@ static int rfs_unlink(struct inode *inode, struct dentry *dentry)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(inode);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -860,7 +860,7 @@ static int rfs_rmdir(struct inode *inode, struct dentry *dentry)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(inode);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -901,7 +901,7 @@ static int rfs_permission(struct inode *inode, int mask, struct nameidata *nd)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     int submask;
 
     submask = mask & ~MAY_APPEND;
@@ -957,7 +957,7 @@ static int rfs_permission(struct inode *inode, int mask)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     int submask;
 
     submask = mask & ~MAY_APPEND;
@@ -1011,7 +1011,7 @@ static int rfs_permission(struct inode *inode, int mask, unsigned int flags)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     int submask;
 
     submask = mask & ~MAY_APPEND;
@@ -1067,7 +1067,7 @@ static int rfs_permission(struct inode *inode, int mask)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     int submask;
 
     submask = mask & ~MAY_APPEND;
@@ -1144,7 +1144,7 @@ static int rfs_setattr(struct dentry *dentry, struct iattr *iattr)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dentry->d_inode);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -1265,7 +1265,7 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
     struct rfs_info *rinfo_new;
     struct rfs_context rcont_old;
     struct rfs_context rcont_new;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfs_context_init(&rcont_old, 0);
     rinode_old = rfs_inode_find(old_dir);
@@ -1344,7 +1344,7 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
     struct rfs_info *rinfo_new;
     struct rfs_context rcont_old;
     struct rfs_context rcont_new;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfs_context_init(&rcont_old, 0);
     rinode_old = rfs_inode_find(old_dir);

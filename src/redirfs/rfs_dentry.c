@@ -379,7 +379,7 @@ void rfs_d_iput(struct dentry *dentry, struct inode *inode)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -428,7 +428,7 @@ static void rfs_d_release(struct dentry *dentry)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -471,7 +471,7 @@ static int rfs_d_compare(struct dentry *dentry, struct qstr *name1,
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -533,7 +533,7 @@ static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -602,7 +602,7 @@ static int rfs_d_compare(const struct dentry *parent,
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -667,7 +667,7 @@ static int rfs_d_compare(const struct dentry *dentry,
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -730,7 +730,7 @@ static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -785,7 +785,7 @@ static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);

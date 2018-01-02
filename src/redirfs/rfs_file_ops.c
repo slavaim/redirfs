@@ -32,7 +32,7 @@ loff_t rfs_llseek(struct file *file, loff_t offset, int origin)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -71,7 +71,7 @@ ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -112,7 +112,7 @@ ssize_t rfs_write(struct file *file, const char __user *buf, size_t count, loff_
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -154,7 +154,7 @@ ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(kiocb->ki_filp);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -191,7 +191,7 @@ ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(kiocb->ki_filp);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -230,7 +230,7 @@ int rfs_iterate(struct file *file, struct dir_context *dir_context)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *d_first = NULL;
 
     /* this optimization was borrowed from
@@ -280,7 +280,7 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *d_first = NULL;
 
     /* this optimization was borrowed from
@@ -328,7 +328,7 @@ unsigned int rfs_poll(struct file *file, struct poll_table_struct *poll_table_st
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -365,7 +365,7 @@ long rfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -404,7 +404,7 @@ long rfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -443,7 +443,7 @@ int rfs_mmap(struct file *file, struct vm_area_struct *vma)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -480,7 +480,7 @@ int rfs_flush(struct file *file, fl_owner_t owner)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -517,7 +517,7 @@ int rfs_fsync(struct file *file, struct dentry *dentry, int datasync)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -554,7 +554,7 @@ int rfs_fsync(struct file *file, int datasync)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -589,7 +589,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -631,7 +631,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -670,7 +670,7 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -710,7 +710,7 @@ ssize_t rfs_sendpage(struct file *file, struct page *page, int offset,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -756,7 +756,7 @@ unsigned long rfs_get_unmapped_area(struct file *file, unsigned long addr,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -799,7 +799,7 @@ int rfs_flock(struct file *file, int cmd, struct file_lock *flock)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -839,7 +839,7 @@ ssize_t rfs_splice_write(struct pipe_inode_info *pipe, struct file *out,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(out);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -884,7 +884,7 @@ ssize_t rfs_splice_read(struct file *in, loff_t *ppos,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(in);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -927,7 +927,7 @@ int rfs_setlease(struct file *file, long arg, struct file_lock **flock)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -965,7 +965,7 @@ int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -1009,7 +1009,7 @@ long rfs_fallocate(struct file *file, int mode,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -1053,7 +1053,7 @@ int rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -1086,7 +1086,7 @@ void rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -1123,7 +1123,7 @@ ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file_in);
     if (!rfile)
@@ -1174,7 +1174,7 @@ int rfs_clone_file_range(struct file *src_file, loff_t src_off,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(src_file);
     if (!rfile)
@@ -1223,7 +1223,7 @@ ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(src_file);
     if (!rfile)

@@ -325,7 +325,7 @@ int rfs_open(struct inode *inode, struct file *file)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(inode);
     fops_put(file->f_op);
@@ -395,7 +395,7 @@ static int rfs_release(struct inode *inode, struct file *file)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -491,7 +491,7 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *d_first = NULL;
 
     /* this optimization was borrowed from

@@ -65,7 +65,7 @@ int rfs_readpage(struct file *file,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfs_context_init(&rcont, 0);
     
@@ -113,7 +113,7 @@ int rfs_readpages(struct file *file,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfs_context_init(&rcont, 0);
 
@@ -162,7 +162,7 @@ int rfs_writepages(struct address_space *mapping,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(mapping->host);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -199,7 +199,7 @@ int rfs_set_page_dirty(struct page *page)
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct address_space *mapping;
     
     mapping = page_mapping(page);
@@ -248,7 +248,7 @@ int rfs_write_begin(struct file *file,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfs_context_init(&rcont, 0);
 
@@ -309,7 +309,7 @@ int rfs_write_end(struct file *file,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfs_context_init(&rcont, 0);
 
@@ -364,7 +364,7 @@ sector_t rfs_bmap(struct address_space *mapping,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(mapping->host);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -403,7 +403,7 @@ void rfs_invalidatepage(struct page *page,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct address_space *mapping;
 
     mapping = page_mapping(page);
@@ -447,7 +447,7 @@ void rfs_invalidatepage(struct page *page,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct address_space *mapping;
 
     mapping = page_mapping(page);
@@ -492,7 +492,7 @@ int rfs_releasepage(struct page *page,
     struct rfs_info *rinfo;
     struct rfs_inode *rinode;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct address_space *mapping;
     
     mapping = page_mapping(page);
