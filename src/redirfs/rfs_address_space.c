@@ -82,6 +82,7 @@ int rfs_readpage(struct file *file,
     rargs.type.id = REDIRFS_REG_AOP_READPAGE;
     rargs.args.a_readpage.file = file;
     rargs.args.a_readpage.page = page;
+    rargs.rv.rv_int = -EIO;
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -89,8 +90,6 @@ int rfs_readpage(struct file *file,
             rargs.rv.rv_int = rinode->a_op_old->readpage(
                     rargs.args.a_readpage.file,
                     rargs.args.a_readpage.page);
-        else
-            rargs.rv.rv_int = -EIO;
     }
 
     if (RFS_IS_AOP_SET(rinode, rargs.type.id))
@@ -132,6 +131,7 @@ int rfs_readpages(struct file *file,
     rargs.args.a_readpages.mapping = mapping;
     rargs.args.a_readpages.pages = pages;
     rargs.args.a_readpages.nr_pages = nr_pages;
+    rargs.rv.rv_int = -EIO;
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -141,8 +141,6 @@ int rfs_readpages(struct file *file,
                     rargs.args.a_readpages.mapping,
                     rargs.args.a_readpages.pages,
                     rargs.args.a_readpages.nr_pages);
-        else
-            rargs.rv.rv_int = -EIO;
     }
 
     if (RFS_IS_AOP_SET(rinode, rargs.type.id))
@@ -173,6 +171,7 @@ int rfs_writepages(struct address_space *mapping,
     rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_writepages);
     rargs.args.a_writepages.mapping = mapping;
     rargs.args.a_writepages.wbc = wbc;
+    rargs.rv.rv_int = -EIO;
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -180,8 +179,6 @@ int rfs_writepages(struct address_space *mapping,
             rargs.rv.rv_int = rinode->a_op_old->writepages(
                     rargs.args.a_writepages.mapping,
                     rargs.args.a_writepages.wbc);
-        else
-            rargs.rv.rv_int = -EIO;
     }
 
     if (RFS_IS_AOP_SET(rinode, rargs.type.id))
@@ -216,14 +213,13 @@ int rfs_set_page_dirty(struct page *page)
 
     rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_set_page_dirty);
     rargs.args.a_set_page_dirty.page = page;
+    rargs.rv.rv_int = -EIO;
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
         if (rinode->a_op_old && rinode->a_op_old->set_page_dirty) 
             rargs.rv.rv_int = rinode->a_op_old->set_page_dirty(
                     rargs.args.a_set_page_dirty.page);
-        else
-            rargs.rv.rv_int = -EIO;
     }
 
     if (RFS_IS_AOP_SET(rinode, rargs.type.id))
@@ -270,6 +266,7 @@ int rfs_write_begin(struct file *file,
     rargs.args.a_write_begin.flags = flags;
     rargs.args.a_write_begin.pagep = pagep;
     rargs.args.a_write_begin.fsdata = fsdata;
+    rargs.rv.rv_int = -EIO;
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -282,8 +279,6 @@ int rfs_write_begin(struct file *file,
                     rargs.args.a_write_begin.flags,
                     rargs.args.a_write_begin.pagep,
                     rargs.args.a_write_begin.fsdata);
-        else
-            rargs.rv.rv_int = -EIO;
     }
 
     if (RFS_IS_AOP_SET(rinode, rargs.type.id))
@@ -331,6 +326,7 @@ int rfs_write_end(struct file *file,
     rargs.args.a_write_end.copied = copied;
     rargs.args.a_write_end.page = page;
     rargs.args.a_write_end.fsdata = fsdata;
+    rargs.rv.rv_int = -EIO;
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -343,8 +339,6 @@ int rfs_write_end(struct file *file,
                     rargs.args.a_write_end.copied,
                     rargs.args.a_write_end.page,
                     rargs.args.a_write_end.fsdata);
-        else
-            rargs.rv.rv_int = -EIO;
     }
 
     if (RFS_IS_AOP_SET(rinode, rargs.type.id))
@@ -375,6 +369,7 @@ sector_t rfs_bmap(struct address_space *mapping,
     rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_bmap);
     rargs.args.a_bmap.mapping = mapping;
     rargs.args.a_bmap.block = block;
+    rargs.rv.rv_int = -EIO;
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -382,8 +377,6 @@ sector_t rfs_bmap(struct address_space *mapping,
             rargs.rv.rv_int = rinode->a_op_old->bmap(
                     rargs.args.a_bmap.mapping,
                     rargs.args.a_bmap.block);
-        else
-            rargs.rv.rv_int = -EIO;
     }
 
     if (RFS_IS_AOP_SET(rinode, rargs.type.id))
@@ -510,6 +503,7 @@ int rfs_releasepage(struct page *page,
     rargs.type.id = rfs_inode_to_idc(rinode->inode, RFS_OP_a_releasepage);
     rargs.args.a_releasepage.page = page;
     rargs.args.a_releasepage.flags = flags;
+    rargs.rv.rv_int = -EIO;
 
     if (!RFS_IS_AOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -517,8 +511,6 @@ int rfs_releasepage(struct page *page,
             rargs.rv.rv_int = rinode->a_op_old->releasepage(
                     rargs.args.a_releasepage.page,
                     rargs.args.a_releasepage.flags);
-            else
-                rargs.rv.rv_int = -EIO;
     }
 
     if (RFS_IS_AOP_SET(rinode, rargs.type.id))
