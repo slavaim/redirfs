@@ -289,7 +289,6 @@ int avflt_get_file(struct avflt_event *event)
     file = dentry_open(dget(event->f_path_dentry), mntget(event->mnt), flags,
             current_cred());
 #else
-    path_get(&event->f_path);
     file = dentry_open(&event->f_path, flags, current_cred());
 #endif
     if (IS_ERR(file)) {

@@ -325,7 +325,7 @@ int rfs_open(struct inode *inode, struct file *file)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(inode);
     fops_put(file->f_op);
@@ -361,6 +361,7 @@ int rfs_open(struct inode *inode, struct file *file)
 
     rargs.args.f_open.inode = inode;
     rargs.args.f_open.file = file;
+    rargs.rv.rv_int = -EACCES;
 
     if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
         DBG_BUG_ON(rinode->f_op_old && rinode->f_op_old->open == rfs_open);
@@ -395,7 +396,7 @@ static int rfs_release(struct inode *inode, struct file *file)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
@@ -416,6 +417,7 @@ static int rfs_release(struct inode *inode, struct file *file)
 
     rargs.args.f_release.inode = inode;
     rargs.args.f_release.file = file;
+    rargs.rv.rv_int = -EACCES;
 
     if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -491,7 +493,7 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *d_first = NULL;
 
     /* this optimization was borrowed from
@@ -501,6 +503,7 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
     rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
+    rargs.rv.rv_int = -ENOTDIR;
 
     if (S_ISDIR(file->f_dentry->d_inode->i_mode)) {
         rargs.type.id = REDIRFS_DIR_FOP_READDIR;
@@ -516,8 +519,6 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
                         rargs.args.f_readdir.file,
                         rargs.args.f_readdir.dirent,
                         rargs.args.f_readdir.filldir);
-            else
-                rargs.rv.rv_int = -ENOTDIR;
         }
 
         if (RFS_IS_FOP_SET(rfile, rargs.type.id))
@@ -525,8 +526,6 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
             
         rfs_context_deinit(&rcont);
 
-    } else {
-        rargs.rv.rv_int = -ENOTDIR;
     }
 
     if (rargs.rv.rv_int)

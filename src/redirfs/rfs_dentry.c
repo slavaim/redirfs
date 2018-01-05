@@ -379,7 +379,7 @@ void rfs_d_iput(struct dentry *dentry, struct inode *inode)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -428,7 +428,7 @@ static void rfs_d_release(struct dentry *dentry)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -471,7 +471,7 @@ static int rfs_d_compare(struct dentry *dentry, struct qstr *name1,
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -498,6 +498,7 @@ static int rfs_d_compare(struct dentry *dentry, struct qstr *name1,
     rargs.args.d_compare.dentry = dentry;
     rargs.args.d_compare.name1 = name1;
     rargs.args.d_compare.name2 = name2;
+    rargs.rv.rv_int = 1;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -533,7 +534,7 @@ static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -564,6 +565,7 @@ static int rfs_d_compare(const struct dentry *parent, const struct inode *inode,
     rargs.args.d_compare.tlen = tlen;
     rargs.args.d_compare.tname = tname;
     rargs.args.d_compare.name = name;
+    rargs.rv.rv_int = 1;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -602,7 +604,7 @@ static int rfs_d_compare(const struct dentry *parent,
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -631,6 +633,7 @@ static int rfs_d_compare(const struct dentry *parent,
     rargs.args.d_compare.len = len;
     rargs.args.d_compare.str = str;
     rargs.args.d_compare.name = name;
+    rargs.rv.rv_int = 1;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -667,7 +670,7 @@ static int rfs_d_compare(const struct dentry *dentry,
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -695,6 +698,7 @@ static int rfs_d_compare(const struct dentry *dentry,
     rargs.args.d_compare.len = len;
     rargs.args.d_compare.str = str;
     rargs.args.d_compare.name = name;
+    rargs.rv.rv_int = 1;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -730,7 +734,7 @@ static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -756,6 +760,7 @@ static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 
     rargs.args.d_revalidate.dentry = dentry;
     rargs.args.d_revalidate.nd = nd;
+    rargs.rv.rv_int = 1;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -763,8 +768,6 @@ static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
             rargs.rv.rv_int = rdentry->op_old->d_revalidate(
                     rargs.args.d_revalidate.dentry,
                     rargs.args.d_revalidate.nd);
-        else
-            rargs.rv.rv_int = 1;
     }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))
@@ -785,7 +788,7 @@ static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
     rinfo = rfs_dentry_get_rinfo(rdentry);
@@ -811,6 +814,7 @@ static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 
     rargs.args.d_revalidate.dentry = dentry;
     rargs.args.d_revalidate.flags = flags;
+    rargs.rv.rv_int = 1;
 
     if (!RFS_IS_DOP_SET(rdentry, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -818,8 +822,6 @@ static int rfs_d_revalidate(struct dentry *dentry, unsigned int flags)
             rargs.rv.rv_int = rdentry->op_old->d_revalidate(
                     rargs.args.d_revalidate.dentry,
                     rargs.args.d_revalidate.flags);
-        else
-            rargs.rv.rv_int = 1;
     }
 
     if (RFS_IS_DOP_SET(rdentry, rargs.type.id))

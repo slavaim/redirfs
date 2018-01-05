@@ -377,6 +377,7 @@ enum redirfs_op_idc {
     /* REDIRFS_REG_AOP_LAUNDER_PAGE, */
 
     REDIRFS_OP_MAX = RFS_OP_IDC(RFS_INODE_MAX, RFS_OP_MAX),
+    REDIRFS_OP_INVALID = REDIRFS_OP_MAX,
     REDIRFS_OP_END = (-1)
 };
 
@@ -973,11 +974,25 @@ struct redirfs_op_type {
     enum redirfs_op_call call;
 };
 
+#define RFS_REDIRFS_OP_TYPE_INITIALIZER \
+    {\
+        .id =  REDIRFS_OP_INVALID, \
+        .call = REDIRFS_PRECALL, \
+    }
+
 struct redirfs_args {
     union redirfs_op_args args;
     union redirfs_op_rv rv;
     struct redirfs_op_type type;
 };
+
+#define RFS_DEFINE_REDIRFS_ARGS(argsname) \
+    struct redirfs_args argsname = { \
+            .args = (union redirfs_op_args) {0}, \
+            .rv = (union redirfs_op_rv) {0}, \
+            .type = (struct redirfs_op_type) RFS_REDIRFS_OP_TYPE_INITIALIZER \
+    }
+
 
 struct redirfs_path_info {
     struct dentry *dentry;

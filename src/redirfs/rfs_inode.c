@@ -492,7 +492,7 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *dadd = dentry;
 
     if (S_ISDIR(dir->i_mode))
@@ -511,6 +511,7 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
 #else
     rargs.args.i_lookup.flags = flags;
 #endif
+    rargs.rv.rv_dentry = ERR_PTR(-ENOSYS);
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -527,8 +528,6 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
                     rargs.args.i_lookup.flags);
 
 #endif
-        } else {
-            rargs.rv.rv_dentry = ERR_PTR(-ENOSYS);
         }
     }
 
@@ -560,7 +559,7 @@ static int rfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -574,6 +573,7 @@ static int rfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
     rargs.args.i_mkdir.dir = dir;
     rargs.args.i_mkdir.dentry = dentry;
     rargs.args.i_mkdir.mode = mode;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -582,8 +582,6 @@ static int rfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
                     rargs.args.i_mkdir.dir,
                     rargs.args.i_mkdir.dentry,
                     rargs.args.i_mkdir.mode);
-        else
-            rargs.rv.rv_int = -ENOSYS;
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -612,7 +610,7 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -631,6 +629,7 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 #else
     rargs.args.i_create.excl = excl;
 #endif
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -648,8 +647,6 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
                     rargs.args.i_create.mode,
                     rargs.args.i_create.excl);
 #endif
-        } else {
-            rargs.rv.rv_int = -ENOSYS;
         }
     }
 
@@ -674,7 +671,7 @@ static int rfs_link(struct dentry *old_dentry, struct inode *dir,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -688,6 +685,7 @@ static int rfs_link(struct dentry *old_dentry, struct inode *dir,
     rargs.args.i_link.old_dentry = old_dentry;
     rargs.args.i_link.dir = dir;
     rargs.args.i_link.dentry = dentry;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -696,8 +694,6 @@ static int rfs_link(struct dentry *old_dentry, struct inode *dir,
                     rargs.args.i_link.old_dentry,
                     rargs.args.i_link.dir,
                     rargs.args.i_link.dentry);
-        else
-            rargs.rv.rv_int = -ENOSYS;
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -721,7 +717,7 @@ static int rfs_symlink(struct inode *dir, struct dentry *dentry,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -735,6 +731,7 @@ static int rfs_symlink(struct inode *dir, struct dentry *dentry,
     rargs.args.i_symlink.dir = dir;
     rargs.args.i_symlink.dentry = dentry;
     rargs.args.i_symlink.oldname = oldname;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -743,8 +740,6 @@ static int rfs_symlink(struct inode *dir, struct dentry *dentry,
                     rargs.args.i_symlink.dir,
                     rargs.args.i_symlink.dentry,
                     rargs.args.i_symlink.oldname);
-        else
-            rargs.rv.rv_int = -ENOSYS;
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -773,7 +768,7 @@ static int rfs_mknod(struct inode * dir, struct dentry *dentry, umode_t mode,
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dir);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -788,6 +783,7 @@ static int rfs_mknod(struct inode * dir, struct dentry *dentry, umode_t mode,
     rargs.args.i_mknod.dentry = dentry;
     rargs.args.i_mknod.mode = mode;
     rargs.args.i_mknod.rdev = rdev;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -797,8 +793,6 @@ static int rfs_mknod(struct inode * dir, struct dentry *dentry, umode_t mode,
                     rargs.args.i_mknod.dentry,
                     rargs.args.i_mknod.mode,
                     rargs.args.i_mknod.rdev);
-        else
-            rargs.rv.rv_int = -ENOSYS;
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -821,7 +815,7 @@ static int rfs_unlink(struct inode *inode, struct dentry *dentry)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(inode);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -834,6 +828,7 @@ static int rfs_unlink(struct inode *inode, struct dentry *dentry)
 
     rargs.args.i_unlink.dir = inode;
     rargs.args.i_unlink.dentry = dentry;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -841,8 +836,6 @@ static int rfs_unlink(struct inode *inode, struct dentry *dentry)
             rargs.rv.rv_int = rinode->op_old->unlink(
                     rargs.args.i_unlink.dir,
                     rargs.args.i_unlink.dentry);
-        else
-            rargs.rv.rv_int = -ENOSYS;
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -860,7 +853,7 @@ static int rfs_rmdir(struct inode *inode, struct dentry *dentry)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(inode);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -873,6 +866,7 @@ static int rfs_rmdir(struct inode *inode, struct dentry *dentry)
 
     rargs.args.i_unlink.dir = inode;
     rargs.args.i_unlink.dentry = dentry;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
@@ -880,8 +874,6 @@ static int rfs_rmdir(struct inode *inode, struct dentry *dentry)
             rargs.rv.rv_int = rinode->op_old->rmdir(
                     rargs.args.i_unlink.dir,
                     rargs.args.i_unlink.dentry);
-        else
-            rargs.rv.rv_int = -ENOSYS;
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -901,7 +893,7 @@ static int rfs_permission(struct inode *inode, int mask, struct nameidata *nd)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     int submask;
 
     submask = mask & ~MAY_APPEND;
@@ -938,6 +930,8 @@ static int rfs_permission(struct inode *inode, int mask, struct nameidata *nd)
         else
             rargs.rv.rv_int = generic_permission(inode, submask,
                     NULL);
+    } else {
+        rargs.rv.rv_int = generic_permission(inode, submask, NULL);
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -957,7 +951,7 @@ static int rfs_permission(struct inode *inode, int mask)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     int submask;
 
     submask = mask & ~MAY_APPEND;
@@ -992,6 +986,8 @@ static int rfs_permission(struct inode *inode, int mask)
         else
             rargs.rv.rv_int = generic_permission(inode, submask,
                     NULL);
+    } else {
+        rargs.rv.rv_int = generic_permission(inode, submask, NULL);
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -1011,7 +1007,7 @@ static int rfs_permission(struct inode *inode, int mask, unsigned int flags)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     int submask;
 
     submask = mask & ~MAY_APPEND;
@@ -1067,7 +1063,7 @@ static int rfs_permission(struct inode *inode, int mask)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
     int submask;
 
     submask = mask & ~MAY_APPEND;
@@ -1101,6 +1097,8 @@ static int rfs_permission(struct inode *inode, int mask)
                     rargs.args.i_permission.mask);
         else
             rargs.rv.rv_int = generic_permission(inode, submask);
+    } else {
+        rargs.rv.rv_int = generic_permission(inode, submask);
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -1144,7 +1142,7 @@ static int rfs_setattr(struct dentry *dentry, struct iattr *iattr)
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rinode = rfs_inode_find(dentry->d_inode);
     rinfo = rfs_inode_get_rinfo(rinode);
@@ -1176,6 +1174,8 @@ static int rfs_setattr(struct dentry *dentry, struct iattr *iattr)
                     rargs.args.i_setattr.iattr);
         else 
             rargs.rv.rv_int = rfs_setattr_default(dentry, iattr);
+    } else {
+        rargs.rv.rv_int = rfs_setattr_default(dentry, iattr);
     }
 
     if (RFS_IS_IOP_SET(rinode, rargs.type.id))
@@ -1265,7 +1265,7 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
     struct rfs_info *rinfo_new;
     struct rfs_context rcont_old;
     struct rfs_context rcont_new;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfs_context_init(&rcont_old, 0);
     rinode_old = rfs_inode_find(old_dir);
@@ -1288,6 +1288,7 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
     rargs.args.i_rename.old_dentry = old_dentry;
     rargs.args.i_rename.new_dir = new_dir;
     rargs.args.i_rename.new_dentry = new_dentry;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (RFS_IS_IOP_SET(rinode_old, rargs.type.id) &&
         rfs_precall_flts(rinfo_old->rchain, &rcont_old, &rargs))
@@ -1303,8 +1304,6 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
                 rargs.args.i_rename.old_dentry,
                 rargs.args.i_rename.new_dir,
                 rargs.args.i_rename.new_dentry);
-    else
-        rargs.rv.rv_int = -ENOSYS;
     
 skip:
     if (!rargs.rv.rv_int)
@@ -1344,7 +1343,7 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
     struct rfs_info *rinfo_new;
     struct rfs_context rcont_old;
     struct rfs_context rcont_new;
-    struct redirfs_args rargs;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rfs_context_init(&rcont_old, 0);
     rinode_old = rfs_inode_find(old_dir);
@@ -1368,6 +1367,7 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
     rargs.args.i_rename.new_dir = new_dir;
     rargs.args.i_rename.new_dentry = new_dentry;
     rargs.args.i_rename.flags = flags;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (RFS_IS_IOP_SET(rinode_old, rargs.type.id) &&
         rfs_precall_flts(rinfo_old->rchain, &rcont_old, &rargs))
@@ -1378,21 +1378,20 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
         goto skip;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
-    if (rinode_old->op_old && rinode_old->op_old->rename2)
+    if (rinode_old->op_old && rinode_old->op_old->rename2) {
         rargs.rv.rv_int = rinode_old->op_old->rename2(
                 rargs.args.i_rename.old_dir,
                 rargs.args.i_rename.old_dentry,
                 rargs.args.i_rename.new_dir,
                 rargs.args.i_rename.new_dentry,
                 rargs.args.i_rename.flags);
-    else if (rinode_old->op_old && rinode_old->op_old->rename)
+    } else if (rinode_old->op_old && rinode_old->op_old->rename) {
         rargs.rv.rv_int = rinode_old->op_old->rename(
                 rargs.args.i_rename.old_dir,
                 rargs.args.i_rename.old_dentry,
                 rargs.args.i_rename.new_dir,
                 rargs.args.i_rename.new_dentry);
-    else
-        rargs.rv.rv_int = -ENOSYS;
+    }
 #else
     if (rinode_old->op_old && rinode_old->op_old->rename)
         rargs.rv.rv_int = rinode_old->op_old->rename(
@@ -1401,8 +1400,6 @@ int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
                 rargs.args.i_rename.new_dir,
                 rargs.args.i_rename.new_dentry,
                 rargs.args.i_rename.flags);
-    else
-        rargs.rv.rv_int = -ENOSYS;
 #endif //(LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
 
 skip:
