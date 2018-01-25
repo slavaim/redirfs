@@ -1425,6 +1425,61 @@ skip:
 }
 #endif //(LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0))
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,5,0))
+int rfs_atomic_open(struct inode *inode, struct dentry *dentry, struct file *file, unsigned open_flag, umode_t create_mode, int *opened)
+{
+    struct rfs_inode *rinode;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+    struct rfs_file *rfile;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
+
+    rinode = rfs_inode_find(inode);
+    rinfo = rfs_inode_get_rinfo(rinode);
+    rfs_context_init(&rcont, 0);
+    rargs.type.id = REDIRFS_DIR_IOP_ATOMIC_OPEN;
+    rargs.args.i_atomic_open.inode = inode;
+    rargs.args.i_atomic_open.dentry = dentry;
+    rargs.args.i_atomic_open.file = file;
+    rargs.args.i_atomic_open.open_flag = open_flag;
+    rargs.args.i_atomic_open.create_mode = create_mode;
+    rargs.args.i_atomic_open.opened = opened;
+    rargs.rv.rv_int = -ENOSYS;
+
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rinode->op_old && rinode->op_old->atomic_open)
+            rargs.rv.rv_int = rinode->op_old->atomic_open(
+	    rargs.args.i_atomic_open.inode,
+	    rargs.args.i_atomic_open.dentry,
+	    rargs.args.i_atomic_open.file,
+	    rargs.args.i_atomic_open.open_flag,
+	    rargs.args.i_atomic_open.create_mode,
+	    rargs.args.i_atomic_open.opened);
+    } else {
+        rargs.rv.rv_int = -EACCES;
+    }
+
+    if (!rargs.rv.rv_int) {
+        if (rfs_dcache_rdentry_add(dentry, rinfo))
+            BUG();
+        rfile = rfs_file_add(file);
+        if (IS_ERR(rfile))
+            BUG();
+        rfs_file_put(rfile);
+    }
+
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+
+    rfs_inode_put(rinode);
+    rfs_info_put(rinfo);
+    return rargs.rv.rv_int;
+}
+#endif
+
 /*---------------------------------------------------------------------------*/
 
 /* 
@@ -1458,11 +1513,14 @@ static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)
     RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_SYMLINK, symlink, rfs_symlink);
 
     //
-    // the following two operations are required to support hooking,
+    // the following operations are required to support hooking,
     // their registration do not dependent on registered filters
     //
     RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_LOOKUP, lookup, rfs_lookup);
     RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_MKDIR, mkdir, rfs_mkdir);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,5,0))
+    RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_ATOMIC_OPEN, atomic_open, rfs_atomic_open);
+#endif
 }
 
 static void rfs_inode_set_ops_lnk(struct rfs_inode *rinode)

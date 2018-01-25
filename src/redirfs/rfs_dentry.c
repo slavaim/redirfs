@@ -70,9 +70,9 @@ struct rfs_dentry* rfs_dentry_find(const struct dentry *dentry)
     struct rfs_object  *robject;
 
 #ifdef RFS_PER_OBJECT_OPS
-    rdentry = rfs_dentry_get(rfs_cast_to_rdentry(dentry));
-    if (rdentry)
-        return rdentry;
+    rinode = rfs_dentry_get(rfs_cast_to_rdentry(dentry));
+    if (rinode)
+        return rinode;
 #endif /* RFS_PER_OBJECT_OPS */
 
     robject = rfs_get_object_by_system_object(&rfs_dentry_radix_tree, dentry);
