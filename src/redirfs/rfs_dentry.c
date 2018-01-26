@@ -90,7 +90,7 @@ static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
 {
     struct rfs_dentry *rdentry;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rdentry = kmem_cache_zalloc(rfs_dentry_cache, GFP_KERNEL);
     if (!rdentry)
@@ -246,6 +246,8 @@ struct rfs_dentry *rfs_dentry_add(struct dentry *dentry, struct rfs_info *rinfo)
             return ERR_PTR(err);
         }
     }
+
+    rfs_pr_debug("rd=%p, rd_new=%p", rd, rd_new);
 
     return rd;
 }
@@ -450,6 +452,7 @@ static void rfs_d_release(struct dentry *dentry)
     rfs_dentry_del(rdentry);
     rfs_dentry_put(rdentry);
     rfs_info_put(rinfo);
+    rfs_pr_debug("dentry=%p", dentry);
 }
 
 static inline int rfs_d_compare_default(const struct qstr *name1,
@@ -734,6 +737,7 @@ static int rfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
     struct rfs_dentry *rdentry;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
+    struct rfs_file *rfile;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);

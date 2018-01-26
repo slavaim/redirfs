@@ -34,7 +34,9 @@ loff_t rfs_llseek(struct file *file, loff_t offset, int origin)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -72,7 +74,9 @@ ssize_t rfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -112,7 +116,9 @@ ssize_t rfs_write(struct file *file, const char __user *buf, size_t count, loff_
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -153,7 +159,9 @@ ssize_t rfs_read_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(kiocb->ki_filp);
+    rfile = rfs_file_find_with_open_flts(kiocb->ki_filp);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -189,7 +197,9 @@ ssize_t rfs_write_iter(struct kiocb *kiocb, struct iov_iter *iov_iter)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(kiocb->ki_filp);
+    rfile = rfs_file_find_with_open_flts(kiocb->ki_filp);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -228,11 +238,14 @@ int rfs_iterate(struct file *file, struct dir_context *dir_context)
     RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *d_first = NULL;
 
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
+
     /* this optimization was borrowed from
        the Kaspersky's version of rfs filter */
     d_first = rfs_get_first_cached_dir_entry(file->f_dentry);
 
-    rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -277,11 +290,13 @@ int rfs_iterate_shared(struct file *file, struct dir_context *dir_context)
     RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *d_first = NULL;
 
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     /* this optimization was borrowed from
        the Kaspersky's version of rfs filter */
     d_first = rfs_get_first_cached_dir_entry(file->f_dentry);
 
-    rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -323,7 +338,9 @@ unsigned int rfs_poll(struct file *file, struct poll_table_struct *poll_table_st
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -359,7 +376,9 @@ long rfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -397,7 +416,9 @@ long rfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -435,7 +456,9 @@ int rfs_mmap(struct file *file, struct vm_area_struct *vma)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -471,7 +494,9 @@ int rfs_flush(struct file *file, fl_owner_t owner)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -507,7 +532,9 @@ int rfs_fsync(struct file *file, struct dentry *dentry, int datasync)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -543,7 +570,9 @@ int rfs_fsync(struct file *file, int datasync)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -577,7 +606,9 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -618,7 +649,9 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -656,7 +689,9 @@ int rfs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -695,7 +730,9 @@ ssize_t rfs_sendpage(struct file *file, struct page *page, int offset,
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -740,7 +777,9 @@ unsigned long rfs_get_unmapped_area(struct file *file, unsigned long addr,
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -782,7 +821,9 @@ int rfs_flock(struct file *file, int cmd, struct file_lock *flock)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -821,7 +862,9 @@ ssize_t rfs_splice_write(struct pipe_inode_info *pipe, struct file *out,
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(out);
+    rfile = rfs_file_find_with_open_flts(out);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -865,7 +908,9 @@ ssize_t rfs_splice_read(struct file *in, loff_t *ppos,
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(in);
+    rfile = rfs_file_find_with_open_flts(in);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -907,7 +952,9 @@ int rfs_setlease(struct file *file, long arg, struct file_lock **flock)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -944,7 +991,9 @@ int rfs_setlease(struct file *file, long arg, struct file_lock **flock,
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -987,7 +1036,9 @@ long rfs_fallocate(struct file *file, int mode,
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -1030,7 +1081,9 @@ int rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -1062,7 +1115,9 @@ void rfs_show_fdinfo(struct seq_file *seq_file, struct file *file)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return;
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -1101,8 +1156,9 @@ ssize_t rfs_copy_file_range(struct file *file_in, loff_t pos_in,
 
     rfile = rfs_file_find(file_in);
     if (!rfile)
-        rfile = rfs_file_find(file_out);
-
+        rfile = rfs_file_find_with_open_flts(file_out);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -1151,8 +1207,9 @@ int rfs_clone_file_range(struct file *src_file, loff_t src_off,
 
     rfile = rfs_file_find(src_file);
     if (!rfile)
-        rfile = rfs_file_find(dst_file);
-
+        rfile = rfs_file_find_with_open_flts(dst_file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -1198,8 +1255,9 @@ ssize_t rfs_dedupe_file_range(struct file *src_file, u64 loff,
 
     rfile = rfs_file_find(src_file);
     if (!rfile)
-        rfile = rfs_file_find(dst_file);
-
+        rfile = rfs_file_find_with_open_flts(dst_file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 

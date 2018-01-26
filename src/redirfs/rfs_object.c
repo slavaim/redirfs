@@ -186,7 +186,7 @@ int rfs_insert_object(
     rfs_object->object_table = rfs_object_table;
 
     /* spin_lock can't synchronize user context with softirq */
-    DBG_BUG_ON(in_softirq());
+    DBG_BUG_ON(rfs_in_softirq());
 
     spin_lock(&table_entry->lock);
     { /* start of the lock */
@@ -248,7 +248,7 @@ rfs_remove_object(
     rcu_assign_pointer(rfs_object->system_object, NULL);
 
     /* spin_lock can't synchronize user context with softirq */
-    DBG_BUG_ON(in_softirq());
+    DBG_BUG_ON(rfs_in_softirq());
 
     spin_lock(&table_entry->lock);
     { /* start of the lock */
@@ -278,7 +278,7 @@ rfs_get_object_by_system_object(
     DBG_BUG_ON(!system_object && radix_tree->rfs_type != RFS_TYPE_DENTRY_OPS);
 
     /* spin_lock can't synchronize user context with softirq */
-    DBG_BUG_ON(in_softirq());
+    DBG_BUG_ON(rfs_in_softirq());
 
     rcu_read_lock();
     { /* start of the RCU lock */
@@ -299,7 +299,7 @@ int rfs_insert_object(
     int    err;
 
     do {
-        DBG_BUG_ON(!preemptible());
+        DBG_BUG_ON(!rfs_preemptible());
         err = radix_tree_preload(GFP_KERNEL);
         {
             DBG_BUG_ON(err);
@@ -313,7 +313,7 @@ int rfs_insert_object(
                 rfs_object->radix_tree = radix_tree;
 
                 /* spin_lock can't synchronize user context with softirq */
-                DBG_BUG_ON(in_softirq());
+                DBG_BUG_ON(rfs_in_softirq());
 
                 spin_lock(&radix_tree->lock);
                 {
@@ -384,7 +384,7 @@ rfs_remove_object(
         bool removed;
 
         /* spin_lock can't synchronize user context with softirq */
-        DBG_BUG_ON(in_softirq());
+        DBG_BUG_ON(rfs_in_softirq());
 
         spin_lock(&radix_tree->lock);
         {

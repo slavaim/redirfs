@@ -111,7 +111,7 @@ struct rfs_chain *rfs_chain_add(struct rfs_chain *rchain, struct rfs_flt *rflt)
     else
         size = rchain->rflts_nr + 1;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rchain_new = rfs_chain_alloc(size, GFP_KERNEL);
     if (IS_ERR(rchain_new))
@@ -148,7 +148,7 @@ struct rfs_chain *rfs_chain_rem(struct rfs_chain *rchain, struct rfs_flt *rflt)
     if (rchain->rflts_nr == 1)
         return NULL;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rchain_new = rfs_chain_alloc(rchain->rflts_nr - 1, GFP_KERNEL);
     if (IS_ERR(rchain_new))
@@ -231,7 +231,7 @@ struct rfs_chain *rfs_chain_join(struct rfs_chain *rch1, struct rfs_chain *rch2)
             size++;
     }
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rch = rfs_chain_alloc(size, GFP_KERNEL);
     if (IS_ERR(rch))
@@ -282,7 +282,7 @@ struct rfs_chain *rfs_chain_diff(struct rfs_chain *rch1, struct rfs_chain *rch2)
     if (size == rch1->rflts_nr)
         return rfs_chain_get(rch1);
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rch = rfs_chain_alloc(size, GFP_KERNEL);
     if (IS_ERR(rch))

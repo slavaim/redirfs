@@ -20,28 +20,12 @@
  * along with RedirFS. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _RFS_DBG_H
-#define _RFS_DBG_H
+#include <linux/kernel.h>
+#include <linux/version.h>
 
-#include <asm-generic/bug.h>
-#include <linux/printk.h>
-
-#ifdef RFS_RBG_PREEMPTIBLE
-    #define rfs_preemptible() preemptible()
-    #define rfs_in_softirq() in_softirq()
-#else
-    #define rfs_preemptible() true
-    #define rfs_in_softirq() false
+#if defined RFS_DBG && defined RH_KABI_DEPRECATE && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0)
+int ____ilog2_NaN(void)
+{
+	return 0;
+}
 #endif
-
-#ifdef RFS_DBG
-    #define DBG_BUG_ON(cond) BUG_ON(cond)
-    #define rfs_pr_debug(fmt, ...) \
-	    printk(KERN_INFO "redirfs: %s:%d:%s:" pr_fmt(fmt) , __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#else
-    #define DBG_BUG_ON(cond) do {} while(0)
-    #define rfs_pr_debug(fmt, ...) \
-        no_printk(KERN_INFO "redirfs: %s:%d:%s:" pr_fmt(fmt) , __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
-#endif
-
-#endif //_RFS_DBG_H
