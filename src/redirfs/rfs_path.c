@@ -267,6 +267,8 @@ static int rfs_path_add_dirs(struct dentry *dentry)
 
 static int rfs_path_check_fs(struct file_system_type *type)
 {
+    return 0;
+/*
     if (!strcmp("cifs", type->name))
         goto notsup;
 
@@ -275,6 +277,7 @@ notsup:
     printk(KERN_ERR "redirfs does not support '%s' file system\n",
             type->name);
     return -1;
+*/
 }
 
 static int rfs_path_add_include(struct rfs_path *rpath, struct rfs_flt *rflt)

@@ -40,7 +40,7 @@
 #include <linux/aio.h>
 #include <linux/version.h>
 
-#define REDIRFS_VERSION "0.13 EXPERIMENTAL"
+#define REDIRFS_VERSION "0.14 EXPERIMENTAL"
 
 #define REDIRFS_PATH_INCLUDE        1
 #define REDIRFS_PATH_EXCLUDE        2
@@ -283,6 +283,7 @@ enum redirfs_op_idc {
 #endif
     REDIRFS_DIR_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_permission),
     REDIRFS_DIR_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_setattr),
+    REDIRFS_DIR_IOP_ATOMIC_OPEN  = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_atomic_open),
 
     REDIRFS_CHR_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_i_permission),
     REDIRFS_CHR_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_i_setattr),
@@ -604,6 +605,17 @@ union redirfs_op_args {
         struct dentry *dentry;
         struct iattr *iattr;
     } i_setattr;
+
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,5,0))
+    struct {
+        struct inode *inode;
+        struct dentry *dentry;
+        struct file *file;
+        unsigned open_flag;
+        umode_t create_mode;
+        int *opened;
+    } i_atomic_open;
+#endif
 
     struct {
         struct inode *inode;

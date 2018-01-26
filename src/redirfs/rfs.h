@@ -642,6 +642,7 @@ void rfs_file_put(struct rfs_file *rfile);
 void rfs_file_set_ops(struct rfs_file *rfile);
 int rfs_file_cache_create(void);
 void rfs_file_cache_destory(void);
+struct rfs_file *rfs_file_add(struct file *file);
 
 void rfs_add_dir_subs(
     struct rfs_file *rfile,
