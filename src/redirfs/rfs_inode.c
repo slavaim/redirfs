@@ -1519,7 +1519,9 @@ static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)
     RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_LOOKUP, lookup, rfs_lookup);
     RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_MKDIR, mkdir, rfs_mkdir);
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3,5,0))
-    RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_ATOMIC_OPEN, atomic_open, rfs_atomic_open);
+    // hook atomic_open when i_op has it
+    if (rinode->i_rhops->old.i_op->atomic_open)
+        RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_ATOMIC_OPEN, atomic_open, rfs_atomic_open);
 #endif
 }
 
