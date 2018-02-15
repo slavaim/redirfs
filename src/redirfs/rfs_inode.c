@@ -214,8 +214,7 @@ static void rfs_inode_set_default_fop_reg(struct rfs_inode *ri_new, struct inode
 {
 #define PROTOTYPE_FOP(op, new_op) \
     RFS_ADD_OP(ri_new->f_op_new, inode->i_fop, op, new_op);
-    FUNCTION_FOP_open
-        SET_FOP_REG
+    SET_FOP_REG
 #undef PROTOTYPE_FOP
 }
 
@@ -223,42 +222,28 @@ static void rfs_inode_set_default_fop_dir(struct rfs_inode *ri_new, struct inode
 {
 #define PROTOTYPE_FOP(op, new_op) \
     RFS_ADD_OP(ri_new->f_op_new, inode->i_fop, op, new_op);
-    FUNCTION_FOP_open
-        SET_FOP_DIR
+    SET_FOP_DIR
 #undef PROTOTYPE_FOP
 }
 
 static void rfs_inode_set_default_fop_lnk(struct rfs_inode *ri_new, struct inode *inode)
 {
-#define PROTOTYPE_FOP(op, new_op) \
-    RFS_ADD_OP_MGT(ri_new->f_op_new, inode->i_fop, op, new_op);
-    FUNCTION_FOP_open
-#undef PROTOTYPE_FOP
 }
 
 static void rfs_inode_set_default_fop_chr(struct rfs_inode *ri_new, struct inode *inode)
 {
 #define PROTOTYPE_FOP(op, new_op) \
     RFS_ADD_OP(ri_new->f_op_new, inode->i_fop, op, new_op);
-    FUNCTION_FOP_open
     SET_FOP_CHR
 #undef PROTOTYPE_FOP
 }
 
 static void rfs_inode_set_default_fop_blk(struct rfs_inode *ri_new, struct inode *inode)
 {
-#define PROTOTYPE_FOP(op, new_op) \
-    RFS_ADD_OP_MGT(ri_new->f_op_new, inode->i_fop, op, new_op);
-    FUNCTION_FOP_open
-#undef PROTOTYPE_FOP
 }
 
 static void rfs_inode_set_default_fop_fifo(struct rfs_inode *ri_new, struct inode *inode)
 {
-#define PROTOTYPE_FOP(op, new_op) \
-    RFS_ADD_OP_MGT(ri_new->f_op_new, inode->i_fop, op, new_op);
-    FUNCTION_FOP_open
-#undef PROTOTYPE_FOP
 }
 
 static void rfs_inode_set_default_fop(struct rfs_inode *ri_new, struct inode *inode)
@@ -291,10 +276,11 @@ static void rfs_inode_set_default_fop(struct rfs_inode *ri_new, struct inode *in
         return;
     }
 
-    #define PROTOTYPE_FOP(op, new_op) \
+#define PROTOTYPE_FOP(op, new_op) \
     RFS_ADD_OP_MGT(ri_new->f_op_new, inode->i_fop, op, new_op);
+    FUNCTION_FOP_open // a watermark for rfs_cast_to_rfile
     FUNCTION_FOP_release
-    #undef PROTOTYPE_FOP
+#undef PROTOTYPE_FOP
 
     inode->i_fop = &ri_new->f_op_new;
 }
@@ -1802,7 +1788,7 @@ static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)
     RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_MKDIR, mkdir, rfs_mkdir);
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3,5,0))
     // hook atomic_open when i_op has it
-    if (rinode->i_rhops->old.i_op->atomic_open)
+    if (rinode->op_old->atomic_open)
         RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_ATOMIC_OPEN, atomic_open, rfs_atomic_open);
 #endif
 }
