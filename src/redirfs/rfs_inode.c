@@ -1384,7 +1384,7 @@ static int rfs_setattr_default(struct dentry *dentry, struct iattr *iattr)
     struct inode *inode = dentry->d_inode;
     int rv;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0) && !(LINUX_VERSION_CODE > KERNEL_VERSION(3,16,38) && LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)))
     rv = inode_change_ok(inode, iattr);
 #else
     rv = setattr_prepare(dentry, iattr);
