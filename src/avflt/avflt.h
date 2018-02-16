@@ -33,6 +33,7 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
 #include <linux/freezer.h>
 #endif
+#include <linux/fs_struct.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <redirfs.h>
@@ -178,6 +179,14 @@ extern atomic_t avflt_reply_timeout;
 extern atomic_t avflt_cache_enabled;
 extern redirfs_filter avflt;
 extern wait_queue_head_t avflt_request_available;
+
+#ifdef DEBUG
+#define avlft_pr_debug(fmt, ...) \
+	printk(KERN_INFO "avflt: %s:%d:%s:" pr_fmt(fmt) , __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#else
+#define avlft_pr_debug(fmt, ...) \
+    no_printk(KERN_INFO "avflt: %s:%d:%s:" pr_fmt(fmt) , __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#endif
 
 #endif
 

@@ -35,15 +35,7 @@
 #endif // RFS_DBG
 
 static rfs_kmem_cache_t *rfs_file_cache = NULL;
-
-/*---------------------------------------------------------------------------*/
-
-static int rfs_release(struct inode *inode, struct file *file);
-
-struct file_operations rfs_file_ops = {
-    .open = rfs_open,
-    .release = rfs_release,
-};
+static spinlock_t rfs_file_add_lock = __SPIN_LOCK_INITIALIZER(rfs_file_add_lock);
 
 /*---------------------------------------------------------------------------*/
 
@@ -122,13 +114,95 @@ struct rfs_file* rfs_file_find(struct file *file)
     return rfile;
 }
 
+struct rfs_file* rfs_file_find_with_open_flts(struct file *file)
+{
+    struct rfs_file     *rfile;
+    struct rfs_inode    *rinode;
+    struct rfs_dentry   *rdentry;
+    struct rfs_info     *rinfo;
+    struct rfs_context  rcont;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
+
+    if (!file) {
+        printk(KERN_ERR "redirfs: invalid argument(%s:%d)\n", __FILE__, __LINE__);
+        return ERR_PTR(-EINVAL);
+    }
+
+    rfile  = rfs_file_find(file);
+    if (rfile) {
+        //rfile was created with previous call rfs_file_find_with_open_flts/open/atomic_open
+        return rfile;
+    }
+
+    rinode = rfs_inode_find(file->f_inode);
+    if (!rinode) {
+        printk(KERN_ERR "redirfs: cannot find rfs_file(%s:%d)\n", __FILE__, __LINE__);
+        return ERR_PTR(-ENOENT);
+    }
+
+    rdentry = rfs_dentry_find(file->f_dentry);
+    if (!rdentry) {
+        printk(KERN_ERR "redirfs: cannot find rfs_dentry(%s:%d)\n", __FILE__, __LINE__);
+        rfs_inode_put(rinode);
+        return ERR_PTR(-ENOENT);
+    }
+
+    rinfo = rfs_dentry_get_rinfo(rdentry);
+    if(!rinfo) {
+        printk(KERN_ERR "redirfs: cannot find rfs_info(%s:%d)\n", __FILE__, __LINE__);
+        rfs_dentry_put(rdentry);
+        rfs_inode_put(rinode);
+        return ERR_PTR(-ENOENT);
+    }
+
+    fops_put(file->f_op);
+    file->f_op = fops_get(rinode->f_op_old);
+
+    rfs_context_init(&rcont, 0);
+
+    if (S_ISREG(file->f_inode->i_mode))
+        rargs.type.id = REDIRFS_REG_FOP_OPEN;
+    else if (S_ISDIR(file->f_inode->i_mode))
+        rargs.type.id = REDIRFS_DIR_FOP_OPEN;
+    else if (S_ISLNK(file->f_inode->i_mode))
+        rargs.type.id = REDIRFS_LNK_FOP_OPEN;
+    else if (S_ISCHR(file->f_inode->i_mode))
+        rargs.type.id = REDIRFS_CHR_FOP_OPEN;
+    else if (S_ISBLK(file->f_inode->i_mode))
+        rargs.type.id = REDIRFS_BLK_FOP_OPEN;
+    else if (S_ISFIFO(file->f_inode->i_mode))
+        rargs.type.id = REDIRFS_FIFO_FOP_OPEN;
+    else
+        BUG();
+
+    rargs.args.f_open.inode = file->f_inode;
+    rargs.args.f_open.file = file;
+    rargs.rv.rv_int = 0;
+
+    if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs) && !rargs.rv.rv_int) {
+        rfile = rfs_file_add(file);
+        if (IS_ERR(rfile))
+            BUG();
+    } else {
+        rfile = ERR_PTR(rargs.rv.rv_int);
+    }
+
+    rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+    rfs_info_put(rinfo);
+    rfs_dentry_put(rdentry);
+    rfs_inode_put(rinode);
+    return rfile;
+}
+
 /*---------------------------------------------------------------------------*/
 
 static struct rfs_file *rfs_file_alloc(struct file *file)
 {
     struct rfs_file *rfile;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rfile = kmem_cache_zalloc(rfs_file_cache, GFP_KERNEL);
     if (!rfile)
@@ -234,10 +308,18 @@ struct rfs_file *rfs_file_add(struct file *file)
 {
     struct rfs_file *rfile;
     int err;
-
-    rfile = rfs_file_alloc(file);
-    if (IS_ERR(rfile))
+    
+    spin_lock(&rfs_file_add_lock);
+    rfile = rfs_file_find(file);
+    if (rfile) {
+        spin_unlock(&rfs_file_add_lock);
         return rfile;
+    }
+    rfile = rfs_file_alloc(file);
+    if (IS_ERR(rfile)) {
+        spin_unlock(&rfs_file_add_lock);
+        return rfile;
+    }
         
     rfs_file_get(rfile);
 
@@ -258,12 +340,12 @@ struct rfs_file *rfs_file_add(struct file *file)
 #ifndef RFS_PER_OBJECT_OPS
     rfs_keep_operations(rfile->f_rhops);
 #endif /* RFS_PER_OBJECT_OPS */
-
 #ifdef RFS_USE_HASHTABLE
     err = rfs_insert_object(&rfs_file_table, &rfile->robject, false);
 #else
     err = rfs_insert_object(&rfs_file_radix_tree, &rfile->robject, false);
 #endif
+    spin_unlock(&rfs_file_add_lock);
     DBG_BUG_ON(err);
     if (unlikely(err)) {
         rfs_file_del(rfile);
@@ -361,7 +443,7 @@ int rfs_open(struct inode *inode, struct file *file)
 
     rargs.args.f_open.inode = inode;
     rargs.args.f_open.file = file;
-    rargs.rv.rv_int = -EACCES;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
         DBG_BUG_ON(rinode->f_op_old && rinode->f_op_old->open == rfs_open);
@@ -386,19 +468,22 @@ int rfs_open(struct inode *inode, struct file *file)
 
     rfs_inode_put(rinode);
     rfs_info_put(rinfo);
+    rfs_pr_debug("inode=%p, ret=%d", inode, rargs.rv.rv_int);
     return rargs.rv.rv_int;
 }
 
 /*---------------------------------------------------------------------------*/
 
-static int rfs_release(struct inode *inode, struct file *file)
+int rfs_release(struct inode *inode, struct file *file)
 {
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
-    rfile = rfs_file_find(file);
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -417,16 +502,17 @@ static int rfs_release(struct inode *inode, struct file *file)
 
     rargs.args.f_release.inode = inode;
     rargs.args.f_release.file = file;
-    rargs.rv.rv_int = -EACCES;
+    rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_FOP_SET(rfile, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
-        if (rfile->op_old && rfile->op_old->release)
+        if (rfile->op_old && rfile->op_old->release) {
             rargs.rv.rv_int = rfile->op_old->release(
                     rargs.args.f_release.inode,
                     rargs.args.f_release.file);
-        else
+        } else {
             rargs.rv.rv_int = 0;
+        }
     }
 
     if (RFS_IS_FOP_SET(rfile, rargs.type.id))
@@ -434,9 +520,11 @@ static int rfs_release(struct inode *inode, struct file *file)
         
     rfs_context_deinit(&rcont);
 
-    rfs_file_del(rfile);
+    if (!rargs.rv.rv_int)
+        rfs_file_del(rfile);
     rfs_file_put(rfile);
     rfs_info_put(rinfo);
+    rfs_pr_debug("inode=%p, ret=%d", inode, rargs.rv.rv_int);
     return rargs.rv.rv_int;
 }
 
@@ -488,7 +576,7 @@ exit:
 /*---------------------------------------------------------------------------*/
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
-static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
+int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 {
     struct rfs_file *rfile;
     struct rfs_info *rinfo;
@@ -496,11 +584,13 @@ static int rfs_readdir(struct file *file, void *dirent, filldir_t filldir)
     RFS_DEFINE_REDIRFS_ARGS(rargs);
     struct dentry *d_first = NULL;
 
-    /* this optimization was borrowed from
+    rfile = rfs_file_find_with_open_flts(file);
+    if (IS_ERR(rfile))
+        return PTR_ERR(rfile);
+    
+        /* this optimization was borrowed from
        the Kaspersky's version of rfs filter */
     d_first = rfs_get_first_cached_dir_entry(file->f_dentry);
-
-    rfile = rfs_file_find(file);
     rinfo = rfs_dentry_get_rinfo(rfile->rdentry);
     rfs_context_init(&rcont, 0);
     rargs.rv.rv_int = -ENOTDIR;
@@ -552,47 +642,10 @@ exit:
 #pragma GCC optimize ("O3")
 static void rfs_file_set_ops_reg(struct rfs_file *rfile)
 {
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_LLSEEK, llseek, rfs_llseek);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_READ, read, rfs_read);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_WRITE, write, rfs_write);
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_READ_ITER, read_iter, rfs_read_iter);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_WRITE_ITER, write_iter, rfs_write_iter);
-#endif
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_POLL, poll, rfs_poll);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_UNLOCKED_IOCTL, unlocked_ioctl, rfs_unlocked_ioctl);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_COMPAT_IOCTL, compat_ioctl, rfs_compat_ioctl);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_MMAP, mmap, rfs_mmap);
-#ifdef RFS_PER_OBJECT_OPS 
-    /*
-     * the open opeartion is called through rfile->op_new.open registered on inode lookup
-     * then unconditionally set for file_operations and should not be removed as used as
-     * a watermark for rfs_cast_to_rfile
-     *
-     * RFS_SET_FOP(rfile, REDIRFS_REG_FOP_OPEN, open, rfs_open);
-     */
-#endif /* RFS_PER_OBJECT_OPS  */
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FLUSH, flush, rfs_flush);
-    RFS_SET_FOP(rfile, REDIRFS_REG_FOP_FSYNC, fsync, rfs_fsync);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_fasync), fasync, rfs_fasync);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_lock), lock, rfs_lock);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_sendpage), sendpage, rfs_sendpage);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_get_unmapped_area), get_unmapped_area, rfs_get_unmapped_area);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_flock), flock, rfs_flock);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_splice_write), splice_write, rfs_splice_write);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_splice_read), splice_read, rfs_splice_read);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_setlease), setlease, rfs_setlease);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_fallocate), fallocate, rfs_fallocate);
-#endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_show_fdinfo), show_fdinfo, rfs_show_fdinfo);
-#endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_copy_file_range), copy_file_range, rfs_copy_file_range);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_clone_file_range), clone_file_range, rfs_clone_file_range);
-	RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
-#endif
+    #define PROTOTYPE_FOP(old_op, new_op) \
+        RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_REG, RFS_OP_f_ ## old_op), old_op, new_op);
+    SET_FOP_REG
+    #undef PROTOTYPE_FOP
 }
 
 /*---------------------------------------------------------------------------*/
@@ -607,24 +660,11 @@ static void rfs_file_set_ops_dir(struct rfs_file *rfile)
     rfile->op_new.iterate = rfs_iterate;
     rfile->op_new.iterate_shared = rfs_iterate_shared;
 #endif
-
 #else /* RFS_PER_OBJECT_OPS  */
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
-    RFS_SET_FOP_MGT(rfile,
-                    RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_readdir),
-                    readdir, rfs_readdir);
-#else
-    RFS_SET_FOP_MGT(rfile,
-                    RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate),
-                    iterate, rfs_iterate);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
-    RFS_SET_FOP_MGT(rfile,
-                    RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_iterate_shared),
-					iterate_shared, rfs_iterate_shared);
-#endif
-#endif
-
+    #define PROTOTYPE_FOP(old_op, new_op) \
+        RFS_SET_FOP_MGT(rfile, RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_f_ ## old_op), old_op, new_op);
+    SET_FOP_DIR
+    #undef PROTOTYPE_FOP
 #endif /* !RFS_PER_OBJECT_OPS  */
 }
 
@@ -638,47 +678,10 @@ static void rfs_file_set_ops_lnk(struct rfs_file *rfile)
 
 static void rfs_file_set_ops_chr(struct rfs_file *rfile)
 {
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_llseek), llseek, rfs_llseek);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_read), read, rfs_read);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_write), write, rfs_write);
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_read_iter), read_iter, rfs_read_iter);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_write_iter), write_iter, rfs_write_iter);
-#endif
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_poll), poll, rfs_poll);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_unlocked_ioctl), unlocked_ioctl, rfs_unlocked_ioctl);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_compat_ioctl), compat_ioctl, rfs_compat_ioctl);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_mmap), mmap, rfs_mmap);
-#ifdef RFS_PER_OBJECT_OPS 
-    /*
-     * the open opeartion is called through rfile->op_new.open registered on inode lookup
-     * then unconditionally set for file_operations and should not be removed as used as
-     * a watermark for rfs_cast_to_rfile
-     *
-     * RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_open), open, rfs_open);
-     */
-#endif /*RFS_PER_OBJECT_OPS*/
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_flush), flush, rfs_flush);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fsync), fsync, rfs_fsync);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fasync), fasync, rfs_fasync);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_lock), lock, rfs_lock);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_sendpage), sendpage, rfs_sendpage);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_get_unmapped_area), get_unmapped_area, rfs_get_unmapped_area);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_flock), flock, rfs_flock);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_splice_write), splice_write, rfs_splice_write);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_splice_read), splice_read, rfs_splice_read);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_setlease), setlease, rfs_setlease);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_fallocate), fallocate, rfs_fallocate);
-#endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_show_fdinfo), show_fdinfo, rfs_show_fdinfo);
-#endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_copy_file_range), copy_file_range, rfs_copy_file_range);
-    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_clone_file_range), clone_file_range, rfs_clone_file_range);
-	RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_dedupe_file_range), dedupe_file_range, rfs_dedupe_file_range);
-#endif
+    #define PROTOTYPE_FOP(old_op, new_op) \
+    RFS_SET_FOP(rfile, RFS_OP_IDC(RFS_INODE_CHAR, RFS_OP_f_ ## old_op), old_op, new_op);
+        SET_FOP_CHR
+    #undef PROTOTYPE_FOP
 }
 
 /*---------------------------------------------------------------------------*/

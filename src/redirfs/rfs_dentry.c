@@ -70,9 +70,9 @@ struct rfs_dentry* rfs_dentry_find(const struct dentry *dentry)
     struct rfs_object  *robject;
 
 #ifdef RFS_PER_OBJECT_OPS
-    rinode = rfs_dentry_get(rfs_cast_to_rdentry(dentry));
-    if (rinode)
-        return rinode;
+    rdentry = rfs_dentry_get(rfs_cast_to_rdentry(dentry));
+    if (rdentry)
+        return rdentry;
 #endif /* RFS_PER_OBJECT_OPS */
 
     robject = rfs_get_object_by_system_object(&rfs_dentry_radix_tree, dentry);
@@ -90,7 +90,7 @@ static struct rfs_dentry *rfs_dentry_alloc(struct dentry *dentry)
 {
     struct rfs_dentry *rdentry;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rdentry = kmem_cache_zalloc(rfs_dentry_cache, GFP_KERNEL);
     if (!rdentry)
@@ -185,69 +185,84 @@ struct rfs_dentry *rfs_dentry_add(struct dentry *dentry, struct rfs_info *rinfo)
 {
     struct rfs_dentry *rd_new;
     struct rfs_dentry *rd = NULL;
+    int err;
 
     DBG_BUG_ON(!dentry);
     if (!dentry)
         return NULL;
 
+    spin_lock(&dentry->d_lock);
+    rd = rfs_dentry_find(dentry);
+    /*
+     * Workaround for the isofs_lookup function. It assigns
+     * dentry operations for the new dentry from the root dentry.
+     * This leads to the situation when one rdentry object can be
+     * found for more dentry objects.
+     *
+     * isofs_lookup: dentry->d_op = dir->i_sb->s_root->d_op;
+     * vfat_lookup: dentry->d_op = dir->i_sb->s_root->d_op;
+     */
+    {
+        if (rd) {
+#ifdef RFS_PER_OBJECT_OPS
+            if (rd->dentry != dentry) {
+                dentry->d_op = rd->op_old;
+                rfs_dentry_put(rd);
+            } else {
+                spin_unlock(&dentry->d_lock);
+                rfs_pr_debug("rd=%p", rd);
+                return rd;
+            }
+#else
+            spin_unlock(&dentry->d_lock);
+            rfs_pr_debug("rd=%p", rd);
+            return rd;
+#endif /* RFS_PER_OBJECT_OPS */
+        }
+#ifndef RFS_PER_OBJECT_OPS
+        if (dentry->d_op && dentry->d_op->d_iput == rfs_d_iput) {
+            if (dentry->d_sb && dentry->d_sb->s_root) {
+                rd = rfs_dentry_find(dentry->d_sb->s_root);
+                if (rd && rd->dentry != dentry) {
+                    dentry->d_op = rd->d_rhops->old.d_op;
+                    rfs_pr_debug("dentry->d_op = dentry->d_sb->s_root->d_op");
+                }
+                rfs_dentry_put(rd);
+            }
+        }
+#endif
+    }
+
     rd_new = rfs_dentry_alloc(dentry);
-    if (IS_ERR(rd_new))
+    if (IS_ERR(rd_new)) {
+        spin_unlock(&dentry->d_lock);
         return rd_new;
+    }
 
     DBG_BUG_ON(!rd_new->d_rhops);
-
-    spin_lock(&dentry->d_lock);
-    {
-        rd = rfs_dentry_find(dentry);
-
-    #ifdef RFS_PER_OBJECT_OPS
-        /*
-        * Workaround for the isofs_lookup function. It assigns
-        * dentry operations for the new dentry from the root dentry.
-        * This leads to the situation when one rdentry object can be
-        * found for more dentry objects.
-        *
-        * isofs_lookup: dentry->d_op = dir->i_sb->s_root->d_op;
-        */
-        if (rd && (rd->dentry != dentry)) {
-            rd_new->op_old = rd->op_old;
-            rfs_dentry_put(rd);
-            rd = NULL;
-        }
-    #endif /* RFS_PER_OBJECT_OPS */
-
-        if (!rd) {
-            rd_new->rinfo = rfs_info_get(rinfo);
-    #ifdef RFS_PER_OBJECT_OPS
-            dentry->d_op = &rd_new->op_new;
-    #endif /* RFS_PER_OBJECT_OPS */
-            rfs_dentry_get(rd_new);
-            rd = rfs_dentry_get(rd_new);
-        }
-    }
+    rd_new->rinfo = rfs_info_get(rinfo);
+#ifdef RFS_PER_OBJECT_OPS
+    dentry->d_op = &rd_new->op_new;
+#endif /* RFS_PER_OBJECT_OPS */
+    rfs_dentry_get(rd_new);
     spin_unlock(&dentry->d_lock);
 
-    rfs_dentry_put(rd_new);
-    
-    if (rd == rd_new) {
-        int err;
-
 #ifndef RFS_PER_OBJECT_OPS
-        rfs_keep_operations(rd->d_rhops);
+    rfs_keep_operations(rd_new->d_rhops);
 #endif /* !RFS_PER_OBJECT_OPS */
 
-        err = rfs_insert_object(&rfs_dentry_radix_tree,
-                                &rd->robject,
-                                false);
-        DBG_BUG_ON(err);
-        if (unlikely(err)) {
-            rfs_dentry_del(rd);
-            rfs_dentry_put(rd);
-            return ERR_PTR(err);
-        }
+    err = rfs_insert_object(&rfs_dentry_radix_tree,
+                            &rd_new->robject,
+                            false);
+    DBG_BUG_ON(err);
+    if (unlikely(err)) {
+        rfs_dentry_del(rd_new);
+        rfs_dentry_put(rd_new);
+        return ERR_PTR(err);
     }
 
-    return rd;
+    rfs_pr_debug("rd_new=%p", rd_new);
+    return rd_new;
 }
 
 void rfs_dentry_del(struct rfs_dentry *rdentry)
@@ -381,7 +396,14 @@ void rfs_d_iput(struct dentry *dentry, struct inode *inode)
     struct rfs_context rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
+    rfs_pr_debug("dentry=%p, inode=%p", dentry, inode);
+
     rdentry = rfs_dentry_find(dentry);
+    if (!rdentry) {
+        rfs_pr_debug("dentry=%p, rdentry=%p", dentry, rdentry);
+        iput(inode);
+        return;
+    }
     rinfo = rfs_dentry_get_rinfo(rdentry);
     rfs_context_init(&rcont, 0);
 
@@ -431,6 +453,10 @@ static void rfs_d_release(struct dentry *dentry)
     RFS_DEFINE_REDIRFS_ARGS(rargs);
 
     rdentry = rfs_dentry_find(dentry);
+    if (!rdentry) {
+        rfs_pr_debug("dentry=%p", dentry);
+        return;
+    }
     rinfo = rfs_dentry_get_rinfo(rdentry);
     rfs_context_init(&rcont, 0);
     rargs.type.id = REDIRFS_NONE_DOP_D_RELEASE;
@@ -450,6 +476,7 @@ static void rfs_d_release(struct dentry *dentry)
     rfs_dentry_del(rdentry);
     rfs_dentry_put(rdentry);
     rfs_info_put(rinfo);
+    rfs_pr_debug("dentry=%p", dentry);
 }
 
 static inline int rfs_d_compare_default(const struct qstr *name1,

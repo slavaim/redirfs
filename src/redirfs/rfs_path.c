@@ -42,7 +42,7 @@ static struct rfs_path *rfs_path_alloc(struct vfsmount *mnt,
     size_t size;
     char* pathname;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rpath = kzalloc(sizeof(struct rfs_path), GFP_KERNEL);
     if (!rpath)
@@ -505,7 +505,7 @@ redirfs_path* redirfs_get_paths_root(redirfs_filter filter, redirfs_root root)
     redirfs_path *paths;
     int i = 0;
     
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     if (!filter || IS_ERR(filter) || !root)
         return ERR_PTR(-EINVAL);
@@ -540,7 +540,7 @@ redirfs_path* redirfs_get_paths(redirfs_filter filter)
     redirfs_path *paths;
     int i = 0;
     
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
     might_sleep();
 
     if (!filter || IS_ERR(filter))
@@ -590,7 +590,7 @@ struct redirfs_path_info *redirfs_get_path_info(redirfs_filter filter,
     struct rfs_path *rpath = path;
     struct redirfs_path_info *info;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
     might_sleep();
 
     if (!filter || IS_ERR(filter) || !path)
@@ -664,7 +664,7 @@ int rfs_path_get_info(struct rfs_flt *rflt, char *buf, int size)
     char type;
     int len = 0;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rfs_mutex_lock(&rfs_path_mutex);
 

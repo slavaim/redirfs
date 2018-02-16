@@ -22,7 +22,7 @@ modules:
 	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS=$(MINC) modules
 
 modules_debug:
-	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS='$(MINC) -v -O1 -g -DRFS_DBG' modules
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS='$(MINC) -v -O1 -g -DRFS_DBG -DDEBUG' modules
 
 modules_install: modules
 	mkdir -p $(MDIR)
@@ -99,6 +99,8 @@ cscope_clean:
 # general targes
 
 all: libs utils modules cscope
+
+all_debug: libs utils modules_debug cscope
 
 clean: libs_clean utils_clean modules_clean cscope_clean
 

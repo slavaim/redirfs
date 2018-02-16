@@ -23,7 +23,7 @@
 
 #include "avflt.h"
 
-static int avflt_should_check(struct file *file)
+static int avflt_should_check(struct file *file, int type)
 {
     if (avflt_is_stopped())
         return 0;
@@ -38,6 +38,9 @@ static int avflt_should_check(struct file *file)
         return 0;
 
     if (!i_size_read(file->f_dentry->d_inode))
+        return 0;
+
+    if (type == AVFLT_EVENT_CLOSE && ((file->f_flags & O_ACCMODE) == O_RDONLY))
         return 0;
 
     return 1;
@@ -119,7 +122,7 @@ static enum redirfs_rv avflt_check_file(struct file *file, int type,
 {
     int rv;
 
-    if (!avflt_should_check(file))
+    if (!avflt_should_check(file, type))
         return REDIRFS_CONTINUE;
 
     rv = avflt_check_cache(file, type);

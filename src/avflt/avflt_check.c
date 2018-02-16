@@ -275,6 +275,9 @@ int avflt_get_file(struct avflt_event *event)
     struct file *file;
     int flags;
     int fd;
+    char* buff;
+    char* buff_s;
+    struct path path;
 
     fd = get_unused_fd();
     if (fd < 0)
@@ -291,6 +294,22 @@ int avflt_get_file(struct avflt_event *event)
 #else
     file = dentry_open(&event->f_path, flags, current_cred());
 #endif
+    if (IS_ERR(file)) {
+        buff = (char *)kmalloc(PAGE_SIZE, GFP_KERNEL);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
+        path.mnt = event->mnt;
+        path.dentry = event->f_path_dentry;
+#else
+        path = event->f_path;
+#endif
+        buff_s = d_path(&path, buff, PAGE_SIZE);
+        if (!IS_ERR(buff_s)) {
+            avlft_pr_debug("dentry=%p, path=%s", path.dentry, buff_s);
+            if (!d_unlinked(path.dentry))
+                file = filp_open(buff_s ,flags, 0);
+        }
+        kfree(buff);
+    }
     if (IS_ERR(file)) {
         put_unused_fd(fd);
         return PTR_ERR(file);

@@ -36,7 +36,7 @@ struct rfs_dcache_data *rfs_dcache_data_alloc(struct dentry *dentry,
 {
     struct rfs_dcache_data *rdata;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rdata = kzalloc(sizeof(struct rfs_dcache_data), GFP_KERNEL);
     if (!rdata)
@@ -62,7 +62,7 @@ static struct rfs_dcache_entry *rfs_dcache_entry_alloc(struct dentry *dentry,
 {
     struct rfs_dcache_entry *entry;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     entry = kzalloc(sizeof(struct rfs_dcache_entry), GFP_KERNEL);
     if (!entry)

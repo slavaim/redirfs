@@ -36,9 +36,8 @@ static int check(void)
         if (av_request(&av_conn, &av_event, 500)) {
             if (errno == ETIMEDOUT)
                 continue;
-
             perror("av_request failed");
-            return -1;
+            continue;
         }
 
         if (av_get_filename(&av_event, fn, PATH_MAX)) {
@@ -100,7 +99,7 @@ int main(int argc, char *argv[])
     sigaction(SIGINT, &sa, NULL);
 
     if (av_register(&av_conn)) {
-        perror("av_register failed");
+        perror("av_register_trusted failed");
         exit(EXIT_FAILURE);
     }
 

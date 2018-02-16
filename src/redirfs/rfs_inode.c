@@ -31,6 +31,7 @@
 #include "rfs.h"
 #include "rfs_address_space.h"
 #include "rfs_hooked_ops.h"
+#include "rfs_file_ops.h"
 
 #ifdef RFS_DBG
     #pragma GCC push_options
@@ -98,7 +99,7 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
 {
     struct rfs_inode *rinode;
 
-    DBG_BUG_ON(!preemptible());
+    DBG_BUG_ON(!rfs_preemptible());
 
     rinode = kmem_cache_zalloc(rfs_inode_cache, GFP_KERNEL);
     if (IS_ERR(rinode))
@@ -209,6 +210,83 @@ void rfs_inode_free(struct rfs_object *robject)
 
 /*---------------------------------------------------------------------------*/
 
+static void rfs_inode_set_default_fop_reg(struct rfs_inode *ri_new, struct inode *inode)
+{
+#define PROTOTYPE_FOP(op, new_op) \
+    RFS_ADD_OP(ri_new->f_op_new, inode->i_fop, op, new_op);
+    SET_FOP_REG
+#undef PROTOTYPE_FOP
+}
+
+static void rfs_inode_set_default_fop_dir(struct rfs_inode *ri_new, struct inode *inode)
+{
+#define PROTOTYPE_FOP(op, new_op) \
+    RFS_ADD_OP(ri_new->f_op_new, inode->i_fop, op, new_op);
+    SET_FOP_DIR
+#undef PROTOTYPE_FOP
+}
+
+static void rfs_inode_set_default_fop_lnk(struct rfs_inode *ri_new, struct inode *inode)
+{
+}
+
+static void rfs_inode_set_default_fop_chr(struct rfs_inode *ri_new, struct inode *inode)
+{
+#define PROTOTYPE_FOP(op, new_op) \
+    RFS_ADD_OP(ri_new->f_op_new, inode->i_fop, op, new_op);
+    SET_FOP_CHR
+#undef PROTOTYPE_FOP
+}
+
+static void rfs_inode_set_default_fop_blk(struct rfs_inode *ri_new, struct inode *inode)
+{
+}
+
+static void rfs_inode_set_default_fop_fifo(struct rfs_inode *ri_new, struct inode *inode)
+{
+}
+
+static void rfs_inode_set_default_fop(struct rfs_inode *ri_new, struct inode *inode)
+{
+    umode_t mode = inode->i_mode;
+
+    if (S_ISREG(mode))
+        rfs_inode_set_default_fop_reg(ri_new, inode);
+
+    else if (S_ISDIR(mode))
+        rfs_inode_set_default_fop_dir(ri_new, inode);
+
+    else if (S_ISLNK(mode))
+        rfs_inode_set_default_fop_lnk(ri_new, inode);
+
+    else if (S_ISCHR(mode))
+        rfs_inode_set_default_fop_chr(ri_new, inode);
+
+    else if (S_ISBLK(mode))
+        rfs_inode_set_default_fop_blk(ri_new, inode);
+
+    else if (S_ISFIFO(mode))
+        rfs_inode_set_default_fop_fifo(ri_new, inode);
+
+    else if (S_ISSOCK(mode))
+    {
+        /*
+         * nothing
+         */
+        return;
+    }
+
+#define PROTOTYPE_FOP(op, new_op) \
+    RFS_ADD_OP_MGT(ri_new->f_op_new, inode->i_fop, op, new_op);
+    FUNCTION_FOP_open // a watermark for rfs_cast_to_rfile
+    FUNCTION_FOP_release
+#undef PROTOTYPE_FOP
+
+    inode->i_fop = &ri_new->f_op_new;
+}
+
+/*---------------------------------------------------------------------------*/
+
 struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
 {
     struct rfs_inode *ri_new;
@@ -228,19 +306,11 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
     {
         ri = rfs_inode_find(inode);
         if (!ri) {
-
             DBG_BUG_ON(ri_new->f_op_old->open == rfs_open);
 
             ri_new->rinfo = rfs_info_get(rinfo);
 
-            /*
-             * unconditionally register open operation to be notified
-             * of open requests, some devices do not register open
-             * operation, e.g. null_fops, but RedirFS requires
-             * open operation to be called through file_operations
-             */
-            if (!S_ISSOCK(inode->i_mode))
-                inode->i_fop = &rfs_file_ops;
+            rfs_inode_set_default_fop(ri_new, inode);
 
 #ifdef RFS_PER_OBJECT_OPS
             inode->i_op = &ri_new->op_new;
@@ -481,19 +551,82 @@ void rfs_inode_cache_destroy(void)
     kmem_cache_destroy(rfs_inode_cache);
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
-static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
-        struct nameidata *nd)
-#else
-static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
-        unsigned int flags)
-#endif
+static int is_fs_with_name(const char* name, struct inode *dir)
 {
-    struct rfs_inode *rinode;
-    struct rfs_info *rinfo;
-    struct rfs_context rcont;
+    if (dir && dir->i_sb && dir->i_sb->s_type && dir->i_sb->s_type->name) {
+        rfs_pr_debug("name=%s", dir->i_sb->s_type->name);
+        return !strcmp(name, dir->i_sb->s_type->name);
+    }
+    return 0;
+}
+
+static int lookup_cifs_rfs_dcache_rdentry_add(unsigned int flags, struct dentry *dentry, struct rfs_info *rinfo)
+{
+	/*
+	 * If dentry->d_inode doesn't exist and dentry wants to be exclusive created, then it
+	 * will be handled by rfs_create. Create of FS can override dentry
+	 * operation(d_op). eg: CIFS
+	 */
+
+	if ((flags & LOOKUP_OPEN) && !(flags & LOOKUP_EXCL)) {
+		if (rfs_dcache_rdentry_add(dentry, rinfo))
+			BUG();
+        return 0;
+	}
+    return -1;
+}
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
+
+static void rfs_lookup_add_nameidata(struct dentry *dentry, struct nameidata *nd)
+{
+    struct file         *file;
+    struct rfs_file     *rfile;
+
+	if (nd && nd->flags & LOOKUP_OPEN) {
+		file = !IS_ERR(nd->intent.open.file) ? nd->intent.open.file : NULL;
+		rfs_pr_debug("file(%p)->f_dentry(%p)->d_inode(%p), dentry(%p)->d_inode(%p)",
+					 file,
+					 file ? file->f_dentry : NULL,
+					 file && file->f_dentry ? file->f_dentry->d_inode : NULL,
+					 dentry,
+					 dentry->d_inode);
+		if (file && (file->f_dentry == dentry) && (file->f_dentry->d_inode && dentry->d_inode)) {
+			/*
+			 * File was open and can be used by f_op -> register it to rfs.
+			 * e.g: NFS first open of file
+			 */
+
+			if (S_ISREG(nd->intent.open.file->f_mode)) {
+				/*
+				 * Emulate open operation for redirfs filters.
+				 */
+				rfile = rfs_file_find_with_open_flts(file);
+				if (IS_ERR(rfile)) {
+					d_drop(dentry);
+					dentry = (struct dentry *)rfile;
+				}
+			} else {
+				rfile = rfs_file_add(file);
+				if (IS_ERR(rfile))
+					BUG();
+			}
+			rfs_file_put(rfile);
+		}
+	}
+}
+
+struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
+        struct nameidata *nd)
+{
+    struct rfs_inode    *rinode;
+    struct rfs_info     *rinfo;
+    struct rfs_context   rcont;
     RFS_DEFINE_REDIRFS_ARGS(rargs);
-    struct dentry *dadd = dentry;
+
+    rfs_pr_debug("dir=%p, dentry=%p, nameidata=%p", dir, dentry, nd);
+    if (nd)
+        rfs_pr_debug("nd: { flags: 0x%x, intent.open: { flags: 0x%x, create_mode: 0x%x }}", nd->flags, nd->intent.open.flags, nd->intent.open.create_mode);
 
     if (S_ISDIR(dir->i_mode))
         rargs.type.id = REDIRFS_DIR_IOP_LOOKUP;
@@ -506,28 +639,17 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
 
     rargs.args.i_lookup.dir = dir;
     rargs.args.i_lookup.dentry = dentry;
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
     rargs.args.i_lookup.nd = nd;
-#else
-    rargs.args.i_lookup.flags = flags;
-#endif
+
     rargs.rv.rv_dentry = ERR_PTR(-ENOSYS);
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
         if (rinode->op_old && rinode->op_old->lookup) {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
             rargs.rv.rv_dentry = rinode->op_old->lookup(
                     rargs.args.i_lookup.dir,
                     rargs.args.i_lookup.dentry,
                     rargs.args.i_lookup.nd);
-#else
-            rargs.rv.rv_dentry = rinode->op_old->lookup(
-                    rargs.args.i_lookup.dir,
-                    rargs.args.i_lookup.dentry,
-                    rargs.args.i_lookup.flags);
-
-#endif
         }
     }
 
@@ -539,16 +661,89 @@ static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
     if (IS_ERR(rargs.rv.rv_dentry))
         goto exit;
 
-    if (rargs.rv.rv_dentry)
-        dadd = rargs.rv.rv_dentry;
-
-    if (rfs_dcache_rdentry_add(dadd, rinfo))
-        BUG();
+	if (is_fs_with_name("cifs", dir)) {
+        if (nd) {
+            if (!lookup_cifs_rfs_dcache_rdentry_add(nd->flags, dentry, rinfo) && (nd->flags & LOOKUP_CREATE)) {
+                rfs_lookup_add_nameidata(dentry, nd);
+			}
+		}
+	} else {
+		if (rargs.rv.rv_dentry)
+			dentry = rargs.rv.rv_dentry;
+		if (rfs_dcache_rdentry_add(dentry, rinfo))
+			BUG();
+	}
 exit:
     rfs_inode_put(rinode);
     rfs_info_put(rinfo);
+    rfs_pr_debug("dentry=%p, ret=%ld", dentry, IS_ERR(dentry) ? PTR_ERR(dentry) : 0);
     return rargs.rv.rv_dentry;
 }
+
+#else
+
+static struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
+        unsigned int flags)
+{
+    struct rfs_inode *rinode;
+    struct rfs_info *rinfo;
+    struct rfs_context rcont;
+
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
+
+    rfs_pr_debug("dir=%p, dentry=%p, flags=0x%x", dir, dentry, flags);
+
+    if (S_ISDIR(dir->i_mode))
+        rargs.type.id = REDIRFS_DIR_IOP_LOOKUP;
+    else
+        return ERR_PTR(-ENOTDIR);
+
+    rinode = rfs_inode_find(dir);
+    rinfo = rfs_inode_get_rinfo(rinode);
+    rfs_context_init(&rcont, 0);
+
+    rargs.args.i_lookup.dir = dir;
+    rargs.args.i_lookup.dentry = dentry;
+    rargs.args.i_lookup.flags = flags;
+
+    rargs.rv.rv_dentry = ERR_PTR(-ENOSYS);
+
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rinode->op_old && rinode->op_old->lookup) {
+            rargs.rv.rv_dentry = rinode->op_old->lookup(
+                    rargs.args.i_lookup.dir,
+                    rargs.args.i_lookup.dentry,
+                    rargs.args.i_lookup.flags);
+        }
+    }
+
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+
+    if (IS_ERR(rargs.rv.rv_dentry))
+        goto exit;
+
+    if (is_fs_with_name("cifs", dir)) {
+		lookup_cifs_rfs_dcache_rdentry_add(flags, dentry, rinfo);
+    } else {
+        if (rargs.rv.rv_dentry)
+            dentry = rargs.rv.rv_dentry;
+        if (rfs_dcache_rdentry_add(dentry, rinfo))
+            BUG();
+    }
+
+exit:
+    rfs_inode_put(rinode);
+    rfs_info_put(rinfo);
+
+    rfs_pr_debug("dentry=%p, ret=%ld", dentry, IS_ERR(rargs.rv.rv_dentry) ? PTR_ERR(rargs.rv.rv_dentry) : 0);
+    return rargs.rv.rv_dentry;
+}
+
+#endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 static int rfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
@@ -600,12 +795,89 @@ static int rfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
+
 static int rfs_create(struct inode *dir, struct dentry *dentry, int mode,
         struct nameidata *nd)
+{
+    struct rfs_file     *rfile;
+    struct file         *file;
+    struct rfs_inode    *rinode;
+    struct rfs_info     *rinfo;
+    struct rfs_context   rcont;
+    RFS_DEFINE_REDIRFS_ARGS(rargs);
+
+    rfs_pr_debug("dir=%p, dentry=%p, mode=%d, nameidata=%p",
+        dir, dentry, mode, nd);
+    if (nd)
+        rfs_pr_debug("nd: { flags: 0x%x, intent.open: { flags: 0x%x, create_mode: 0x%x }}", nd->flags, nd->intent.open.flags, nd->intent.open.create_mode);
+
+    rinode = rfs_inode_find(dir);
+    rinfo = rfs_inode_get_rinfo(rinode);
+    rfs_context_init(&rcont, 0);
+
+    if (S_ISDIR(dir->i_mode))
+        rargs.type.id = REDIRFS_DIR_IOP_CREATE;
+    else
+        BUG();
+
+    rargs.args.i_create.dir = dir;
+    rargs.args.i_create.dentry = dentry;
+    rargs.args.i_create.mode = mode;
+    rargs.args.i_create.nd = nd;
+
+    rargs.rv.rv_int = -ENOSYS;
+
+    if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
+        !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
+        if (rinode->op_old && rinode->op_old->create) {
+            rargs.rv.rv_int = rinode->op_old->create(
+                    rargs.args.i_create.dir,
+                    rargs.args.i_create.dentry,
+                    rargs.args.i_create.mode,
+                    rargs.args.i_create.nd);
+        }
+    }
+
+    if (RFS_IS_IOP_SET(rinode, rargs.type.id))
+        rfs_postcall_flts(rinfo->rchain, &rcont, &rargs);
+
+    rfs_context_deinit(&rcont);
+
+	if (!rargs.rv.rv_int && dentry) {
+		if (rfs_dcache_rdentry_add(dentry, rinfo))
+			BUG();
+		if (nd && !IS_ERR(nd->intent.open.file) && nd->intent.open.file && dentry == nd->intent.open.file->f_dentry) {
+			/*
+			 * Empty file was created and can be used by f_op -> register it to rfs.
+			 */
+			file = nd->intent.open.file;
+			rfs_pr_debug("flags=0x%x, open_flags=0x%x, "
+						 "file(%p)->f_dentry(%p)->d_inode(%p), dentry(%p)->d_inode(%p)",
+						 nd->flags,
+						 nd->intent.open.flags,
+						 file,
+						 file->f_dentry,
+						 file->f_dentry->d_inode,
+						 dentry,
+						 dentry->d_inode);
+			rfile = rfs_file_add(file);
+			if (IS_ERR(rfile))
+				BUG();
+			rfs_file_put(rfile);
+		}
+	}
+
+	rfs_inode_put(rinode);
+    rfs_info_put(rinfo);
+
+    rfs_pr_debug("dentry=%p, ret=%d", dentry, rargs.rv.rv_int);
+    return rargs.rv.rv_int;
+}
+
 #else
+
 static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
         bool excl)
-#endif
 {
     struct rfs_inode *rinode;
     struct rfs_info *rinfo;
@@ -624,29 +896,18 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
     rargs.args.i_create.dir = dir;
     rargs.args.i_create.dentry = dentry;
     rargs.args.i_create.mode = mode;
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
-    rargs.args.i_create.nd = nd;
-#else
     rargs.args.i_create.excl = excl;
-#endif
+
     rargs.rv.rv_int = -ENOSYS;
 
     if (!RFS_IS_IOP_SET(rinode, rargs.type.id) ||
         !rfs_precall_flts(rinfo->rchain, &rcont, &rargs)) {
         if (rinode->op_old && rinode->op_old->create) {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
-            rargs.rv.rv_int = rinode->op_old->create(
-                    rargs.args.i_create.dir,
-                    rargs.args.i_create.dentry,
-                    rargs.args.i_create.mode,
-                    rargs.args.i_create.nd);
-#else
             rargs.rv.rv_int = rinode->op_old->create(
                     rargs.args.i_create.dir,
                     rargs.args.i_create.dentry,
                     rargs.args.i_create.mode,
                     rargs.args.i_create.excl);
-#endif
         }
     }
 
@@ -657,13 +918,17 @@ static int rfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 
     if (!rargs.rv.rv_int) {
         if (rfs_dcache_rdentry_add(dentry, rinfo))
-            BUG();
+          BUG();
     }
 
     rfs_inode_put(rinode);
     rfs_info_put(rinfo);
+
+    rfs_pr_debug("dentry=%p, ret=%d", dentry, rargs.rv.rv_int);
     return rargs.rv.rv_int;
 }
+
+#endif
 
 static int rfs_link(struct dentry *old_dentry, struct inode *dir,
         struct dentry *dentry)
@@ -845,6 +1110,7 @@ static int rfs_unlink(struct inode *inode, struct dentry *dentry)
 
     rfs_inode_put(rinode);
     rfs_info_put(rinfo);
+    rfs_pr_debug("dentry=%p, ret=%d", dentry, rargs.rv.rv_int);
     return rargs.rv.rv_int;
 }
 
@@ -1118,7 +1384,7 @@ static int rfs_setattr_default(struct dentry *dentry, struct iattr *iattr)
     struct inode *inode = dentry->d_inode;
     int rv;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0) && !(LINUX_VERSION_CODE > KERNEL_VERSION(3,16,38) && LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)))
     rv = inode_change_ok(inode, iattr);
 #else
     rv = setattr_prepare(dentry, iattr);
@@ -1476,6 +1742,8 @@ int rfs_atomic_open(struct inode *inode, struct dentry *dentry, struct file *fil
 
     rfs_inode_put(rinode);
     rfs_info_put(rinfo);
+
+    rfs_pr_debug("dentry=%p, ret=%d", dentry, rargs.rv.rv_int);
     return rargs.rv.rv_int;
 }
 #endif
@@ -1520,7 +1788,7 @@ static void rfs_inode_set_ops_dir(struct rfs_inode *rinode)
     RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_MKDIR, mkdir, rfs_mkdir);
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3,5,0))
     // hook atomic_open when i_op has it
-    if (rinode->i_rhops->old.i_op->atomic_open)
+    if (rinode->op_old->atomic_open)
         RFS_SET_IOP_MGT(rinode, REDIRFS_DIR_IOP_ATOMIC_OPEN, atomic_open, rfs_atomic_open);
 #endif
 }
@@ -1568,7 +1836,6 @@ void rfs_inode_set_ops(struct rfs_inode *rinode)
         if (S_ISREG(mode)) {
             rfs_inode_set_ops_reg(rinode);
             rfs_inode_set_aops_reg(rinode);
-
         } else if (S_ISDIR(mode))
             rfs_inode_set_ops_dir(rinode);
 

@@ -267,6 +267,7 @@ enum redirfs_op_idc {
 
     REDIRFS_REG_IOP_PERMISSION   = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_i_permission),
     REDIRFS_REG_IOP_SETATTR      = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_i_setattr),
+    REDIRFS_REG_IOP_LOOKUP      = RFS_OP_IDC(RFS_INODE_REG, RFS_OP_i_lookup),
 
     REDIRFS_DIR_IOP_CREATE       = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_create),
     REDIRFS_DIR_IOP_LOOKUP       = RFS_OP_IDC(RFS_INODE_DIR, RFS_OP_i_lookup),
@@ -1000,8 +1001,8 @@ struct redirfs_args {
 
 #define RFS_DEFINE_REDIRFS_ARGS(argsname) \
     struct redirfs_args argsname = { \
-            .args = (union redirfs_op_args) {0}, \
-            .rv = (union redirfs_op_rv) {0}, \
+            .args = (union redirfs_op_args) { .d_revalidate = {0} }, \
+            .rv = (union redirfs_op_rv) { .rv_dentry = NULL }, \
             .type = (struct redirfs_op_type) RFS_REDIRFS_OP_TYPE_INITIALIZER \
     }
 

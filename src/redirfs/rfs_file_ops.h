@@ -23,6 +23,131 @@
 
 #include "rfs.h"
 
+#define FUNCTION_FOP_open PROTOTYPE_FOP(open, rfs_open)
+#define FUNCTION_FOP_release PROTOTYPE_FOP(release, rfs_release)
+#define FUNCTION_FOP_read PROTOTYPE_FOP(read, rfs_read)
+#define FUNCTION_FOP_write PROTOTYPE_FOP(write, rfs_write)
+#define FUNCTION_FOP_llseek PROTOTYPE_FOP(llseek, rfs_llseek)
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
+    #define FUNCTION_FOP_read_iter PROTOTYPE_FOP(read_iter, rfs_read_iter)
+    #define FUNCTION_FOP_write_iter PROTOTYPE_FOP(write_iter, rfs_write_iter)
+#else
+    #define FUNCTION_FOP_read_iter
+    #define FUNCTION_FOP_write_iter
+#endif
+#define FUNCTION_FOP_poll PROTOTYPE_FOP(poll, rfs_poll)
+#define FUNCTION_FOP_unlocked_ioctl PROTOTYPE_FOP(unlocked_ioctl, rfs_unlocked_ioctl)
+#define FUNCTION_FOP_compat_ioctl PROTOTYPE_FOP(compat_ioctl, rfs_compat_ioctl)
+#define FUNCTION_FOP_mmap PROTOTYPE_FOP(mmap, rfs_mmap)
+#define FUNCTION_FOP_flush PROTOTYPE_FOP(flush, rfs_flush)
+#define FUNCTION_FOP_fsync PROTOTYPE_FOP(fsync, rfs_fsync)
+#define FUNCTION_FOP_fasync PROTOTYPE_FOP(fasync, rfs_fasync)
+#define FUNCTION_FOP_lock PROTOTYPE_FOP(lock, rfs_lock)
+#define FUNCTION_FOP_sendpage PROTOTYPE_FOP(sendpage, rfs_sendpage)
+#define FUNCTION_FOP_get_unmapped_area PROTOTYPE_FOP(get_unmapped_area, rfs_get_unmapped_area)
+#define FUNCTION_FOP_flock PROTOTYPE_FOP(flock, rfs_flock)
+#define FUNCTION_FOP_splice_write PROTOTYPE_FOP(splice_write, rfs_splice_write)
+#define FUNCTION_FOP_splice_read PROTOTYPE_FOP(splice_read, rfs_splice_read)
+#define FUNCTION_FOP_setlease PROTOTYPE_FOP(setlease, rfs_setlease)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
+    #define FUNCTION_FOP_fallocate PROTOTYPE_FOP(fallocate, rfs_fallocate)
+#else
+    #define FUNCTION_FOP_fallocate
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
+    #define FUNCTION_FOP_show_fdinfo PROTOTYPE_FOP(show_fdinfo, rfs_show_fdinfo)
+#else
+    #define FUNCTION_FOP_show_fdinfo
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
+    #define FUNCTION_FOP_copy_file_range PROTOTYPE_FOP(copy_file_range, rfs_copy_file_range)
+    #define FUNCTION_FOP_clone_file_range PROTOTYPE_FOP(clone_file_range, rfs_clone_file_range)
+    #define FUNCTION_FOP_dedupe_file_range PROTOTYPE_FOP(dedupe_file_range, rfs_dedupe_file_range)
+#else
+    #define FUNCTION_FOP_copy_file_range
+    #define FUNCTION_FOP_clone_file_range
+    #define FUNCTION_FOP_dedupe_file_range
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+#define FUNCTION_FOP_readdir PROTOTYPE_FOP(readdir, rfs_readdir)
+#define FUNCTION_FOP_iterate
+#else
+#define FUNCTION_FOP_readdir
+#define FUNCTION_FOP_iterate PROTOTYPE_FOP(iterate, rfs_iterate)
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
+#define FUNCTION_FOP_iterate_shared PROTOTYPE_FOP(iterate_shared, rfs_iterate_shared)
+#else
+#define FUNCTION_FOP_iterate_shared
+#endif
+
+#ifdef RFS_PER_OBJECT_OPS 
+/*
+ * the open opeartion is called through rfile->op_new.open registered on inode lookup
+ * then unconditionally set for file_operations and should not be removed as used as
+ * a watermark for rfs_cast_to_rfile
+ *
+ * FUNCTION_FOP_open
+ */
+#endif
+
+#define SET_FOP_REG \
+    FUNCTION_FOP_read \
+    FUNCTION_FOP_write \
+    FUNCTION_FOP_llseek \
+    FUNCTION_FOP_read_iter \
+    FUNCTION_FOP_write_iter \
+    FUNCTION_FOP_poll \
+    FUNCTION_FOP_unlocked_ioctl \
+    FUNCTION_FOP_compat_ioctl \
+    FUNCTION_FOP_mmap \
+    FUNCTION_FOP_flush \
+    FUNCTION_FOP_fsync \
+    FUNCTION_FOP_fasync \
+    FUNCTION_FOP_lock \
+    FUNCTION_FOP_sendpage \
+    FUNCTION_FOP_get_unmapped_area \
+    FUNCTION_FOP_flock \
+    FUNCTION_FOP_splice_write \
+    FUNCTION_FOP_splice_read \
+    FUNCTION_FOP_setlease \
+    FUNCTION_FOP_fallocate \
+    FUNCTION_FOP_show_fdinfo \
+    FUNCTION_FOP_copy_file_range \
+    FUNCTION_FOP_clone_file_range \
+    FUNCTION_FOP_dedupe_file_range \
+
+#define SET_FOP_DIR \
+    FUNCTION_FOP_readdir \
+    FUNCTION_FOP_iterate \
+    FUNCTION_FOP_iterate_shared \
+
+#define SET_FOP_CHR \
+    FUNCTION_FOP_read \
+    FUNCTION_FOP_write \
+    FUNCTION_FOP_llseek \
+    FUNCTION_FOP_read_iter \
+    FUNCTION_FOP_write_iter \
+    FUNCTION_FOP_poll \
+    FUNCTION_FOP_unlocked_ioctl \
+    FUNCTION_FOP_compat_ioctl \
+    FUNCTION_FOP_mmap \
+    FUNCTION_FOP_flush \
+    FUNCTION_FOP_fsync \
+    FUNCTION_FOP_fasync \
+    FUNCTION_FOP_lock \
+    FUNCTION_FOP_sendpage \
+    FUNCTION_FOP_get_unmapped_area \
+    FUNCTION_FOP_flock \
+    FUNCTION_FOP_splice_write \
+    FUNCTION_FOP_splice_read \
+    FUNCTION_FOP_setlease \
+    FUNCTION_FOP_fallocate \
+    FUNCTION_FOP_show_fdinfo \
+    FUNCTION_FOP_copy_file_range \
+    FUNCTION_FOP_clone_file_range \
+    FUNCTION_FOP_dedupe_file_range \
+
 loff_t rfs_llseek(struct file *file,
                   loff_t offset,
                   int origin);
@@ -154,5 +279,11 @@ ssize_t rfs_dedupe_file_range(struct file *src_file,
                               u64 len,
                               struct file *dst_file,
                               u64 dst_loff);
+
+int rfs_release(struct inode *inode, struct file *file);
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+int rfs_readdir(struct file *file, void *dirent, filldir_t filldir);
+#endif
 
 #endif // _RFS_FILE_OPS_H

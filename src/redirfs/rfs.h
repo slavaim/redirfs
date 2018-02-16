@@ -280,7 +280,7 @@ struct rfs_file;
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16))
     #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_child)
     #define rfs_d_child_entry(pos) list_entry(pos, struct dentry, d_child)
-#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0))
     #define rfs_for_each_d_child(pos, head) list_for_each_entry(pos, head, d_u.d_child)
     #define rfs_d_child_entry(pos) list_entry(pos, struct dentry, d_u.d_child)
 #else
@@ -551,6 +551,7 @@ struct rfs_inode {
     struct list_head rdentries; /* mutex */
     struct list_head data;
     struct inode *inode;
+    struct file_operations f_op_new;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17))
     const struct inode_operations           *op_old;
     const struct file_operations            *f_op_old;
@@ -633,10 +634,23 @@ struct rfs_file {
 };
 
 struct rfs_file* rfs_file_find(struct file *file);
+/*
+ * NFS can open regular file without a file operation(fop) open and the fop's
+ * are inherited from inode(i_fop). For that reason we hooks all fop of a inode
+ * regular file. When any hook is evaluated at first time its handled as
+ * open for filters and then as original operation.
+ * Issue is replicable on old kernel 2.6.32.xyz
+ */
+struct rfs_file* rfs_file_find_with_open_flts(struct file *file);
      
 extern struct file_operations rfs_file_ops;
+extern struct file_operations rfs_reg_file_ops;
 
 int rfs_open(struct inode *inode, struct file *file);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
+struct dentry *rfs_lookup(struct inode *dir, struct dentry *dentry,
+        struct nameidata *nd);
+#endif
 struct rfs_file *rfs_file_get(struct rfs_file *rfile);
 void rfs_file_put(struct rfs_file *rfile);
 void rfs_file_set_ops(struct rfs_file *rfile);
