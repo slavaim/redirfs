@@ -31,6 +31,10 @@ struct avfltctl_filter {
     int cache;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct avfltctl_filter *avfltctl_get_filter(void);
 void avfltctl_put_filter(struct avfltctl_filter *filter);
 int avfltctl_add_path(const char *path, int type);
@@ -46,6 +50,10 @@ int avfltctl_invalidate_path_cache(int id);
 int avfltctl_enable_path_cache(int id);
 int avfltctl_disable_path_cache(int id);
 int avfltctl_set_timeout(int timeout);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
