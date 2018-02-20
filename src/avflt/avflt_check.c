@@ -198,7 +198,7 @@ static int avflt_wait_for_reply(struct avflt_event *event)
         return (int)jiffies;
 
     if (!jiffies) {
-        printk(KERN_WARNING "avflt: wait for reply timeout with id=%d\n", event->id);
+        printk(KERN_WARNING "avflt: wait for reply timeout\n");
         event->result = AVFLT_FILE_CLEAN;
         event->cache = 0;
     }

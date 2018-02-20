@@ -658,7 +658,9 @@ static void rfs_file_set_ops_dir(struct rfs_file *rfile)
     rfile->op_new.readdir = rfs_readdir;
 #else
     rfile->op_new.iterate = rfs_iterate;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
     rfile->op_new.iterate_shared = rfs_iterate_shared;
+#endif
 #endif
 #else /* RFS_PER_OBJECT_OPS  */
     #define PROTOTYPE_FOP(old_op, new_op) \
