@@ -106,6 +106,7 @@ static ssize_t avflt_dev_read(struct file *file, char __user *buf,
     rv = avflt_add_reply(event);
     if (rv)
         goto error;
+    avlft_pr_debug("%s", buf);
 
     avflt_install_fd(event);
     avflt_event_put(event);
@@ -126,6 +127,7 @@ static ssize_t avflt_dev_write(struct file *file, const char __user *buf,
       
     while(delimeter) {
         event = avflt_get_reply(iter, delimeter + 1 - iter);
+        avlft_pr_debug("%s", iter);
         if (IS_ERR(event))
             return PTR_ERR(event);
 
