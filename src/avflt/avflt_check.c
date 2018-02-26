@@ -127,6 +127,7 @@ static int avflt_add_request(struct avflt_event *event, int tail)
         return 1;
     }
 
+    event->was_removed_from_req_list = 0;
     if (tail)
         list_add_tail(&event->req_list, &avflt_request_list);
     else
@@ -150,11 +151,12 @@ void avflt_readd_request(struct avflt_event *event)
 static void avflt_rem_request(struct avflt_event *event)
 {
     spin_lock(&avflt_request_lock);
-    if (list_empty(&event->req_list)) {
+    if (event->was_removed_from_req_list || list_empty(&event->req_list)) {
         spin_unlock(&avflt_request_lock);
         return;
     }
     list_del_init(&event->req_list);
+    event->was_removed_from_req_list = 1;
     spin_unlock(&avflt_request_lock);
     avflt_event_put(event);
 }
@@ -432,6 +434,7 @@ void avflt_rem_requests(void)
     }
 
     list_for_each_entry_safe(event, tmp, &avflt_request_list, req_list) {
+        event->was_removed_from_req_list = 1;
         list_move_tail(&event->req_list, &list);
         avflt_event_done(event);
     }
