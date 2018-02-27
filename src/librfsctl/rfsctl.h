@@ -24,6 +24,10 @@ struct rfsctl_filter {
     int active;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct rfsctl_filter *rfsctl_get_filter(const char *name);
 void rfsctl_put_filter(struct rfsctl_filter *filter);
 struct rfsctl_filter **rfsctl_get_filters(void);
@@ -39,6 +43,10 @@ int rfsctl_read_data(const char *fltname, const char *filename, char *buf,
         int size);
 int rfsctl_write_data(const char *fltname, const char *filename, char *buf,
         int size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

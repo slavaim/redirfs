@@ -106,6 +106,7 @@ static ssize_t avflt_dev_read(struct file *file, char __user *buf,
     rv = avflt_add_reply(event);
     if (rv)
         goto error;
+    avlft_pr_debug("%s", buf);
 
     avflt_install_fd(event);
     avflt_event_put(event);
@@ -121,14 +122,25 @@ static ssize_t avflt_dev_write(struct file *file, const char __user *buf,
         size_t size, loff_t *pos)
 {
     struct avflt_event *event;
+    const char* iter = buf;
+    const char* delimeter = memchr(iter, '\0', size);
+      
+    while(delimeter) {
+        event = avflt_get_reply(iter, delimeter + 1 - iter);
+        avlft_pr_debug("%s", iter);
+        if (IS_ERR(event))
+            return PTR_ERR(event);
 
-    event = avflt_get_reply(buf, size);
-    if (IS_ERR(event))
-        return PTR_ERR(event);
-
-    avflt_event_done(event);
-    avflt_event_put(event);
-    return size;
+        avflt_event_done(event);
+        avflt_event_put(event);
+        iter = delimeter + 1;
+        if (iter - buf < size) {
+            delimeter = memchr(iter, '\0', size - (iter - buf));
+        } else {
+            break;
+        }
+    }
+    return iter - buf;
 }
 
 static unsigned int avflt_poll(struct file *file, poll_table *wait)

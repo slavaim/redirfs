@@ -238,8 +238,9 @@ struct rfs_dentry *rfs_dentry_add(struct dentry *dentry, struct rfs_info *rinfo)
         spin_unlock(&dentry->d_lock);
         return rd_new;
     }
-
+#ifndef RFS_PER_OBJECT_OPS
     DBG_BUG_ON(!rd_new->d_rhops);
+#endif
     rd_new->rinfo = rfs_info_get(rinfo);
 #ifdef RFS_PER_OBJECT_OPS
     dentry->d_op = &rd_new->op_new;

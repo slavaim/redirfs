@@ -1,5 +1,6 @@
 /*
  *          Copyright Frantisek Hrbata 2008 - 2010.
+ *          Copyright Jozef Kralik 2018 - 2018
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -52,75 +53,6 @@ int av_register_trusted(struct av_connection *conn)
 int av_unregister_trusted(struct av_connection *conn)
 {
     return av_unregister(conn);
-}
-
-int av_request(struct av_connection *conn, struct av_event *event, int timeout)
-{
-    struct timeval tv;
-    struct timeval *ptv;
-    char buf[256];
-    fd_set rfds;
-    int rv = 0;
-
-    if (!conn || !event || timeout < 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    FD_ZERO(&rfds);
-    FD_SET(conn->fd, &rfds);
-
-    if (timeout) {
-        tv.tv_sec = timeout / 1000;
-        tv.tv_usec = (timeout - (tv.tv_sec * 1000)) * 1000;
-        ptv = &tv;
-    } else
-        ptv = NULL;
-
-    while (!rv) {
-        rv = select(conn->fd + 1, &rfds, NULL, NULL, ptv);
-        if (rv == 0) {
-            errno = ETIMEDOUT;
-            return -1;
-        }
-        if (rv == -1)
-            return -1;
-
-        rv = read(conn->fd, buf, 256);
-        if (rv == -1)
-            return -1;
-    }
-
-    if (sscanf(buf, "id:%d,type:%d,fd:%d,pid:%d,tgid:%d",
-                &event->id, &event->type, &event->fd,
-                &event->pid, &event->tgid) != 5)
-        return -1;
-
-    event->res = 0;
-    event->cache = AV_CACHE_ENABLE;
-
-    return 0;
-}
-
-int av_reply(struct av_connection *conn, struct av_event *event)
-{
-    char buf[256];
-
-    if (!conn || !event) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    snprintf(buf, 256, "id:%d,res:%d,cache:%d", event->id, event->res,
-            event->cache);
-
-    if (write(conn->fd, buf, strlen(buf) + 1) == -1)
-        return -1;
-
-    if (close(event->fd) == -1)
-        return -1;
-
-    return 0;
 }
 
 int av_set_result(struct av_event *event, int res)
@@ -176,3 +108,44 @@ int av_get_filename(struct av_event *event, char *buf, int size)
     return 0;
 }
 
+ssize_t av_parse_request_from_buf(struct av_event *event, const char* buf, size_t size)
+{
+    const char* delimeter;
+
+    if (!buf || !event || !size) {
+        errno = EINVAL;
+        return -1;
+    }
+    delimeter = memchr(buf, '\0', size);
+    if (!delimeter) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (sscanf(buf, "id:%d,type:%d,fd:%d,pid:%d,tgid:%d",
+           &event->id, &event->type, &event->fd,
+           &event->pid, &event->tgid) != 5)
+        return -1;
+    return delimeter+1 - buf;
+}
+
+ssize_t av_set_reply_to_buf(char* buf, size_t size, const struct av_event *event)
+{
+    ssize_t r;
+
+    if (!buf || !size || !event) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    r = snprintf(buf, size, "id:%d,res:%d,cache:%d", event->id, event->res,
+        event->cache);
+
+    if (r < 0) {
+        return -1;
+    }
+    if (r == (ssize_t)size) {
+        errno = ENOSPC;
+        return -1;
+    }
+    return r+1;
+}

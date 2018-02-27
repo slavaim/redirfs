@@ -6,11 +6,11 @@ CFLAGS += -g -O0
 endif
 
 VMAR := 0
-VMIN := 2
+VMIN := 3
 VREL := 0
 LIB_NAME := libav
-LIB_OBJS := av.o
-LIB_SRCS := av.c
+LIB_OBJS := av.o av_ext.o
+LIB_SRCS := av.c av_ext.c
 LIB_DIR ?= /opt/redirfs/lib
 HDR_NAME := av.h
 HDR_DIR ?= /usr/include

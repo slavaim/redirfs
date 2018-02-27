@@ -73,6 +73,7 @@ struct avflt_event {
     int cache;
     pid_t pid;
     pid_t tgid;
+    int was_removed_from_req_list;
 };
 
 struct avflt_event *avflt_event_get(struct avflt_event *event);

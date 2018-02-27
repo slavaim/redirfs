@@ -35,7 +35,6 @@
 #endif // RFS_DBG
 
 static rfs_kmem_cache_t *rfs_file_cache = NULL;
-static spinlock_t rfs_file_add_lock = __SPIN_LOCK_INITIALIZER(rfs_file_add_lock);
 
 /*---------------------------------------------------------------------------*/
 
@@ -309,17 +308,13 @@ struct rfs_file *rfs_file_add(struct file *file)
     struct rfs_file *rfile;
     int err;
     
-    spin_lock(&rfs_file_add_lock);
     rfile = rfs_file_find(file);
-    if (rfile) {
-        spin_unlock(&rfs_file_add_lock);
+    if (rfile)
         return rfile;
-    }
+
     rfile = rfs_file_alloc(file);
-    if (IS_ERR(rfile)) {
-        spin_unlock(&rfs_file_add_lock);
+    if (IS_ERR(rfile))
         return rfile;
-    }
         
     rfs_file_get(rfile);
 
@@ -345,7 +340,6 @@ struct rfs_file *rfs_file_add(struct file *file)
 #else
     err = rfs_insert_object(&rfs_file_radix_tree, &rfile->robject, false);
 #endif
-    spin_unlock(&rfs_file_add_lock);
     DBG_BUG_ON(err);
     if (unlikely(err)) {
         rfs_file_del(rfile);
@@ -658,7 +652,9 @@ static void rfs_file_set_ops_dir(struct rfs_file *rfile)
     rfile->op_new.readdir = rfs_readdir;
 #else
     rfile->op_new.iterate = rfs_iterate;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
     rfile->op_new.iterate_shared = rfs_iterate_shared;
+#endif
 #endif
 #else /* RFS_PER_OBJECT_OPS  */
     #define PROTOTYPE_FOP(old_op, new_op) \

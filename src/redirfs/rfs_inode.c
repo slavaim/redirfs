@@ -59,6 +59,19 @@ static struct rfs_object_type rfs_inode_type = {
 
 static rfs_kmem_cache_t *rfs_inode_cache = NULL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0))
+int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
+        struct inode *new_dir, struct dentry *new_dentry);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+int rfs_rename2(struct inode *old_dir, struct dentry *old_dentry,
+        struct inode *new_dir, struct dentry *new_dentry,
+        unsigned int flags);
+#else
+int rfs_rename(struct inode *old_dir, struct dentry *old_dentry,
+        struct inode *new_dir, struct dentry *new_dentry,
+		unsigned int flags);
+#endif //(LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+
 /*---------------------------------------------------------------------------*/
 #ifdef RFS_PER_OBJECT_OPS
 	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
@@ -129,7 +142,11 @@ static struct rfs_inode *rfs_inode_alloc(struct inode *inode)
                 sizeof(struct inode_operations));
 
     /* rename hook is required for correct functioning of rfs_inode_find */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+    rinode->op_new.rename2 = rfs_rename2;
+#else
     rinode->op_new.rename = rfs_rename;
+#endif
 
     if (inode->i_mapping && inode->i_mapping->a_ops) {
         memcpy(&rinode->a_op_new,
@@ -299,8 +316,9 @@ struct rfs_inode *rfs_inode_add(struct inode *inode, struct rfs_info *rinfo)
     ri_new = rfs_inode_alloc(inode);
     if (IS_ERR(ri_new))
         return ri_new;
-        
+#ifndef RFS_PER_OBJECT_OPS
     DBG_BUG_ON(!ri_new->i_rhops);
+#endif
 
     spin_lock(&inode->i_lock);
     {
