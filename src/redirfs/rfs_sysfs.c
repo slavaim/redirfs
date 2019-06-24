@@ -798,6 +798,22 @@ void rfs_flt_sysfs_exit(struct rfs_flt *rflt)
     kobject_del(&rflt->kobj);
 }
 
+int rfs_sysfs_remove(void)
+{
+    sysfs_remove_file(rfs_info_kobj, &stat_attr.attr);
+
+    if (rfs_info_kobj)
+        kobject_put(rfs_info_kobj);
+
+    if (rfs_flt_kset)
+        kobject_put(&rfs_flt_kset->kobj);
+
+    if (rfs_kobj)
+        kobject_put(rfs_kobj);
+
+    return 0;
+}
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25))
 
 extern ssize_t rfs_get_stat(char *buf, ssize_t size);

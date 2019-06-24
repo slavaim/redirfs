@@ -188,7 +188,13 @@ err_dentry_cache:
     return rv;
 }
 
+void rfs_exit(void) {
+    extern int rfs_sysfs_remove(void);
+    rfs_sysfs_remove();
+}
+
 module_init(rfs_init);
+module_exit(rfs_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Frantisek Hrbata <frantisek.hrbata@redirfs.org>");
